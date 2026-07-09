@@ -1093,6 +1093,7 @@ function App() {
               currentMemberId={currentMemberId}
               onDelete={deleteExpense}
               onAdd={() => setShowAddExpense(true)}
+              onRequestPayment={requestPayment}
             />
           )}
           {activeTab === "balances" && (
@@ -1107,7 +1108,7 @@ function App() {
             />
           )}
           {activeTab === "stats" && (
-            <StatsTab key="stats" expenses={expenses} members={members} />
+            <StatsTab key="stats" expenses={expenses} members={members} currentMemberId={currentMemberId} />
           )}
           {activeTab === "profile" && (
             <ProfileTab
@@ -2024,12 +2025,14 @@ function ExpensesTab({
   currentMemberId,
   onDelete,
   onAdd,
+  onRequestPayment,
 }: {
   expenses: Expense[];
   members: Member[];
   currentMemberId: string;
   onDelete: (id: string) => void;
   onAdd: () => void;
+  onRequestPayment: (toId: string, amount: number, expenseId: string) => void;
 }) {
   const [search, setSearch] = useState("");
   const filtered = expenses
@@ -2132,15 +2135,32 @@ function ExpensesTab({
                       <span className="text-[10px] text-orange-400 bg-orange-500/10 px-2 py-1 rounded-full">Vous devez {formatCurrency(userShare)}</span>
                     )}
                   </div>
-                  {exp.payerId === currentMemberId && (
-                    <motion.button
-                      whileTap={{ scale: 0.8 }}
-                      onClick={() => onDelete(exp.id)}
-                      className="w-8 h-8 rounded-full bg-red-500/10 text-red-400 flex items-center justify-center border border-red-500/10"
-                    >
-                      <Trash2 size={14} />
-                    </motion.button>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {exp.payerId === currentMemberId && exp.participants.length > 1 && (
+                      <motion.button
+                        whileTap={{ scale: 0.8 }}
+                        onClick={() => {
+                          // Request payment from the first participant (for simplicity)
+                          const otherParticipant = exp.participants.find(p => p !== currentMemberId);
+                          if (otherParticipant) {
+                            onRequestPayment(otherParticipant, perPerson, exp.id);
+                          }
+                        }}
+                        className="text-[10px] bg-primary text-primary-foreground px-3 py-1.5 rounded-full font-medium hover:bg-primary/90 transition-colors"
+                      >
+                        Demander remboursement
+                      </motion.button>
+                    )}
+                    {exp.payerId === currentMemberId && (
+                      <motion.button
+                        whileTap={{ scale: 0.8 }}
+                        onClick={() => onDelete(exp.id)}
+                        className="w-8 h-8 rounded-full bg-red-500/10 text-red-400 flex items-center justify-center border border-red-500/10"
+                      >
+                        <Trash2 size={14} />
+                      </motion.button>
+                    )}
+                  </div>
                 </div>
               </motion.div>
             );
@@ -2383,58 +2403,63 @@ function BalancesTab({
 }
 
 // ─── Stats Tab (with Recharts) ───────────────────────────────────────────────
-function StatsTab({ expenses, members }: { expenses: Expense[]; members: Member[] }) {
+function StatsTab({ expenses, members, currentMemberId }: { expenses: Expense[]; members: Member[]; currentMemberId: string }) {
+  // Filter expenses for current member only
+  const memberExpenses = useMemo(() => {
+    return expenses.filter(e => e.payerId === currentMemberId || e.participants.includes(currentMemberId));
+  }, [expenses, currentMemberId]);
+
   const categoryData = useMemo(() => {
     const totals: Record<string, number> = {};
-    expenses.forEach((e) => {
+    memberExpenses.forEach((e) => {
       const key = `${e.categoryEmoji} ${e.category}`;
       totals[key] = (totals[key] || 0) + e.amount;
     });
     return Object.entries(totals)
       .map(([name, value]) => ({ name, value: Math.round(value * 100) / 100 }))
       .sort((a, b) => b.value - a.value);
-  }, [expenses]);
+  }, [memberExpenses]);
 
   const memberData = useMemo(() => {
     const totals: Record<string, number> = {};
-    expenses.forEach((e) => {
+    memberExpenses.forEach((e) => {
       totals[e.payerId] = (totals[e.payerId] || 0) + e.amount;
     });
     return members.map((m) => ({
       name: m.avatar + " " + m.name,
       total: Math.round((totals[m.id] || 0) * 100) / 100,
     }));
-  }, [expenses, members]);
+  }, [memberExpenses, members]);
 
   const trendData = useMemo(() => {
     const byDay: Record<string, number> = {};
-    expenses.forEach((e) => {
+    memberExpenses.forEach((e) => {
       const day = new Intl.DateTimeFormat("fr-FR", { day: "2-digit", month: "2-digit" }).format(new Date(e.date));
       byDay[day] = (byDay[day] || 0) + e.amount;
     });
     return Object.entries(byDay)
       .map(([date, total]) => ({ date, total: Math.round(total * 100) / 100 }))
       .slice(-10);
-  }, [expenses]);
+  }, [memberExpenses]);
 
   // Monthly breakdown
   const monthlyData = useMemo(() => {
     const byMonth: Record<string, number> = {};
-    expenses.forEach((e) => {
+    memberExpenses.forEach((e) => {
       const month = new Intl.DateTimeFormat("fr-FR", { month: "short", year: "2-digit" }).format(new Date(e.date));
       byMonth[month] = (byMonth[month] || 0) + e.amount;
     });
     return Object.entries(byMonth)
       .map(([month, total]) => ({ month, total: Math.round(total * 100) / 100 }))
       .slice(-6);
-  }, [expenses]);
+  }, [memberExpenses]);
 
   // Average per person
   const averagePerPerson = useMemo(() => {
     if (members.length === 0) return 0;
-    const total = expenses.reduce((s, e) => s + e.amount, 0);
+    const total = memberExpenses.reduce((s, e) => s + e.amount, 0);
     return Math.round((total / members.length) * 100) / 100;
-  }, [expenses, members]);
+  }, [memberExpenses, members]);
 
   // Most expensive category
   const topCategory = useMemo(() => {
@@ -2442,13 +2467,13 @@ function StatsTab({ expenses, members }: { expenses: Expense[]; members: Member[
     return categoryData[0];
   }, [categoryData]);
 
-  const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0);
+  const totalExpenses = memberExpenses.reduce((s, e) => s + e.amount, 0);
 
   return (
     <motion.div {...fadeUp} className="max-w-md mx-auto px-5 pt-16 space-y-6">
       <h1 className="text-2xl font-bold tracking-tight">Statistiques</h1>
 
-      {expenses.length === 0 ? (
+      {memberExpenses.length === 0 ? (
         <div className="text-center py-16 text-muted-foreground text-sm">
           <div className="text-5xl mb-4">📊</div>
           Ajoutez des dépenses pour voir les statistiques
