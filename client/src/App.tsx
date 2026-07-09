@@ -337,12 +337,17 @@ async function authenticateBiometric(memberId: string): Promise<boolean> {
 // ─── Main App ─────────────────────────────────────────────────────────────────
 function App() {
   // Check if running on Netlify (no backend)
+  // Detect environment
+  const isDevelopment = process.env.NODE_ENV === 'development' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
   const isNetlify = window.location.hostname.includes('netlify.app');
 
-  // tRPC queries and mutations
+  // Development-only logging
+  const devLog: (...args: any[]) => void = isDevelopment ? console.log : () => {};
+
+  // tRPC queries and mutations - enabled in production, disabled on Netlify
   const { data: groupData, isLoading, refetch } = trpc.equilibra.getGroupData.useQuery(undefined, {
-    enabled: !isNetlify, // Disable on Netlify
-    refetchInterval: isNetlify ? false : 5000, // Auto-refresh every 5 seconds
+    enabled: !isNetlify, // Disable on Netlify, enable in production
+    refetchInterval: isNetlify ? false : 10000, // Auto-refresh every 10 seconds in production
     retry: 2,
     refetchOnWindowFocus: true,
   });
@@ -432,13 +437,13 @@ function App() {
   useEffect(() => {
     const initializeBackend = async () => {
       if (isNetlify) {
-        console.log("Running on Netlify - skipping backend initialization");
+        devLog("Running on Netlify - skipping backend initialization");
         return;
       }
       try {
         await initGroup.mutateAsync({ members: DEFAULT_MEMBERS });
       } catch (error) {
-        console.log("Backend initialization failed, using local storage");
+        devLog("Backend initialization failed, using local storage");
       }
     };
     initializeBackend();
@@ -659,7 +664,7 @@ function App() {
             enabled: false,
           });
         } catch (error) {
-          console.log("Backend biometric update failed");
+          devLog("Backend biometric update failed");
         }
       }
       
@@ -679,7 +684,7 @@ function App() {
               enabled: true,
             });
           } catch (error) {
-            console.log("Backend biometric update failed");
+            devLog("Backend biometric update failed");
           }
         }
         
@@ -709,7 +714,7 @@ function App() {
         await initGroup.mutateAsync({ members: [...members, newMember] });
         refetch();
       } catch (error) {
-        console.log("Backend member add failed");
+        devLog("Backend member add failed");
       }
     }
   }, [members, initGroup, refetch, isNetlify]);
@@ -734,7 +739,7 @@ function App() {
         await initGroup.mutateAsync({ members: [...members, newMember] });
         refetch();
       } catch (error) {
-        console.log("Backend member add failed");
+        devLog("Backend member add failed");
       }
     }
   }, [members, initGroup, refetch, isNetlify]);
@@ -760,7 +765,7 @@ function App() {
         await initGroup.mutateAsync({ members: members.filter((m) => m.id !== memberId) });
         refetch();
       } catch (error) {
-        console.log("Backend member remove failed");
+        devLog("Backend member remove failed");
       }
     }
   }, [members, expenses, initGroup, refetch, isNetlify]);
@@ -794,7 +799,7 @@ function App() {
           return;
         }
       } catch (error) {
-        console.log("Backend add failed, using local storage");
+        devLog("Backend add failed, using local storage");
       }
     }
     // Fallback to local storage
@@ -825,7 +830,7 @@ function App() {
           refetch();
           return;
         } catch (error) {
-          console.log("Backend delete failed, using local storage");
+          devLog("Backend delete failed, using local storage");
         }
       }
       setExpenses((prev) => prev.filter((e) => e.id !== id));
@@ -864,7 +869,7 @@ function App() {
             amount,
           });
         } catch (error) {
-          console.log("Backend notification failed, using local");
+          devLog("Backend notification failed, using local");
         }
       }
       
@@ -910,7 +915,7 @@ function App() {
           return;
         }
       } catch (error) {
-        console.log("Backend request failed, using local storage");
+        devLog("Backend request failed, using local storage");
       }
     }
     
@@ -947,7 +952,7 @@ function App() {
             amount: payment.amount,
           });
         } catch (error) {
-          console.log("Backend confirm failed, using local storage");
+          devLog("Backend confirm failed, using local storage");
         }
       }
       
@@ -975,7 +980,7 @@ function App() {
             amount: payment.amount,
           });
         } catch (error) {
-          console.log("Backend confirm failed, using local storage");
+          devLog("Backend confirm failed, using local storage");
         }
       }
       
@@ -1008,7 +1013,7 @@ function App() {
         try {
           await refusePaymentMutation.mutateAsync({ paymentId });
         } catch (error) {
-          console.log("Backend refuse failed, using local storage");
+          devLog("Backend refuse failed, using local storage");
         }
       }
       
@@ -1107,7 +1112,7 @@ function App() {
               expenses={expenses}
             />
           )}
-          {activeTab === "stats" && (
+          {activeTab === "stats" && isDevelopment && (
             <StatsTab key="stats" expenses={expenses} members={members} currentMemberId={currentMemberId} />
           )}
           {activeTab === "profile" && (
@@ -1135,7 +1140,7 @@ function App() {
               { id: "home" as Tab, icon: Home, label: "Accueil" },
               { id: "expenses" as Tab, icon: Receipt, label: "Dépenses" },
               { id: "balances" as Tab, icon: Scale, label: "Soldes" },
-              { id: "stats" as Tab, icon: BarChart3, label: "Stats" },
+              ...(isDevelopment ? [{ id: "stats" as Tab, icon: BarChart3, label: "Stats" }] : []),
               { id: "profile" as Tab, icon: User, label: "Profil" },
             ]).map((tab) => (
               <button
