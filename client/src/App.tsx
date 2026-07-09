@@ -2933,6 +2933,31 @@ function ProfileTab({
         </motion.button>
       )}
 
+      {/* Clear All Data - Available for Mohamed */}
+      {currentMember.name === "Mohamed" && (
+        <motion.button
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          whileTap={{ scale: 0.97 }}
+          whileHover={{ scale: 1.02 }}
+          onClick={() => {
+            haptic("heavy");
+            if (window.confirm("Êtes-vous sûr de vouloir effacer toutes les données ? Cette action est irréversible.")) {
+              localStorage.clear();
+              sessionStorage.clear();
+              toast.success("Toutes les données ont été effacées");
+              setTimeout(() => {
+                window.location.reload();
+              }, 1000);
+            }
+          }}
+          className="w-full bg-red-500/20 text-red-400 font-semibold py-3.5 rounded-2xl border border-red-500/20 press-scale shadow-lg shadow-red-500/10"
+        >
+          🗑️ Effacer toutes les données
+        </motion.button>
+      )}
+
       <div className="h-4" />
     </motion.div>
   );
