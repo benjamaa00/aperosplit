@@ -57,10 +57,10 @@ export const equilibraRouter = router({
         ...e,
         amount: parseFloat(e.amount as unknown as string),
       })),
-      settlements: data.settlements.map((s) => ({
+      settlements: data.settlements ? data.settlements.map((s: any) => ({
         ...s,
         amount: parseFloat(s.amount as unknown as string),
-      })),
+      })) : [],
       pending: data.pending.map((p) => ({
         ...p,
         amount: parseFloat(p.amount as unknown as string),
@@ -185,29 +185,11 @@ export const equilibraRouter = router({
       })
     )
     .mutation(async ({ input }) => {
-      const settlementId = `settle_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-      const historyId = `h_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-
       const success = await confirmPayment(
         input.paymentId,
-        {
-          id: settlementId,
-          groupId: GROUP_ID,
-          fromId: input.fromId,
-          toId: input.toId,
-          amount: input.amount.toString(),
-          date: new Date(),
-        },
-        {
-          id: historyId,
-          groupId: GROUP_ID,
-          type: "settlement_confirmed",
-          authorId: input.toId,
-          fromId: input.fromId,
-          toId: input.toId,
-          amount: input.amount.toString(),
-          date: new Date(),
-        }
+        input.fromId,
+        input.toId,
+        input.amount.toString()
       );
 
       return { success };
@@ -249,7 +231,6 @@ export const equilibraRouter = router({
     .mutation(async ({ input }) => {
       const success = await updateMemberBiometric(
         input.memberId,
-        input.credentialId || "",
         input.enabled
       );
       return { success };
