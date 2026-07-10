@@ -1,7 +1,8 @@
 import { z } from "zod";
-import { publicProcedure, router } from "../_core/trpc";
+import { groupProcedure, router } from "../_core/trpc";
 import { storagePut } from "../storage";
 import { invokeLLM } from "../_core/llm";
+import { randomUUID } from "node:crypto";
 import {
   getOrCreateGroup,
   getGroupData,
@@ -14,21 +15,20 @@ import {
   addHistoryEntry,
   updateGroupShareUrl,
   updateMemberBiometric,
-  clearAllData,
 } from "../db";
 
 const GROUP_ID = "equilibra-fixed-group";
 
 export const equilibraRouter = router({
   // Initialize group with members
-  initGroup: publicProcedure
+  initGroup: groupProcedure
     .input(
       z.object({
         members: z.array(
           z.object({
-            id: z.string(),
-            name: z.string(),
-            avatar: z.string(),
+            id: z.string().min(1).max(128),
+            name: z.string().trim().min(1).max(80),
+            avatar: z.string().min(1).max(32),
           })
         ),
       })
@@ -42,7 +42,7 @@ export const equilibraRouter = router({
     }),
 
   // Get all group data
-  getGroupData: publicProcedure.query(async () => {
+  getGroupData: groupProcedure.query(async () => {
     const data = await getGroupData(GROUP_ID);
     if (!data) return null;
 
@@ -75,19 +75,19 @@ export const equilibraRouter = router({
   }),
 
   // Add expense
-  addExpense: publicProcedure
+  addExpense: groupProcedure
     .input(
       z.object({
-        description: z.string(),
-        amount: z.number(),
-        category: z.string(),
-        payerId: z.string(),
-        participants: z.array(z.string()),
-        photoUrl: z.string().optional(),
+        description: z.string().trim().min(1).max(255),
+        amount: z.number().positive().max(1_000_000),
+        category: z.string().trim().min(1).max(64),
+        payerId: z.string().min(1).max(128),
+        participants: z.array(z.string().min(1).max(128)).min(1).max(20),
+        photoUrl: z.string().max(2048).optional(),
       })
     )
     .mutation(async ({ input }) => {
-      const expenseId = `exp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      const expenseId = `exp_${randomUUID()}`;
 
       const success = await addExpense({
         id: expenseId,
@@ -102,7 +102,7 @@ export const equilibraRouter = router({
       });
 
       if (success) {
-        const historyId = `h_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+        const historyId = `h_${randomUUID()}`;
         await addHistoryEntry({
           id: historyId,
           groupId: GROUP_ID,
@@ -118,20 +118,20 @@ export const equilibraRouter = router({
     }),
 
   // Delete expense
-  deleteExpense: publicProcedure
+  deleteExpense: groupProcedure
     .input(
       z.object({
-        expenseId: z.string(),
-        description: z.string(),
-        amount: z.number(),
-        authorId: z.string(),
+        expenseId: z.string().min(1).max(128),
+        description: z.string().trim().min(1).max(255),
+        amount: z.number().positive().max(1_000_000),
+        authorId: z.string().min(1).max(128),
       })
     )
     .mutation(async ({ input }) => {
       const success = await deleteExpense(input.expenseId);
 
       if (success) {
-        const historyId = `h_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+        const historyId = `h_${randomUUID()}`;
         await addHistoryEntry({
           id: historyId,
           groupId: GROUP_ID,
@@ -147,20 +147,21 @@ export const equilibraRouter = router({
     }),
 
   // Request payment
-  requestPayment: publicProcedure
+  requestPayment: groupProcedure
     .input(
       z.object({
-        fromId: z.string(),
-        fromName: z.string(),
-        toId: z.string(),
-        toName: z.string(),
-        amount: z.number(),
+        fromId: z.string().min(1).max(128),
+        fromName: z.string().trim().min(1).max(80),
+        toId: z.string().min(1).max(128),
+        toName: z.string().trim().min(1).max(80),
+        amount: z.number().positive().max(1_000_000),
+        expenseId: z.string().min(1).max(128).optional(),
       })
     )
     .mutation(async ({ input }) => {
-      const paymentId = `pay_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      const paymentId = `pay_${randomUUID()}`;
 
-      const success = await addPendingPayment({
+      const storedPaymentId = await addPendingPayment({
         id: paymentId,
         groupId: GROUP_ID,
         fromId: input.fromId,
@@ -169,14 +170,15 @@ export const equilibraRouter = router({
         toName: input.toName,
         amount: input.amount.toString(),
         status: "pending",
+        expenseId: input.expenseId,
         date: new Date(),
       });
 
-      return { success, paymentId };
+      return { success: true, paymentId: storedPaymentId };
     }),
 
   // Confirm payment
-  confirmPayment: publicProcedure
+  confirmPayment: groupProcedure
     .input(
       z.object({
         paymentId: z.string(),
@@ -197,7 +199,7 @@ export const equilibraRouter = router({
     }),
 
   // Refuse payment
-  refusePayment: publicProcedure
+  refusePayment: groupProcedure
     .input(
       z.object({
         paymentId: z.string(),
@@ -209,7 +211,7 @@ export const equilibraRouter = router({
     }),
 
   // Update share URL
-  updateShareUrl: publicProcedure
+  updateShareUrl: groupProcedure
     .input(
       z.object({
         shareUrl: z.string(),
@@ -221,7 +223,7 @@ export const equilibraRouter = router({
     }),
 
   // Update member biometric
-  updateMemberBiometric: publicProcedure
+  updateMemberBiometric: groupProcedure
     .input(
       z.object({
         memberId: z.string(),
@@ -237,11 +239,11 @@ export const equilibraRouter = router({
       return { success };
     }),
 
-  uploadReceiptPhoto: publicProcedure
+  uploadReceiptPhoto: groupProcedure
     .input(
       z.object({
-        fileData: z.string(),
-        fileName: z.string(),
+        fileData: z.string().min(1).max(7_000_000),
+        fileName: z.string().trim().min(1).max(120).regex(/^[a-zA-Z0-9._-]+$/),
       })
     )
     .mutation(async ({ input }) => {
@@ -259,10 +261,10 @@ export const equilibraRouter = router({
       }
     }),
 
-  analyzeReceiptPhoto: publicProcedure
+  analyzeReceiptPhoto: groupProcedure
     .input(
       z.object({
-        imageUrl: z.string(),
+        imageUrl: z.string().min(1).max(2048),
       })
     )
     .mutation(async ({ input }) => {
@@ -334,12 +336,5 @@ export const equilibraRouter = router({
         console.error("[AI] Receipt analysis failed:", error);
         return { success: false, error: "Analysis failed" };
       }
-    }),
-
-  // Clear all data
-  clearAllData: publicProcedure
-    .mutation(async () => {
-      const success = await clearAllData();
-      return { success };
     }),
 });

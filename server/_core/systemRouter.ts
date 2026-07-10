@@ -1,8 +1,9 @@
 import { z } from "zod";
 import { notifyOwner } from "./notification";
-import { adminProcedure, publicProcedure, router } from "./trpc";
+import { adminProcedure, hasGroupAccess, publicProcedure, router } from "./trpc";
 
 export const systemRouter = router({
+  accessStatus: publicProcedure.query(({ ctx }) => ({ authorized: hasGroupAccess(ctx) })),
   health: publicProcedure
     .input(
       z.object({
