@@ -4,4 +4,4 @@ services:
     runtime: node
     plan: free
     buildCommand: pnpm install && pnpm build && pnpm build:server
-    startCommand: node server/dist/_core/index.js
+    startCommand: node start-server.js
