@@ -5,7 +5,8 @@
   "license": "MIT",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && esbuild server/_core/index.ts --platform=node --packages=external --bundle --format=esm --outfile=server/_core/index.js",
+"start": "node server/_core/index.js",
     "build:server": "tsc -p tsconfig.server.json",
     "preview": "vite preview",
     "check": "tsc --noEmit",
