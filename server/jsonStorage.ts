@@ -54,3 +54,15 @@ export function getStorage<K extends keyof StorageData>(
   const data = readStorage();
   return data[section];
 }
+
+// Clear all data
+export function clearAllStorage() {
+  const initialData: StorageData = {
+    members: [],
+    expenses: [],
+    pendingPayments: [],
+    completedPayments: [],
+    biometricEnabled: {}
+  };
+  writeStorage(initialData);
+}

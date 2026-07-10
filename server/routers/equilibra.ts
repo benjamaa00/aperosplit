@@ -14,6 +14,7 @@ import {
   addHistoryEntry,
   updateGroupShareUrl,
   updateMemberBiometric,
+  clearAllData,
 } from "../db";
 
 const GROUP_ID = "equilibra-fixed-group";
@@ -333,5 +334,12 @@ export const equilibraRouter = router({
         console.error("[AI] Receipt analysis failed:", error);
         return { success: false, error: "Analysis failed" };
       }
+    }),
+
+  // Clear all data
+  clearAllData: publicProcedure
+    .mutation(async () => {
+      const success = await clearAllData();
+      return { success };
     }),
 });
