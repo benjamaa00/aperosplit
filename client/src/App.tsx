@@ -1112,7 +1112,7 @@ function App() {
               expenses={expenses}
             />
           )}
-          {activeTab === "stats" && isDevelopment && (
+          {activeTab === "stats" && (
             <StatsTab key="stats" expenses={expenses} members={members} currentMemberId={currentMemberId} />
           )}
           {activeTab === "profile" && (
@@ -1140,7 +1140,7 @@ function App() {
               { id: "home" as Tab, icon: Home, label: "Accueil" },
               { id: "expenses" as Tab, icon: Receipt, label: "Dépenses" },
               { id: "balances" as Tab, icon: Scale, label: "Soldes" },
-              ...(isDevelopment ? [{ id: "stats" as Tab, icon: BarChart3, label: "Stats" }] : []),
+              { id: "stats" as Tab, icon: BarChart3, label: "Stats" },
               { id: "profile" as Tab, icon: User, label: "Profil" },
             ]).map((tab) => (
               <button
@@ -2475,8 +2475,32 @@ function StatsTab({ expenses, members, currentMemberId }: { expenses: Expense[];
   const totalExpenses = memberExpenses.reduce((s, e) => s + e.amount, 0);
 
   return (
-    <motion.div {...fadeUp} className="max-w-md mx-auto px-5 pt-16 space-y-6">
-      <h1 className="text-2xl font-bold tracking-tight">Statistiques</h1>
+    <motion.div {...fadeUp} className="relative max-w-md mx-auto px-5 pt-12 space-y-6 overflow-hidden">
+      <div className="pointer-events-none absolute -top-20 -right-24 h-64 w-64 rounded-full bg-primary/20 blur-3xl" />
+      <div className="pointer-events-none absolute top-64 -left-28 h-56 w-56 rounded-full bg-violet-500/10 blur-3xl" />
+
+      <motion.header
+        initial={{ opacity: 0, y: 14 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="glass-card-enhanced relative overflow-hidden rounded-[2rem] p-6"
+      >
+        <div className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-white/60 to-transparent" />
+        <div className="relative flex items-start justify-between gap-4">
+          <div>
+            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">
+              <Sparkles size={12} />
+              Aperçu intelligent
+            </div>
+            <h1 className="text-3xl font-bold tracking-[-0.04em]">Statistiques</h1>
+            <p className="mt-2 max-w-[16rem] text-sm leading-relaxed text-muted-foreground">
+              Une vision claire de vos dépenses et de leur évolution.
+            </p>
+          </div>
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-gradient-to-br from-primary to-violet-500 text-white shadow-lg shadow-primary/25">
+            <BarChart3 size={22} />
+          </div>
+        </div>
+      </motion.header>
 
       {memberExpenses.length === 0 ? (
         <div className="text-center py-16 text-muted-foreground text-sm">
@@ -2490,7 +2514,7 @@ function StatsTab({ expenses, members, currentMemberId }: { expenses: Expense[];
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="bg-card/50 backdrop-blur-sm border border-white/5 rounded-2xl p-4 text-center"
+              className="glass-card-enhanced rounded-[1.5rem] p-4 text-center"
             >
               <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Total</p>
               <p className="text-xl font-bold mt-1">{formatCurrency(totalExpenses)}</p>
@@ -2499,7 +2523,7 @@ function StatsTab({ expenses, members, currentMemberId }: { expenses: Expense[];
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.1 }}
-              className="bg-card/50 backdrop-blur-sm border border-white/5 rounded-2xl p-4 text-center"
+              className="glass-card-enhanced rounded-[1.5rem] p-4 text-center"
             >
               <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Moyenne/personne</p>
               <p className="text-xl font-bold mt-1">{formatCurrency(averagePerPerson)}</p>
@@ -2512,7 +2536,7 @@ function StatsTab({ expenses, members, currentMemberId }: { expenses: Expense[];
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.15 }}
-              className="bg-gradient-to-br from-primary/10 to-primary/5 backdrop-blur-sm border border-primary/20 rounded-2xl p-4"
+              className="glass-card-enhanced relative overflow-hidden rounded-[1.75rem] border-primary/20 p-5"
             >
               <div className="flex items-center justify-between">
                 <div>
@@ -2528,7 +2552,7 @@ function StatsTab({ expenses, members, currentMemberId }: { expenses: Expense[];
           )}
 
           {/* Pie Chart - By Category */}
-          <div className="bg-card/50 backdrop-blur-sm border border-white/5 rounded-2xl p-5">
+          <div className="glass-card-enhanced relative overflow-hidden rounded-[1.75rem] p-5">
             <h3 className="text-sm font-semibold mb-4">Par catégorie</h3>
             <div className="h-52">
               <ResponsiveContainer width="100%" height="100%">
@@ -2566,7 +2590,7 @@ function StatsTab({ expenses, members, currentMemberId }: { expenses: Expense[];
           </div>
 
           {/* Bar Chart - By Member */}
-          <div className="bg-card/50 backdrop-blur-sm border border-white/5 rounded-2xl p-5">
+          <div className="glass-card-enhanced relative overflow-hidden rounded-[1.75rem] p-5">
             <h3 className="text-sm font-semibold mb-4">Par membre</h3>
             <div className="h-48">
               <ResponsiveContainer width="100%" height="100%">
@@ -2586,7 +2610,7 @@ function StatsTab({ expenses, members, currentMemberId }: { expenses: Expense[];
 
           {/* Line Chart - Trend */}
           {trendData.length > 1 && (
-            <div className="bg-card/50 backdrop-blur-sm border border-white/5 rounded-2xl p-5">
+            <div className="glass-card-enhanced relative overflow-hidden rounded-[1.75rem] p-5">
               <h3 className="text-sm font-semibold mb-4">Tendance (10 derniers jours)</h3>
               <div className="h-44">
                 <ResponsiveContainer width="100%" height="100%">
@@ -2614,7 +2638,7 @@ function StatsTab({ expenses, members, currentMemberId }: { expenses: Expense[];
 
           {/* Monthly Breakdown */}
           {monthlyData.length > 1 && (
-            <div className="bg-card/50 backdrop-blur-sm border border-white/5 rounded-2xl p-5">
+            <div className="glass-card-enhanced relative overflow-hidden rounded-[1.75rem] p-5">
               <h3 className="text-sm font-semibold mb-4">Historique mensuel</h3>
               <div className="h-44">
                 <ResponsiveContainer width="100%" height="100%">
