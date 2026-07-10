@@ -1,4 +1,5 @@
-import { readStorage, writeStorage, getStorage, updateStorage } from "./jsonStorage";
+import { readStorage, writeStorage, getStorage, updateStorage, clearAllStorage } from "./jsonStorage";
+import type { User } from "./drizzle/schema";
 
 // JSON Storage Implementation (no database required)
 
@@ -12,7 +13,7 @@ export async function upsertUser(user: any): Promise<void> {
   console.warn("[JSON Storage] upsertUser not implemented");
 }
 
-export async function getUserByOpenId(openId: string) {
+export async function getUserByOpenId(openId: string): Promise<User | undefined> {
   // Not needed for JSON storage
   console.warn("[JSON Storage] getUserByOpenId not implemented");
   return undefined;
@@ -114,5 +115,10 @@ export async function updateMemberBiometric(memberId: string, enabled: boolean) 
   const biometricEnabled = getStorage("biometricEnabled");
   biometricEnabled[memberId] = enabled;
   updateStorage("biometricEnabled", biometricEnabled);
+  return true;
+}
+
+export async function clearAllData() {
+  clearAllStorage();
   return true;
 }
