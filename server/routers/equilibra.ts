@@ -146,7 +146,7 @@ export const equilibraRouter = router({
       return { success };
     }),
 
-  // Request payment
+  // Request payment (NEW SYSTEM)
   requestPayment: groupProcedure
     .input(
       z.object({
@@ -155,7 +155,10 @@ export const equilibraRouter = router({
         toId: z.string().min(1).max(128),
         toName: z.string().trim().min(1).max(80),
         amount: z.number().positive().max(1_000_000),
-        expenseId: z.string().min(1).max(128).optional(),
+        originalAmount: z.number().positive().max(1_000_000).optional(),
+        expenseId: z.string().min(1).max(128),
+        isGroupRequest: z.boolean().optional(),
+        groupId: z.string().optional(),
       })
     )
     .mutation(async ({ input }) => {
@@ -169,9 +172,13 @@ export const equilibraRouter = router({
         toId: input.toId,
         toName: input.toName,
         amount: input.amount.toString(),
+        originalAmount: input.originalAmount?.toString() || input.amount.toString(),
         status: "pending",
         expenseId: input.expenseId,
         date: new Date(),
+        attemptCount: "1",
+        isGroupRequest: input.isGroupRequest ? "true" : "false",
+        requestGroupId: input.groupId || null,
       });
 
       return { success: true, paymentId: storedPaymentId };
