@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Filter, ChevronDown, Check, X, AlertTriangle, RefreshCw, Clock } from "lucide-react";
+import { Filter, ChevronDown, Check, X, AlertTriangle, RefreshCw, Clock, Calendar, TrendingUp } from "lucide-react";
 
 interface PendingPayment {
   id: string;
@@ -79,12 +79,10 @@ export function PaymentHistory({ payments, members, currentMemberId }: PaymentHi
 
   // Filter payments
   const filteredPayments = payments.filter((payment) => {
-    // Only show payments involving current member
     if (payment.fromId !== currentMemberId && payment.toId !== currentMemberId) {
       return false;
     }
     
-    // Apply status filter
     if (filter === "all") return true;
     if (filter === "completed") return payment.status === "completed";
     if (filter === "pending") return payment.status === "pending";
@@ -108,18 +106,40 @@ export function PaymentHistory({ payments, members, currentMemberId }: PaymentHi
   });
 
   return (
-    <div className="space-y-4">
-      {/* Filter Header */}
+    <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold">Historique des remboursements</h3>
+        <h1 className="text-3xl font-bold tracking-tight">Historique</h1>
         <button
           onClick={() => setShowFilters(!showFilters)}
-          className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 text-sm font-medium hover:bg-white/10 transition-all"
         >
-          <Filter size={14} />
+          <Filter size={16} />
           Filtres
-          <ChevronDown size={14} className={`transition-transform ${showFilters ? "rotate-180" : ""}`} />
+          <ChevronDown size={16} className={`transition-transform ${showFilters ? "rotate-180" : ""}`} />
         </button>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="bg-gradient-to-br from-green-500/10 to-green-500/5 backdrop-blur-sm border border-green-500/20 rounded-3xl p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center">
+              <Check size={16} className="text-green-400" />
+            </div>
+            <span className="text-sm font-medium text-green-400">Terminés</span>
+          </div>
+          <p className="text-2xl font-bold">{payments.filter(p => p.status === "completed").length}</p>
+        </div>
+        <div className="bg-gradient-to-br from-orange-500/10 to-orange-500/5 backdrop-blur-sm border border-orange-500/20 rounded-3xl p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-8 h-8 rounded-full bg-orange-500/20 flex items-center justify-center">
+              <Clock size={16} className="text-orange-400" />
+            </div>
+            <span className="text-sm font-medium text-orange-400">En attente</span>
+          </div>
+          <p className="text-2xl font-bold">{payments.filter(p => p.status === "pending").length}</p>
+        </div>
       </div>
 
       {/* Filter Options */}
@@ -129,56 +149,63 @@ export function PaymentHistory({ payments, members, currentMemberId }: PaymentHi
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            className="space-y-3 bg-card/50 backdrop-blur-sm border border-white/5 rounded-2xl p-4"
+            className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-3xl p-4 space-y-4"
           >
-            <div className="flex flex-wrap gap-2">
-              {(["all", "completed", "pending", "refused", "disputed"] as FilterType[]).map((filterType) => (
-                <button
-                  key={filterType}
-                  onClick={() => setFilter(filterType)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                    filter === filterType
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-background/50 text-muted-foreground hover:bg-background/80"
-                  }`}
-                >
-                  {filterType === "all" ? "Tous" :
-                   filterType === "completed" ? "Terminés" :
-                   filterType === "pending" ? "En attente" :
-                   filterType === "refused" ? "Refusés" :
-                   "Litiges"}
-                </button>
-              ))}
+            <div>
+              <p className="text-xs text-muted-foreground mb-3 font-medium uppercase tracking-wider">Statut</p>
+              <div className="flex flex-wrap gap-2">
+                {(["all", "completed", "pending", "refused", "disputed"] as FilterType[]).map((filterType) => (
+                  <button
+                    key={filterType}
+                    onClick={() => setFilter(filterType)}
+                    className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                      filter === filterType
+                        ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25"
+                        : "bg-white/5 text-muted-foreground hover:bg-white/10"
+                    }`}
+                  >
+                    {filterType === "all" ? "Tous" :
+                     filterType === "completed" ? "Terminés" :
+                     filterType === "pending" ? "En attente" :
+                     filterType === "refused" ? "Refusés" :
+                     "Litiges"}
+                  </button>
+                ))}
+              </div>
             </div>
-            <div className="flex items-center gap-2 pt-2 border-t border-white/5">
-              <span className="text-xs text-muted-foreground">Trier par:</span>
-              {(["date", "amount", "status"] as SortType[]).map((sortType) => (
-                <button
-                  key={sortType}
-                  onClick={() => setSort(sortType)}
-                  className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
-                    sort === sortType
-                      ? "bg-primary/20 text-primary"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  {sortType === "date" ? "Date" : sortType === "amount" ? "Montant" : "Statut"}
-                </button>
-              ))}
+            <div>
+              <p className="text-xs text-muted-foreground mb-3 font-medium uppercase tracking-wider">Trier par</p>
+              <div className="flex gap-2">
+                {(["date", "amount", "status"] as SortType[]).map((sortType) => (
+                  <button
+                    key={sortType}
+                    onClick={() => setSort(sortType)}
+                    className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                      sort === sortType
+                        ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25"
+                        : "bg-white/5 text-muted-foreground hover:bg-white/10"
+                    }`}
+                  >
+                    {sortType === "date" ? "Date" : sortType === "amount" ? "Montant" : "Statut"}
+                  </button>
+                ))}
+              </div>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
       {/* Payment List */}
-      <div className="space-y-2">
+      <div className="space-y-3">
         {sortedPayments.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground text-sm">
-            <div className="text-3xl mb-2">📭</div>
-            Aucun remboursement trouvé
+          <div className="text-center py-16">
+            <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-white/5 flex items-center justify-center">
+              <Calendar size={40} className="text-muted-foreground/50" />
+            </div>
+            <p className="text-muted-foreground">Aucun remboursement trouvé</p>
           </div>
         ) : (
-          sortedPayments.map((payment) => {
+          sortedPayments.map((payment, index) => {
             const from = members.find((m) => m.id === payment.fromId);
             const to = members.find((m) => m.id === payment.toId);
             const statusInfo = getStatusInfo(payment.status);
@@ -187,58 +214,46 @@ export function PaymentHistory({ payments, members, currentMemberId }: PaymentHi
             return (
               <motion.div
                 key={payment.id}
-                initial={{ opacity: 0, y: 10 }}
+                initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className={`bg-card/50 backdrop-blur-sm border rounded-xl p-3 ${statusInfo.color}`}
+                transition={{ delay: index * 0.05 }}
+                className={`bg-white/5 backdrop-blur-sm border rounded-3xl p-4 ${statusInfo.color}`}
               >
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <span className="text-xl">{from?.avatar}</span>
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center text-2xl">
+                      {from?.avatar}
+                    </div>
                     <div>
                       <p className="text-sm font-medium">
                         {payment.fromId === currentMemberId ? "Vous avez payé" : `${from?.name} a payé`}
                         {payment.toId === currentMemberId ? " à vous" : ` à ${to?.name}`}
                       </p>
-                      <p className="text-lg font-bold">{formatCurrency(payment.amount)}</p>
+                      <p className="text-xl font-bold">{formatCurrency(payment.amount)}</p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <span className="text-xs font-medium px-2 py-1 rounded-full flex items-center gap-1">
-                      <StatusIcon size={10} />
+                    <span className="text-xs font-medium px-3 py-1.5 rounded-full flex items-center gap-1.5">
+                      <StatusIcon size={12} />
                       {statusInfo.label}
                     </span>
-                    <p className="text-[10px] text-muted-foreground mt-1">
+                    <p className="text-[11px] text-muted-foreground mt-2">
                       {formatDate(payment.completedAt || payment.respondedAt || payment.createdAt)}
                     </p>
                   </div>
                 </div>
                 
-                {/* Comment for refused/disputed */}
                 {(payment.status === "refused" || payment.status === "disputed") && payment.comment && (
-                  <div className="mt-2 pt-2 border-t border-white/5">
-                    <p className="text-xs text-muted-foreground italic">"{payment.comment}"</p>
+                  <div className="mt-4 pt-4 border-t border-white/10">
+                    <p className="text-sm text-muted-foreground italic bg-white/5 rounded-xl p-3">
+                      "{payment.comment}"
+                    </p>
                   </div>
                 )}
               </motion.div>
             );
           })
         )}
-      </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-2 gap-2 pt-4 border-t border-white/5">
-        <div className="bg-green-500/10 rounded-lg p-3 text-center">
-          <p className="text-lg font-bold text-green-400">
-            {payments.filter(p => p.status === "completed").length}
-          </p>
-          <p className="text-[10px] text-muted-foreground">Terminés</p>
-        </div>
-        <div className="bg-orange-500/10 rounded-lg p-3 text-center">
-          <p className="text-lg font-bold text-orange-400">
-            {payments.filter(p => p.status === "pending").length}
-          </p>
-          <p className="text-[10px] text-muted-foreground">En attente</p>
-        </div>
       </div>
     </div>
   );
