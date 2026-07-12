@@ -83,6 +83,17 @@ const trpcClient = trpc.createClient({
         } catch {
           // sessionStorage unavailable
         }
+        
+        // Add access code for group authentication
+        try {
+          const accessCode = localStorage.getItem("aperosplit_access");
+          if (accessCode) {
+            return { "x-app-access-key": accessCode };
+          }
+        } catch {
+          // localStorage unavailable
+        }
+        
         return {};
       },
       fetch(input, init) {
