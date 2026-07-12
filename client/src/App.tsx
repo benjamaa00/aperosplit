@@ -1042,6 +1042,81 @@ function App() {
     );
   }, [currentMemberId, members, haptic, requestPaymentMutation, refetch, isNetlify, pendingPayments, showNotification]);
 
+  const requestGroupPayment = useCallback(async (expenseId: string, participantIds?: string[]) => {
+    haptic("medium");
+    const expense = expenses.find(e => e.id === expenseId);
+    if (!expense || expense.payerId !== currentMemberId) {
+      toast.error("Seul le payeur peut demander des remboursements");
+      return;
+    }
+
+    const fromMember = members.find((m) => m.id === currentMemberId);
+    if (!fromMember) return;
+
+    // Determine which participants to request from
+    const targetParticipants = participantIds 
+      ? expense.participants.filter(id => participantIds.includes(id))
+      : expense.participants.filter(id => id !== currentMemberId);
+
+    if (targetParticipants.length === 0) {
+      toast.error("Aucun participant valide pour cette demande");
+      return;
+    }
+
+    const perPerson = expense.amount / expense.participants.length;
+    const groupId = `group_${Date.now()}`;
+
+    // Create payment requests for each participant
+    const newPayments: PendingPayment[] = targetParticipants.map(toId => {
+      const toMember = members.find((m) => m.id === toId);
+      return {
+        id: `pay_${Date.now()}_${toId}`,
+        fromId: currentMemberId,
+        fromName: fromMember.name,
+        toId,
+        toName: toMember?.name || "Inconnu",
+        amount: perPerson,
+        originalAmount: perPerson,
+        status: "pending" as const,
+        expenseId,
+        createdAt: Date.now(),
+        notificationSent: true,
+        notificationCount: 1,
+        isGroupRequest: true,
+        groupId,
+      };
+    });
+
+    // Send to backend if available
+    if (!isNetlify) {
+      try {
+        for (const payment of newPayments) {
+          await requestPaymentMutation.mutateAsync({
+            fromId: payment.fromId,
+            fromName: payment.fromName,
+            toId: payment.toId,
+            toName: payment.toName,
+            amount: payment.amount,
+            originalAmount: payment.originalAmount,
+            expenseId: payment.expenseId,
+            isGroupRequest: true,
+            groupId,
+          });
+        }
+      } catch (error) {
+        devLog("Backend group request failed, using local storage");
+      }
+    }
+
+    setPendingPayments((prev) => [...prev, ...newPayments]);
+    toast.success(`Demande de remboursement envoyée à ${targetParticipants.length} participant(s)`);
+    showNotification(
+      "Demande de remboursement groupée",
+      `${fromMember.name} demande ${formatCurrency(perPerson)} de ${targetParticipants.length} participant(s)`,
+    );
+    refetch();
+  }, [currentMemberId, members, expenses, haptic, requestPaymentMutation, refetch, isNetlify, pendingPayments, showNotification]);
+
   const confirmPayment = useCallback(async (paymentId: string) => {
     haptic("success");
     const payment = pendingPayments.find((p) => p.id === paymentId);
@@ -1319,6 +1394,7 @@ function App() {
               onDelete={deleteExpense}
               onAdd={() => setShowAddExpense(true)}
               onRequestPayment={requestPayment}
+              onRequestGroupPayment={requestGroupPayment}
             />
           )}
           {activeTab === "balances" && (
@@ -2250,6 +2326,7 @@ function ExpensesTab({
   onDelete,
   onAdd,
   onRequestPayment,
+  onRequestGroupPayment,
 }: {
   expenses: Expense[];
   members: Member[];
@@ -2257,6 +2334,7 @@ function ExpensesTab({
   onDelete: (id: string) => void;
   onAdd: () => void;
   onRequestPayment: (toId: string, amount: number, expenseId: string) => void;
+  onRequestGroupPayment: (expenseId: string, participantIds?: string[]) => void;
 }) {
   const [search, setSearch] = useState("");
   const filtered = expenses
@@ -2361,10 +2439,32 @@ function ExpensesTab({
                   </div>
                   <div className="flex items-center gap-2">
                     {exp.payerId === currentMemberId && exp.participants.length > 1 && (
+                      <>
+                        <motion.button
+                          whileTap={{ scale: 0.8 }}
+                          onClick={() => onRequestGroupPayment(exp.id)}
+                          className="text-[10px] bg-primary text-primary-foreground px-3 py-1.5 rounded-full font-medium hover:bg-primary/90 transition-colors"
+                        >
+                          Demander à tous
+                        </motion.button>
+                        <motion.button
+                          whileTap={{ scale: 0.8 }}
+                          onClick={() => {
+                            const otherParticipant = exp.participants.find(p => p !== currentMemberId);
+                            if (otherParticipant) {
+                              onRequestPayment(otherParticipant, perPerson, exp.id);
+                            }
+                          }}
+                          className="text-[10px] bg-primary/50 text-primary-foreground px-3 py-1.5 rounded-full font-medium hover:bg-primary/70 transition-colors"
+                        >
+                          Demander individuel
+                        </motion.button>
+                      </>
+                    )}
+                    {exp.payerId === currentMemberId && exp.participants.length === 1 && (
                       <motion.button
                         whileTap={{ scale: 0.8 }}
                         onClick={() => {
-                          // Request payment from the first participant (for simplicity)
                           const otherParticipant = exp.participants.find(p => p !== currentMemberId);
                           if (otherParticipant) {
                             onRequestPayment(otherParticipant, perPerson, exp.id);
