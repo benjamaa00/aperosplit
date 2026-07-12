@@ -6,7 +6,6 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { motion, AnimatePresence } from "framer-motion";
 import { QRCodeSVG } from "qrcode.react";
 import { trpc } from "@/lib/trpc";
-import { useRealtimeSync } from "@/hooks/useRealtimeSync";
 import {
   PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   LineChart, Line, ResponsiveContainer, Tooltip as RechartsTooltip,
@@ -346,7 +345,6 @@ function App() {
   const devLog: (...args: any[]) => void = isDevelopment ? console.log : () => {};
 
   // tRPC queries and mutations - enabled in production, disabled on Netlify
-  const utils = trpc.useUtils();
   const { data: groupData, isLoading, refetch } = trpc.equilibra.getGroupData.useQuery(undefined, {
     enabled: !isNetlify, // Disable on Netlify, enable in production
     refetchInterval: isNetlify ? false : 10000, // Auto-refresh every 10 seconds in production
@@ -380,17 +378,6 @@ function App() {
   useEffect(() => {
     checkBiometricAvailable().then(setBiometricAvailable);
   }, []);
-
-  // Real-time sync for mobile app
-  useRealtimeSync({
-    enabled: screen === "main" && !isNetlify,
-    onDataChange: () => {
-      // Show subtle notification when data changes
-      if (screen === "main") {
-        refetch();
-      }
-    },
-  });
 
   // Initialize theme from localStorage or system preference
   useEffect(() => {
