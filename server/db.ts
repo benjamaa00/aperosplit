@@ -15,16 +15,28 @@ function getPool() {
     useJsonStorage = true;
     return null;
   }
-  pool = new Pool({
-    connectionString,
-    max: 5,
-    idleTimeoutMillis: 30_000,
-    connectionTimeoutMillis: 10_000,
-    ssl: /localhost|127\.0\.0\.1/.test(connectionString)
-      ? undefined
-      : { rejectUnauthorized: false },
-  });
-  return pool;
+  // Validate connection string format
+  if (!connectionString.startsWith('postgresql://') && !connectionString.startsWith('postgres://')) {
+    console.warn("[DB] Invalid DATABASE_URL format, falling back to JSON storage");
+    useJsonStorage = true;
+    return null;
+  }
+  try {
+    pool = new Pool({
+      connectionString,
+      max: 5,
+      idleTimeoutMillis: 30_000,
+      connectionTimeoutMillis: 10_000,
+      ssl: /localhost|127\.0\.0\.1/.test(connectionString)
+        ? undefined
+        : { rejectUnauthorized: false },
+    });
+    return pool;
+  } catch (error) {
+    console.warn("[DB] Failed to create database pool, falling back to JSON storage:", error);
+    useJsonStorage = true;
+    return null;
+  }
 }
 
 let initialization: Promise<void> | undefined;
@@ -36,75 +48,85 @@ export function initializeDatabase(): Promise<void> {
       console.log("[DB] Skipping database initialization (using JSON storage)");
       return;
     }
-    await dbPool.query(`
-      CREATE TABLE IF NOT EXISTS app_users (
-        id BIGSERIAL PRIMARY KEY,
-        open_id VARCHAR(128) UNIQUE NOT NULL,
-        name TEXT,
-        email VARCHAR(320),
-        login_method VARCHAR(64),
-        role VARCHAR(16) NOT NULL DEFAULT 'user',
-        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        last_signed_in TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      );
-      CREATE TABLE IF NOT EXISTS groups (
-        id VARCHAR(128) PRIMARY KEY,
-        name VARCHAR(255) NOT NULL DEFAULT 'AperoSplit',
-        share_url TEXT,
-        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      );
-      CREATE TABLE IF NOT EXISTS group_members (
-        id VARCHAR(128) PRIMARY KEY,
-        group_id VARCHAR(128) NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
-        name VARCHAR(255) NOT NULL,
-        avatar VARCHAR(32) NOT NULL,
-        biometric_enabled BOOLEAN NOT NULL DEFAULT FALSE,
-        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      );
-      CREATE TABLE IF NOT EXISTS expenses (
-        id VARCHAR(128) PRIMARY KEY,
-        group_id VARCHAR(128) NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
-        description VARCHAR(255) NOT NULL,
-        amount NUMERIC(12,2) NOT NULL CHECK (amount > 0),
-        category VARCHAR(64) NOT NULL,
-        payer_id VARCHAR(128) NOT NULL,
-        participants JSONB NOT NULL,
-        photo_url TEXT,
-        date TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      );
-      CREATE INDEX IF NOT EXISTS expenses_group_date_idx ON expenses(group_id, date DESC);
-      CREATE TABLE IF NOT EXISTS payments (
-        id VARCHAR(128) PRIMARY KEY,
-        group_id VARCHAR(128) NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
-        from_id VARCHAR(128) NOT NULL,
-        from_name VARCHAR(255) NOT NULL,
-        to_id VARCHAR(128) NOT NULL,
-        to_name VARCHAR(255) NOT NULL,
-        amount NUMERIC(12,2) NOT NULL CHECK (amount > 0),
-        status VARCHAR(16) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','accepted','refused','completed')),
-        expense_id VARCHAR(128),
-        notification_count INTEGER NOT NULL DEFAULT 1,
-        date TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        responded_at TIMESTAMPTZ,
-        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      );
-      CREATE INDEX IF NOT EXISTS payments_group_status_idx ON payments(group_id, status);
-      CREATE TABLE IF NOT EXISTS activity_history (
-        id VARCHAR(128) PRIMARY KEY,
-        group_id VARCHAR(128) NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
-        type VARCHAR(64) NOT NULL,
-        author_id VARCHAR(128),
-        description TEXT,
-        amount NUMERIC(12,2),
-        from_id VARCHAR(128),
-        to_id VARCHAR(128),
-        date TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      );
-    `);
+    try {
+      await dbPool.query(`
+        CREATE TABLE IF NOT EXISTS app_users (
+          id BIGSERIAL PRIMARY KEY,
+          open_id VARCHAR(128) UNIQUE NOT NULL,
+          name TEXT,
+          email VARCHAR(320),
+          login_method VARCHAR(64),
+          role VARCHAR(16) NOT NULL DEFAULT 'user',
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+          updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+          last_signed_in TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        );
+        CREATE TABLE IF NOT EXISTS groups (
+          id VARCHAR(128) PRIMARY KEY,
+          name VARCHAR(255) NOT NULL DEFAULT 'AperoSplit',
+          share_url TEXT,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+          updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        );
+        CREATE TABLE IF NOT EXISTS group_members (
+          id VARCHAR(128) PRIMARY KEY,
+          group_id VARCHAR(128) NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+          name VARCHAR(255) NOT NULL,
+          avatar VARCHAR(32) NOT NULL,
+          biometric_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        );
+        CREATE TABLE IF NOT EXISTS expenses (
+          id VARCHAR(128) PRIMARY KEY,
+          group_id VARCHAR(128) NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+          description VARCHAR(255) NOT NULL,
+          amount NUMERIC(12,2) NOT NULL CHECK (amount > 0),
+          category VARCHAR(64) NOT NULL,
+          payer_id VARCHAR(128) NOT NULL,
+          participants JSONB NOT NULL,
+          photo_url TEXT,
+          date TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        );
+        CREATE INDEX IF NOT EXISTS expenses_group_date_idx ON expenses(group_id, date DESC);
+        CREATE TABLE IF NOT EXISTS payments (
+          id VARCHAR(128) PRIMARY KEY,
+          group_id VARCHAR(128) NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+          from_id VARCHAR(128) NOT NULL,
+          from_name VARCHAR(255) NOT NULL,
+          to_id VARCHAR(128) NOT NULL,
+          to_name VARCHAR(255) NOT NULL,
+          amount NUMERIC(12,2) NOT NULL CHECK (amount > 0),
+          status VARCHAR(16) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','accepted','refused','completed')),
+          expense_id VARCHAR(128),
+          notification_count INTEGER NOT NULL DEFAULT 1,
+          date TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+          responded_at TIMESTAMPTZ,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        );
+        CREATE INDEX IF NOT EXISTS payments_group_status_idx ON payments(group_id, status);
+        CREATE TABLE IF NOT EXISTS activity_history (
+          id VARCHAR(128) PRIMARY KEY,
+          group_id VARCHAR(128) NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+          type VARCHAR(64) NOT NULL,
+          author_id VARCHAR(128),
+          description TEXT,
+          amount NUMERIC(12,2),
+          from_id VARCHAR(128),
+          to_id VARCHAR(128),
+          date TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        );
+      `);
+    } catch (error) {
+      console.error("[DB] Database initialization failed, switching to JSON storage:", error);
+      useJsonStorage = true;
+      pool = undefined;
+      initialization = undefined;
+    }
   })().catch(error => {
+    console.error("[DB] Database initialization error:", error);
+    useJsonStorage = true;
+    pool = undefined;
     initialization = undefined;
     throw error;
   });
@@ -114,8 +136,16 @@ export function initializeDatabase(): Promise<void> {
 async function ready() {
   const dbPool = getPool();
   if (!dbPool) return null;
-  await initializeDatabase();
-  return dbPool;
+  try {
+    await initializeDatabase();
+    return dbPool;
+  } catch (error) {
+    console.error("[DB] Database ready check failed, using JSON storage:", error);
+    useJsonStorage = true;
+    pool = undefined;
+    initialization = undefined;
+    return null;
+  }
 }
 
 export async function getDb() {
