@@ -1,14 +1,19 @@
 import pg from "pg";
+import { readStorage, writeStorage, getStorage, updateStorage, clearAllStorage } from "./jsonStorage";
 import type { User } from "./drizzle/schema";
 
 const { Pool } = pg;
 let pool: InstanceType<typeof Pool> | undefined;
+let useJsonStorage = false;
 
 function getPool() {
+  if (useJsonStorage) return null;
   if (pool) return pool;
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) {
-    throw new Error("DATABASE_URL is required. Configure the Neon connection string before starting the server.");
+    console.warn("[DB] DATABASE_URL not configured, falling back to JSON storage");
+    useJsonStorage = true;
+    return null;
   }
   pool = new Pool({
     connectionString,
@@ -26,7 +31,12 @@ let initialization: Promise<void> | undefined;
 
 export function initializeDatabase(): Promise<void> {
   initialization ??= (async () => {
-    await getPool().query(`
+    const dbPool = getPool();
+    if (!dbPool) {
+      console.log("[DB] Skipping database initialization (using JSON storage)");
+      return;
+    }
+    await dbPool.query(`
       CREATE TABLE IF NOT EXISTS app_users (
         id BIGSERIAL PRIMARY KEY,
         open_id VARCHAR(128) UNIQUE NOT NULL,
@@ -102,8 +112,10 @@ export function initializeDatabase(): Promise<void> {
 }
 
 async function ready() {
+  const dbPool = getPool();
+  if (!dbPool) return null;
   await initializeDatabase();
-  return getPool();
+  return dbPool;
 }
 
 export async function getDb() {
@@ -112,6 +124,10 @@ export async function getDb() {
 
 export async function upsertUser(user: any): Promise<void> {
   const db = await ready();
+  if (!db) {
+    console.warn("[DB] upsertUser not implemented in JSON storage");
+    return;
+  }
   await db.query(
     `INSERT INTO app_users (open_id, name, email, login_method, last_signed_in)
      VALUES ($1, $2, $3, $4, NOW())
@@ -127,6 +143,7 @@ export async function upsertUser(user: any): Promise<void> {
 
 export async function getUserByOpenId(openId: string): Promise<User | undefined> {
   const db = await ready();
+  if (!db) return undefined;
   const result = await db.query(`SELECT * FROM app_users WHERE open_id = $1`, [openId]);
   const row = result.rows[0];
   if (!row) return undefined;
@@ -145,6 +162,10 @@ export async function getUserByOpenId(openId: string): Promise<User | undefined>
 
 export async function getOrCreateGroup(groupId: string) {
   const db = await ready();
+  if (!db) {
+    const data = readStorage();
+    return { id: groupId, shareUrl: JSON.stringify(data.members) };
+  }
   await db.query(`INSERT INTO groups (id) VALUES ($1) ON CONFLICT (id) DO NOTHING`, [groupId]);
   const result = await db.query(`SELECT id, share_url AS "shareUrl" FROM groups WHERE id = $1`, [groupId]);
   return result.rows[0];
@@ -152,6 +173,16 @@ export async function getOrCreateGroup(groupId: string) {
 
 export async function getGroupData(groupId: string) {
   const db = await ready();
+  if (!db) {
+    const data = readStorage();
+    return {
+      group: { id: groupId, shareUrl: JSON.stringify(data.members) },
+      expenses: data.expenses,
+      settlements: [],
+      pending: data.pendingPayments,
+      history: data.completedPayments,
+    };
+  }
   await getOrCreateGroup(groupId);
   const [group, members, expenses, payments, history] = await Promise.all([
     db.query(`SELECT id, share_url AS "shareUrl" FROM groups WHERE id = $1`, [groupId]),
@@ -175,6 +206,10 @@ export async function getGroupData(groupId: string) {
 
 export async function addMembers(groupId: string, members: Array<{ id: string; name: string; avatar: string }>) {
   const db = await ready();
+  if (!db) {
+    updateStorage("members", members);
+    return true;
+  }
   const client = await db.connect();
   try {
     await client.query("BEGIN");
@@ -205,6 +240,12 @@ export async function addMembers(groupId: string, members: Array<{ id: string; n
 
 export async function addExpense(expense: any) {
   const db = await ready();
+  if (!db) {
+    const expenses = getStorage("expenses");
+    expenses.push(expense);
+    updateStorage("expenses", expenses);
+    return true;
+  }
   await db.query(
     `INSERT INTO expenses (id, group_id, description, amount, category, payer_id, participants, photo_url, date)
      VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,$8,$9)`,
@@ -215,11 +256,23 @@ export async function addExpense(expense: any) {
 
 export async function deleteExpense(expenseId: string) {
   const db = await ready();
+  if (!db) {
+    const expenses = getStorage("expenses");
+    const filtered = expenses.filter((e: any) => e.id !== expenseId);
+    updateStorage("expenses", filtered);
+    return true;
+  }
   return (await db.query(`DELETE FROM expenses WHERE id = $1`, [expenseId])).rowCount === 1;
 }
 
 export async function addPendingPayment(payment: any) {
   const db = await ready();
+  if (!db) {
+    const pendingPayments = getStorage("pendingPayments");
+    pendingPayments.push(payment);
+    updateStorage("pendingPayments", pendingPayments);
+    return payment.id;
+  }
   const existing = await db.query(
     `UPDATE payments
      SET notification_count = notification_count + 1
@@ -243,6 +296,20 @@ export async function addPendingPayment(payment: any) {
 
 export async function confirmPayment(paymentId: string, fromId: string, toId: string, _amount: string) {
   const db = await ready();
+  if (!db) {
+    const pendingPayments = getStorage("pendingPayments");
+    const completedPayments = getStorage("completedPayments");
+    const paymentIndex = pendingPayments.findIndex((p: any) => p.id === paymentId);
+    if (paymentIndex === -1) return false;
+    const payment = pendingPayments[paymentIndex];
+    payment.status = "completed";
+    payment.respondedAt = new Date().toISOString();
+    pendingPayments.splice(paymentIndex, 1);
+    completedPayments.unshift(payment);
+    updateStorage("pendingPayments", pendingPayments);
+    updateStorage("completedPayments", completedPayments);
+    return true;
+  }
   const result = await db.query(
     `UPDATE payments SET
        status = CASE WHEN status = 'pending' THEN 'accepted' WHEN status = 'accepted' THEN 'completed' ELSE status END,
@@ -255,11 +322,26 @@ export async function confirmPayment(paymentId: string, fromId: string, toId: st
 
 export async function refusePayment(paymentId: string) {
   const db = await ready();
+  if (!db) {
+    const pendingPayments = getStorage("pendingPayments");
+    const paymentIndex = pendingPayments.findIndex((p: any) => p.id === paymentId);
+    if (paymentIndex === -1) return false;
+    pendingPayments[paymentIndex].status = "refused";
+    pendingPayments[paymentIndex].respondedAt = new Date().toISOString();
+    updateStorage("pendingPayments", pendingPayments);
+    return true;
+  }
   return (await db.query(`UPDATE payments SET status = 'refused', responded_at = NOW() WHERE id = $1 AND status = 'pending'`, [paymentId])).rowCount === 1;
 }
 
 export async function addHistoryEntry(entry: any) {
   const db = await ready();
+  if (!db) {
+    const history = getStorage("completedPayments");
+    history.push(entry);
+    updateStorage("completedPayments", history);
+    return true;
+  }
   await db.query(
     `INSERT INTO activity_history (id, group_id, type, author_id, description, amount, from_id, to_id, date)
      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
@@ -276,11 +358,21 @@ export async function updateGroupShareUrl(groupId: string, shareUrl: string) {
 
 export async function updateMemberBiometric(memberId: string, enabled: boolean) {
   const db = await ready();
+  if (!db) {
+    const biometricEnabled = getStorage("biometricEnabled");
+    biometricEnabled[memberId] = enabled;
+    updateStorage("biometricEnabled", biometricEnabled);
+    return true;
+  }
   return (await db.query(`UPDATE group_members SET biometric_enabled = $2 WHERE id = $1`, [memberId, enabled])).rowCount === 1;
 }
 
 export async function clearAllData() {
   const db = await ready();
+  if (!db) {
+    clearAllStorage();
+    return true;
+  }
   await db.query(`TRUNCATE activity_history, payments, expenses RESTART IDENTITY`);
   return true;
 }
