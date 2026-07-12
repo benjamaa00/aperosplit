@@ -156,7 +156,7 @@ export const equilibraRouter = router({
         toName: z.string().trim().min(1).max(80),
         amount: z.number().positive().max(1_000_000),
         originalAmount: z.number().positive().max(1_000_000).optional(),
-        expenseId: z.string().min(1).max(128),
+        expenseId: z.string().optional(),
         isGroupRequest: z.boolean().optional(),
         groupId: z.string().optional(),
       })

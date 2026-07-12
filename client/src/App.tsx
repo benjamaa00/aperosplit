@@ -3,6 +3,7 @@ import { Toaster, toast } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import ErrorBoundary from "./components/ErrorBoundary";
+import { PaymentRequestCard } from "./components/PaymentRequestCard";
 import { motion, AnimatePresence } from "framer-motion";
 import { QRCodeSVG } from "qrcode.react";
 import { trpc } from "@/lib/trpc";
@@ -62,14 +63,21 @@ interface PendingPayment {
   toId: string;
   toName: string;
   amount: number;
-  status: "pending" | "accepted" | "refused" | "completed";
+  originalAmount?: number;
+  status: "pending" | "accepted" | "refused" | "resent" | "in_progress" | "completed" | "permanently_refused" | "disputed";
   response?: "accepted" | "refused";
-  expenseId?: string; // Link to specific expense
+  expenseId?: string;
   createdAt: number;
   respondedAt?: number;
-  confirmedBy?: string; // Who confirmed the payment
-  notificationSent: boolean; // Track if notification was sent
-  notificationCount: number; // Count of reminders sent
+  completedAt?: number;
+  confirmedBy?: string;
+  comment?: string;
+  attemptCount?: number;
+  disputeHistory?: Array<{ timestamp: number; comment: string; reportedBy: string }>;
+  isGroupRequest?: boolean;
+  groupId?: string;
+  notificationSent: boolean;
+  notificationCount: number;
 }
 
 type Screen = "identity" | "lock" | "main" | "register" | "access";
@@ -938,6 +946,7 @@ function App() {
             toId,
             toName: toMember.name,
             amount,
+            expenseId: expenseId || "",
           });
         } catch (error) {
           devLog("Backend notification failed, using local");
@@ -964,6 +973,7 @@ function App() {
           toId,
           toName: toMember.name,
           amount,
+          expenseId: expenseId || "",
         });
         
         if (result.success) {
@@ -1020,8 +1030,8 @@ function App() {
     const payment = pendingPayments.find((p) => p.id === paymentId);
     if (!payment) return;
     
-    // If current user is the one who owes money (fromId), they are accepting to pay
-    if (payment.fromId === currentMemberId) {
+    // If current user is the one who owes money (toId), they are accepting to pay
+    if (payment.toId === currentMemberId) {
       if (!isNetlify) {
         try {
           await confirmPaymentMutation.mutateAsync({
@@ -1043,44 +1053,10 @@ function App() {
           respondedAt: Date.now()
         } : p))
       );
-      toast.success("Bien remboursé !");
+      toast.success("Paiement accepté !");
       showNotification(
-        "Remboursement accepté",
-        `${payment.fromName} a accepté de vous rembourser ${formatCurrency(payment.amount)}`,
-      );
-      refetch();
-      return;
-    }
-    
-    // If current user is the one who requested money (toId), they are confirming receipt
-    if (payment.toId === currentMemberId) {
-      if (!isNetlify) {
-        try {
-          await confirmPaymentMutation.mutateAsync({
-            paymentId,
-            fromId: payment.fromId,
-            toId: payment.toId,
-            amount: payment.amount,
-          });
-        } catch (error) {
-          devLog("Backend confirm failed, using local storage");
-        }
-      }
-      
-      // Mark as completed and move to history
-      const completedPayment: PendingPayment = {
-        ...payment,
-        status: "completed" as const,
-        confirmedBy: currentMemberId,
-        respondedAt: Date.now()
-      };
-      
-      setPendingPayments((prev) => prev.filter(p => p.id !== paymentId));
-      setCompletedPayments((prev) => [completedPayment, ...prev].slice(0, 50)); // Keep last 50
-      toast.success("Bien reçu !");
-      showNotification(
-        "Remboursement confirmé",
-        `${payment.toName} a confirmé avoir reçu votre remboursement de ${formatCurrency(payment.amount)}`,
+        "Paiement accepté",
+        `${payment.toName} a accepté de vous rembourser ${formatCurrency(payment.amount)}`,
       );
       refetch();
       return;
@@ -1089,13 +1065,18 @@ function App() {
     toast.error("Action non autorisée");
   }, [currentMemberId, pendingPayments, haptic, confirmPaymentMutation, refetch, isNetlify, showNotification]);
 
-  const refusePayment = useCallback(async (paymentId: string) => {
+  const refusePayment = useCallback(async (paymentId: string, comment?: string) => {
     haptic("medium");
     const payment = pendingPayments.find((p) => p.id === paymentId);
     if (!payment) return;
     
     // Only the person who owes money can refuse
-    if (payment.fromId === currentMemberId) {
+    if (payment.toId === currentMemberId) {
+      if (!comment) {
+        toast.error("Veuillez ajouter un commentaire pour expliquer votre refus");
+        return;
+      }
+      
       if (!isNetlify) {
         try {
           await refusePaymentMutation.mutateAsync({ paymentId });
@@ -1109,19 +1090,139 @@ function App() {
           ...p, 
           status: "refused" as const,
           response: "refused" as const,
-          respondedAt: Date.now()
+          respondedAt: Date.now(),
+          comment
         } : p))
       );
       toast("Remboursement refusé");
       showNotification(
         "Remboursement refusé",
-        `${payment.fromName} a refusé de rembourser ${formatCurrency(payment.amount)}`,
+        `${payment.toName} a refusé de rembourser ${formatCurrency(payment.amount)}: ${comment}`,
       );
       return;
     }
     
     toast.error("Seul le débiteur peut refuser le paiement");
   }, [currentMemberId, pendingPayments, haptic, refusePaymentMutation, isNetlify, showNotification]);
+
+  const resentPayment = useCallback(async (paymentId: string) => {
+    haptic("medium");
+    const payment = pendingPayments.find((p) => p.id === paymentId);
+    if (!payment) return;
+    
+    // Only the requester can resend
+    if (payment.fromId === currentMemberId) {
+      const attemptCount = (payment.attemptCount || 0) + 1;
+      
+      if (attemptCount > 3) {
+        setPendingPayments((prev) =>
+          prev.map((p) => (p.id === paymentId ? { 
+            ...p, 
+            status: "permanently_refused" as const,
+            attemptCount
+          } : p))
+        );
+        toast.error("Maximum de tentatives atteint. Refus définitif.");
+        return;
+      }
+      
+      setPendingPayments((prev) =>
+        prev.map((p) => (p.id === paymentId ? { 
+          ...p, 
+          status: "resent" as const,
+          attemptCount,
+          notificationSent: true,
+          notificationCount: (p.notificationCount || 0) + 1
+        } : p))
+      );
+      toast.success("Demande renvoyée");
+      showNotification(
+        "Nouvelle demande de remboursement",
+        `${payment.fromName} vous demande à nouveau ${formatCurrency(payment.amount)}`,
+      );
+      return;
+    }
+    
+    toast.error("Seul le demandeur peut renvoyer la demande");
+  }, [currentMemberId, pendingPayments, haptic, showNotification]);
+
+  const confirmReceipt = useCallback(async (paymentId: string) => {
+    haptic("success");
+    const payment = pendingPayments.find((p) => p.id === paymentId);
+    if (!payment) return;
+    
+    // Only the requester can confirm receipt
+    if (payment.fromId === currentMemberId) {
+      if (!isNetlify) {
+        try {
+          await confirmPaymentMutation.mutateAsync({
+            paymentId,
+            fromId: payment.fromId,
+            toId: payment.toId,
+            amount: payment.amount,
+          });
+        } catch (error) {
+          devLog("Backend confirm failed, using local storage");
+        }
+      }
+      
+      const completedPayment: PendingPayment = {
+        ...payment,
+        status: "completed" as const,
+        confirmedBy: currentMemberId,
+        completedAt: Date.now()
+      };
+      
+      setPendingPayments((prev) => prev.filter(p => p.id !== paymentId));
+      setCompletedPayments((prev) => [completedPayment, ...prev].slice(0, 50));
+      toast.success("Paiement reçu et confirmé !");
+      showNotification(
+        "Paiement terminé",
+        `Vous avez confirmé avoir reçu ${formatCurrency(payment.amount)} de ${payment.toName}`,
+      );
+      refetch();
+      return;
+    }
+    
+    toast.error("Action non autorisée");
+  }, [currentMemberId, pendingPayments, haptic, confirmPaymentMutation, refetch, isNetlify, showNotification]);
+
+  const reportNotReceived = useCallback(async (paymentId: string, comment?: string) => {
+    haptic("error");
+    const payment = pendingPayments.find((p) => p.id === paymentId);
+    if (!payment) return;
+    
+    // Only the requester can report not received
+    if (payment.fromId === currentMemberId) {
+      if (!comment) {
+        toast.error("Veuillez ajouter un commentaire pour expliquer le problème");
+        return;
+      }
+      
+      const disputeEntry = {
+        timestamp: Date.now(),
+        comment,
+        reportedBy: currentMemberId
+      };
+      
+      setPendingPayments((prev) =>
+        prev.map((p) => (p.id === paymentId ? { 
+          ...p, 
+          status: "disputed" as const,
+          comment,
+          disputeHistory: [...(p.disputeHistory || []), disputeEntry]
+        } : p))
+      );
+      toast.error("Litige signalé");
+      showNotification(
+        "Litige signalé",
+        `${payment.fromName} indique ne pas avoir reçu le paiement: ${comment}`,
+      );
+      return;
+    }
+    
+    toast.error("Action non autorisée");
+  }, [currentMemberId, pendingPayments, haptic, showNotification]);
 
   // ─── Render Screens ─────────────────────────────────────────────────────────
   if (screen === "access") {
@@ -1184,6 +1285,9 @@ function App() {
               )}
               onConfirmPayment={confirmPayment}
               onRefusePayment={refusePayment}
+              onResentPayment={resentPayment}
+              onConfirmReceipt={confirmReceipt}
+              onReportNotReceived={reportNotReceived}
               expenses={expenses}
               monthlyBudget={monthlyBudget}
               onUpdateBudget={updateBudget}
@@ -1774,6 +1878,9 @@ function HomeTab({
   completedPayments,
   onConfirmPayment,
   onRefusePayment,
+  onResentPayment,
+  onConfirmReceipt,
+  onReportNotReceived,
   expenses,
   monthlyBudget,
   onUpdateBudget,
@@ -1787,7 +1894,10 @@ function HomeTab({
   pendingPayments: PendingPayment[];
   completedPayments: PendingPayment[];
   onConfirmPayment: (id: string) => void;
-  onRefusePayment: (id: string) => void;
+  onRefusePayment: (id: string, comment?: string) => void;
+  onResentPayment: (id: string) => void;
+  onConfirmReceipt: (id: string) => void;
+  onReportNotReceived: (id: string, comment?: string) => void;
   expenses: Expense[];
   monthlyBudget: number;
   onUpdateBudget: (budget: number) => void;
@@ -2009,118 +2119,19 @@ function HomeTab({
             Remboursements
           </h3>
           <div className="space-y-2">
-            {pendingPayments.map((p) => {
-              const from = members.find((m) => m.id === p.fromId);
-              const to = members.find((m) => m.id === p.toId);
-              const isFromCurrentUser = p.fromId === currentMember.id;
-              const isToCurrentUser = p.toId === currentMember.id;
-              
-              // Don't show completed payments
-              if (p.status === "completed") return null;
-              
-              return (
-                <motion.div
-                  key={p.id}
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  className={`bg-card/50 backdrop-blur-sm border border-white/5 rounded-2xl p-4 ${
-                    p.status === "accepted" ? "border-green-500/20 bg-green-500/5" :
-                    p.status === "refused" ? "border-red-500/20 bg-red-500/5" :
-                    ""
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-3">
-                      <span className="text-2xl">{from?.avatar}</span>
-                      <div>
-                        <p className="text-sm font-medium">
-                          {isFromCurrentUser ? "Vous demandez" : `${from?.name} demande`}
-                          {isToCurrentUser ? " à vous" : ` à ${to?.name}`}
-                        </p>
-                        <p className="text-lg font-bold text-primary">{formatCurrency(p.amount)}</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <span className={`text-xs font-medium px-2 py-1 rounded-full ${
-                        p.status === "pending" ? "bg-orange-500/10 text-orange-400" :
-                        p.status === "accepted" ? "bg-green-500/10 text-green-400" :
-                        p.status === "refused" ? "bg-red-500/10 text-red-400" :
-                        "bg-gray-500/10 text-gray-400"
-                      }`}>
-                        {p.status === "pending" ? "En attente" :
-                         p.status === "accepted" ? "Accepté" :
-                         p.status === "refused" ? "Refusé" :
-                         p.status}
-                      </span>
-                      {p.notificationCount > 1 && (
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {p.notificationCount} rappels
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  
-                  {/* Actions based on status and user */}
-                  {p.status === "pending" && (
-                    <div className="flex gap-2 justify-end">
-                      {isFromCurrentUser && (
-                        <motion.button
-                          whileTap={{ scale: 0.85 }}
-                          onClick={() => onRefusePayment(p.id)}
-                          className="px-3 py-1.5 rounded-full bg-red-500/15 text-red-400 text-xs font-medium border border-red-500/20"
-                        >
-                          Annuler
-                        </motion.button>
-                      )}
-                      {isToCurrentUser && (
-                        <>
-                          <motion.button
-                            whileTap={{ scale: 0.85 }}
-                            onClick={() => onRefusePayment(p.id)}
-                            className="px-3 py-1.5 rounded-full bg-red-500/15 text-red-400 text-xs font-medium border border-red-500/20"
-                          >
-                            Refuser
-                          </motion.button>
-                          <motion.button
-                            whileTap={{ scale: 0.85 }}
-                            onClick={() => onConfirmPayment(p.id)}
-                            className="px-3 py-1.5 rounded-full bg-green-500/15 text-green-400 text-xs font-medium border border-green-500/20"
-                          >
-                            Accepter
-                          </motion.button>
-                        </>
-                      )}
-                    </div>
-                  )}
-                  
-                  {p.status === "accepted" && isToCurrentUser && (
-                    <div className="flex gap-2 justify-end">
-                      <motion.button
-                        whileTap={{ scale: 0.85 }}
-                        onClick={() => onConfirmPayment(p.id)}
-                        className="px-3 py-1.5 rounded-full bg-green-500/15 text-green-400 text-xs font-medium border border-green-500/20"
-                      >
-                        Bien reçu
-                      </motion.button>
-                    </div>
-                  )}
-                  
-                  {p.status === "accepted" && isFromCurrentUser && (
-                    <div className="flex gap-2 justify-end">
-                      <span className="text-xs text-green-400 font-medium">
-                        Bien remboursé ✓
-                      </span>
-                    </div>
-                  )}
-                  
-                  {p.status === "refused" && isFromCurrentUser && (
-                    <p className="text-xs text-muted-foreground text-right">
-                      Demande refusée par {to?.name}
-                    </p>
-                  )}
-                </motion.div>
-              );
-            })}
+            {pendingPayments.map((p) => (
+              <PaymentRequestCard
+                key={p.id}
+                payment={p}
+                members={members}
+                currentMemberId={currentMember.id}
+                onConfirmPayment={onConfirmPayment}
+                onRefusePayment={onRefusePayment}
+                onResentPayment={onResentPayment}
+                onConfirmReceipt={onConfirmReceipt}
+                onReportNotReceived={onReportNotReceived}
+              />
+            ))}
           </div>
         </div>
       )}
