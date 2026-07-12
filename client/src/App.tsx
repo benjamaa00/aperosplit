@@ -111,6 +111,40 @@ const fadeUp = {
   transition: { duration: 0.3, ease: [0.23, 1, 0.32, 1] as [number, number, number, number] },
 };
 
+// ─── Web Notifications Hook ───────────────────────────────────────────────────────
+function useNotifications() {
+  const [permission, setPermission] = useState<NotificationPermission>("default");
+
+  useEffect(() => {
+    if ("Notification" in window) {
+      setPermission(Notification.permission);
+    }
+  }, []);
+
+  const requestPermission = useCallback(async () => {
+    if ("Notification" in window) {
+      const result = await Notification.requestPermission();
+      setPermission(result);
+      return result === "granted";
+    }
+    return false;
+  }, []);
+
+  const showNotification = useCallback((title: string, body: string, icon?: string) => {
+    if ("Notification" in window && Notification.permission === "granted") {
+      new Notification(title, {
+        body,
+        icon: icon || "/icon.svg",
+        badge: "/icon.svg",
+        tag: "aperosplit",
+        requireInteraction: true,
+      });
+    }
+  }, []);
+
+  return { permission, requestPermission, showNotification };
+}
+
 // ─── Haptic Feedback Hook ───────────────────────────────────────────────────────
 function useHaptic() {
   const trigger = useCallback((type: "light" | "medium" | "heavy" | "success" | "error" | "selection") => {
@@ -373,6 +407,28 @@ function App() {
   const [biometricAvailable, setBiometricAvailable] = useState(false);
   const [theme, setTheme] = useState<"light" | "dark">("dark");
   const [monthlyBudget, setMonthlyBudget] = useState<number>(1000);
+
+  // Notifications hook
+  const { permission: notificationPermission, requestPermission: requestNotificationPermission, showNotification } = useNotifications();
+
+  // Request notification permission on first interaction
+  useEffect(() => {
+    const handleFirstInteraction = () => {
+      if (notificationPermission === "default") {
+        requestNotificationPermission();
+      }
+      document.removeEventListener('click', handleFirstInteraction);
+      document.removeEventListener('touchstart', handleFirstInteraction);
+    };
+
+    document.addEventListener('click', handleFirstInteraction);
+    document.addEventListener('touchstart', handleFirstInteraction);
+
+    return () => {
+      document.removeEventListener('click', handleFirstInteraction);
+      document.removeEventListener('touchstart', handleFirstInteraction);
+    };
+  }, [notificationPermission, requestNotificationPermission]);
 
   // Check biometric availability
   useEffect(() => {
@@ -926,6 +982,10 @@ function App() {
           };
           setPendingPayments((prev) => [...prev, payment]);
           toast.success("Demande de remboursement envoyée à " + toMember.name);
+          showNotification(
+            "Demande de remboursement",
+            `${fromMember.name} demande ${formatCurrency(amount)} de votre part`,
+          );
           refetch();
           return;
         }
@@ -949,7 +1009,11 @@ function App() {
     };
     setPendingPayments((prev) => [...prev, payment]);
     toast.success("Demande de remboursement envoyée (local)");
-  }, [currentMemberId, members, haptic, requestPaymentMutation, refetch, isNetlify, pendingPayments]);
+    showNotification(
+      "Demande de remboursement",
+      `${fromMember.name} demande ${formatCurrency(amount)} de votre part`,
+    );
+  }, [currentMemberId, members, haptic, requestPaymentMutation, refetch, isNetlify, pendingPayments, showNotification]);
 
   const confirmPayment = useCallback(async (paymentId: string) => {
     haptic("success");
@@ -980,6 +1044,10 @@ function App() {
         } : p))
       );
       toast.success("Bien remboursé !");
+      showNotification(
+        "Remboursement accepté",
+        `${payment.fromName} a accepté de vous rembourser ${formatCurrency(payment.amount)}`,
+      );
       refetch();
       return;
     }
@@ -1010,12 +1078,16 @@ function App() {
       setPendingPayments((prev) => prev.filter(p => p.id !== paymentId));
       setCompletedPayments((prev) => [completedPayment, ...prev].slice(0, 50)); // Keep last 50
       toast.success("Bien reçu !");
+      showNotification(
+        "Remboursement confirmé",
+        `${payment.toName} a confirmé avoir reçu votre remboursement de ${formatCurrency(payment.amount)}`,
+      );
       refetch();
       return;
     }
     
     toast.error("Action non autorisée");
-  }, [currentMemberId, pendingPayments, haptic, confirmPaymentMutation, refetch, isNetlify]);
+  }, [currentMemberId, pendingPayments, haptic, confirmPaymentMutation, refetch, isNetlify, showNotification]);
 
   const refusePayment = useCallback(async (paymentId: string) => {
     haptic("medium");
@@ -1041,11 +1113,15 @@ function App() {
         } : p))
       );
       toast("Remboursement refusé");
+      showNotification(
+        "Remboursement refusé",
+        `${payment.fromName} a refusé de rembourser ${formatCurrency(payment.amount)}`,
+      );
       return;
     }
     
     toast.error("Seul le débiteur peut refuser le paiement");
-  }, [currentMemberId, pendingPayments, haptic, refusePaymentMutation, isNetlify]);
+  }, [currentMemberId, pendingPayments, haptic, refusePaymentMutation, isNetlify, showNotification]);
 
   // ─── Render Screens ─────────────────────────────────────────────────────────
   if (screen === "access") {
@@ -2314,7 +2390,9 @@ function BalancesTab({
       <div className="space-y-2">
         {members.map((member, i) => {
           const memberBalance = balances[member.id];
-          const memberOwesMoney = memberBalance < -0.01 && member.id !== currentMemberId;
+          const currentMemberBalance = balances[currentMemberId];
+          // Only show "Demander" button if current member is creditor and this member owes money
+          const memberOwesMoney = memberBalance < -0.01 && member.id !== currentMemberId && currentMemberBalance > 0.01;
           
           return (
             <motion.button
@@ -2410,7 +2488,7 @@ function BalancesTab({
                         </div>
                         <div className="flex items-center gap-2">
                           <p className="font-semibold text-red-400">{formatCurrency(debt.amount)}</p>
-                          {selectedMember === currentMemberId && (
+                          {debt.to === currentMemberId && (
                             <button
                               onClick={() => onRequestPayment(debt.to, debt.amount)}
                               className="bg-primary text-primary-foreground px-3 py-1 rounded-lg text-xs font-medium hover:bg-primary/90 transition-colors"
