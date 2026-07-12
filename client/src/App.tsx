@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { PaymentRequestCard } from "./components/PaymentRequestCard";
+import { PaymentHistory } from "./components/PaymentHistory";
 import { motion, AnimatePresence } from "framer-motion";
 import { QRCodeSVG } from "qrcode.react";
 import { trpc } from "@/lib/trpc";
@@ -17,6 +18,7 @@ import {
   Scale,
   BarChart3,
   User,
+  History,
   Plus,
   X,
   Trash2,
@@ -81,7 +83,7 @@ interface PendingPayment {
 }
 
 type Screen = "identity" | "lock" | "main" | "register" | "access";
-type Tab = "home" | "expenses" | "balances" | "stats" | "profile";
+type Tab = "home" | "expenses" | "balances" | "stats" | "history" | "profile";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const CATEGORIES = [
@@ -658,13 +660,28 @@ function App() {
   const balances = useMemo(() => {
     const b: Record<string, number> = {};
     members.forEach((m) => (b[m.id] = 0));
+    
+    // Calculate balances from expenses
     expenses.forEach((exp) => {
       const perPerson = exp.amount / exp.participants.length;
       exp.participants.forEach((pid) => { b[pid] = (b[pid] || 0) - perPerson; });
       b[exp.payerId] = (b[exp.payerId] || 0) + exp.amount;
     });
+    
+    // Adjust balances for COMPLETED payments only
+    // When a payment is completed, it means the money was actually transferred
+    // So we reduce the debt: fromId owes less, toId is owed less
+    completedPayments.forEach((payment) => {
+      if (payment.status === "completed") {
+        // fromId paid the amount, so their balance increases (they're less in debt)
+        b[payment.fromId] = (b[payment.fromId] || 0) + payment.amount;
+        // toId received the amount, so their balance decreases (they're owed less)
+        b[payment.toId] = (b[payment.toId] || 0) - payment.amount;
+      }
+    });
+    
     return b;
-  }, [members, expenses]);
+  }, [members, expenses, completedPayments]);
 
   const suggestedTransactions = useMemo(() => simplifyDebts(balances), [balances]);
 
@@ -1309,10 +1326,18 @@ function App() {
               key="balances"
               members={members}
               balances={balances}
-              transactions={suggestedTransactions}
+              suggestedTransactions={suggestedTransactions}
               currentMemberId={currentMemberId}
               onRequestPayment={requestPayment}
               expenses={expenses}
+            />
+          )}
+          {activeTab === "history" && (
+            <PaymentHistory
+              key="history"
+              payments={[...pendingPayments, ...completedPayments]}
+              members={members}
+              currentMemberId={currentMemberId}
             />
           )}
           {activeTab === "stats" && (
@@ -1343,7 +1368,7 @@ function App() {
               { id: "home" as Tab, icon: Home, label: "Accueil" },
               { id: "expenses" as Tab, icon: Receipt, label: "Dépenses" },
               { id: "balances" as Tab, icon: Scale, label: "Soldes" },
-              { id: "stats" as Tab, icon: BarChart3, label: "Stats" },
+              { id: "history" as Tab, icon: History, label: "Historique" },
               { id: "profile" as Tab, icon: User, label: "Profil" },
             ]).map((tab) => (
               <button
@@ -2374,14 +2399,14 @@ function ExpensesTab({
 function BalancesTab({
   members,
   balances,
-  transactions,
+  suggestedTransactions,
   currentMemberId,
   onRequestPayment,
   expenses,
 }: {
   members: Member[];
   balances: Record<string, number>;
-  transactions: Array<{ from: string; to: string; amount: number; explanation: string }>;
+  suggestedTransactions: Array<{ from: string; to: string; amount: number; explanation: string }>;
   currentMemberId: string;
   onRequestPayment: (toId: string, amount: number) => void;
   expenses: Expense[];
@@ -2552,7 +2577,7 @@ function BalancesTab({
       </AnimatePresence>
 
       {/* Suggested Transactions */}
-      {transactions.length > 0 && (
+      {suggestedTransactions.length > 0 && (
         <div>
           <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
             <Sparkles size={14} className="text-primary" />
@@ -2562,7 +2587,7 @@ function BalancesTab({
             Ces paiements minimisent le nombre de transactions pour équilibrer les comptes
           </p>
           <div className="space-y-2">
-            {transactions.map((t, i) => {
+            {suggestedTransactions.map((t, i) => {
               const from = members.find((m) => m.id === t.from);
               const to = members.find((m) => m.id === t.to);
               return (
