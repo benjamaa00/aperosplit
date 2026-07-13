@@ -11,27 +11,26 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import "./index.css";
 
 // Register Service Worker for PWA
-// Disabled temporarily to fix cache issues
-// if ("serviceWorker" in navigator) {
-//   window.addEventListener("load", async () => {
-//     try {
-//       const registration = await navigator.serviceWorker.register("/sw.js");
-//       console.log("Service Worker registered:", registration);
-//
-//       // Force update to clear old cache
-//       if (registration.waiting) {
-//         registration.waiting.postMessage({ type: "SKIP_WAITING" });
-//       }
-//     } catch (error) {
-//       console.log("Service Worker registration failed:", error);
-//     }
-//   });
-//
-//   // Listen for controlling service worker
-//   navigator.serviceWorker.addEventListener("controllerchange", () => {
-//     window.location.reload();
-//   });
-// }
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", async () => {
+    try {
+      const registration = await navigator.serviceWorker.register("/sw.js");
+      console.log("Service Worker registered:", registration);
+
+      // Force update to clear old cache
+      if (registration.waiting) {
+        registration.waiting.postMessage({ type: "SKIP_WAITING" });
+      }
+    } catch (error) {
+      console.log("Service Worker registration failed:", error);
+    }
+  });
+
+  // Listen for controlling service worker
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    window.location.reload();
+  });
+}
 
 const queryClient = new QueryClient();
 
@@ -107,7 +106,7 @@ const trpcClient = trpc.createClient({
 
         // Add access code for group authentication
         try {
-          const accessCode = localStorage.getItem("aperosplit_access");
+          const accessCode = localStorage.getItem("equilibra_access") || localStorage.getItem("aperosplit_access");
 
           if (accessCode) {
             headers["x-app-access-key"] = accessCode;
