@@ -32,7 +32,6 @@ export function ExpenseUploadAI({
         const base64 = event.target?.result as string;
         const base64Data = base64.split(",")[1] || "";
 
-        // Upload the receipt
         const uploadResult = await uploadMutation.mutateAsync({
           fileData: base64Data,
           fileName: file.name,
@@ -41,7 +40,6 @@ export function ExpenseUploadAI({
         if (uploadResult.success && uploadResult.url) {
           setPreview(uploadResult.url);
 
-          // Analyze the receipt with AI
           setAnalyzing(true);
           try {
             const analysisResult = await analyzeMutation.mutateAsync({
@@ -84,9 +82,9 @@ export function ExpenseUploadAI({
           </button>
         </div>
       ) : (
-        <label className="flex flex-col items-center justify-center border-2 border-dashed border-slate-700 rounded-lg p-6 cursor-pointer hover:border-emerald-400 transition-colors">
-          <Upload size={24} className="text-slate-500 mb-2" />
-          <span className="text-sm text-slate-400">Cliquez pour ajouter une photo de reçu</span>
+        <label className="flex flex-col items-center justify-center border-2 border-dashed border-border rounded-lg p-6 cursor-pointer hover:border-primary/50 transition-colors">
+          <Upload size={24} className="text-muted-foreground mb-2" />
+          <span className="text-sm text-muted-foreground">Cliquez pour ajouter une photo de reçu</span>
           <input
             type="file"
             accept="image/*"
@@ -98,41 +96,41 @@ export function ExpenseUploadAI({
       )}
 
       {analyzing && (
-        <div className="flex items-center gap-2 text-emerald-400 text-sm">
+        <div className="flex items-center gap-2 text-primary text-sm">
           <Loader2 size={16} className="animate-spin" />
           Analyse de la photo en cours...
         </div>
       )}
 
       {extracted && (
-        <div className="bg-slate-900 border border-slate-800 rounded-lg p-4 space-y-3">
-          <div className="flex items-center gap-2 text-emerald-400 mb-3">
+        <div className="glass-card border border-border rounded-lg p-4 space-y-3">
+          <div className="flex items-center gap-2 text-primary mb-3">
             <Check size={16} />
-            <span className="font-semibold text-sm">Informations extraites</span>
+            <span className="font-semibold text-sm text-foreground">Informations extraites</span>
           </div>
 
           {extracted.amount !== null && (
             <div>
-              <div className="text-xs text-slate-500 mb-1">Montant</div>
-              <div className="text-lg font-semibold text-emerald-400">{extracted.amount.toFixed(2)} €</div>
+              <div className="text-xs text-muted-foreground mb-1">Montant</div>
+              <div className="text-lg font-semibold text-primary">{extracted.amount.toFixed(2)} €</div>
             </div>
           )}
 
           {extracted.date !== null && (
             <div>
-              <div className="text-xs text-slate-500 mb-1">Date</div>
-              <div className="text-sm text-slate-300">{extracted.date}</div>
+              <div className="text-xs text-muted-foreground mb-1">Date</div>
+              <div className="text-sm text-foreground">{extracted.date}</div>
             </div>
           )}
 
           {extracted.category !== null && (
             <div>
-              <div className="text-xs text-slate-500 mb-1">Catégorie</div>
-              <div className="text-sm text-slate-300">{extracted.category}</div>
+              <div className="text-xs text-muted-foreground mb-1">Catégorie</div>
+              <div className="text-sm text-foreground">{extracted.category}</div>
             </div>
           )}
 
-          <div className="text-xs text-slate-500 pt-2 border-t border-slate-800">
+          <div className="text-xs text-muted-foreground pt-2 border-t border-border">
             Vous pouvez modifier ces informations avant de créer la dépense
           </div>
         </div>

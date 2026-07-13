@@ -1,10 +1,14 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { Toaster, toast } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { ThemeProvider } from "./contexts/ThemeContext";
+import { useThemeContext } from "./contexts/ThemeContext";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { PaymentRequestCard } from "./components/PaymentRequestCard";
 import { PaymentHistory } from "./components/PaymentHistory";
+import { SettingsScreen } from "./components/SettingsScreen";
+import { MemberManagement } from "./components/MemberManagement";
+import { ReportsScreen as ReportsScreenEnhanced } from "./components/ReportsScreen";
+import { MemberSelect } from "./components/MemberSelect";
 import { motion, AnimatePresence } from "framer-motion";
 import { QRCodeSVG } from "qrcode.react";
 import { trpc } from "@/lib/trpc";
@@ -22,7 +26,6 @@ import {
   Plus,
   X,
   Trash2,
-  Camera,
   Fingerprint,
   Shield,
   ChevronRight,
@@ -31,7 +34,6 @@ import {
   Check,
   Copy,
   Share2,
-  QrCode,
   Sparkles,
   TrendingUp,
   TrendingDown,
@@ -44,6 +46,9 @@ interface Member {
   id: string;
   name: string;
   avatar: string;
+  role?: string;
+  status?: string;
+  userId?: string;
 }
 
 interface Expense {
@@ -56,6 +61,9 @@ interface Expense {
   date: number;
   participants: string[];
   photoUrl?: string;
+  status?: string;
+  isRecurring?: boolean;
+  recurrenceInterval?: string;
 }
 
 interface PendingPayment {
@@ -66,7 +74,7 @@ interface PendingPayment {
   toName: string;
   amount: number;
   originalAmount?: number;
-  status: "pending" | "accepted" | "refused" | "resent" | "in_progress" | "completed" | "permanently_refused" | "disputed";
+  status: "pending" | "accepted" | "refused" | "resent" | "in_progress" | "completed" | "permanently_refused" | "disputed" | "paid";
   response?: "accepted" | "refused";
   expenseId?: string;
   createdAt: number;
@@ -80,9 +88,31 @@ interface PendingPayment {
   groupId?: string;
   notificationSent: boolean;
   notificationCount: number;
+  requestNote?: string;
+  acceptNote?: string;
+  paidAt?: number;
+  confirmedAt?: number;
+  disputeNote?: string;
 }
 
-type Screen = "identity" | "lock" | "main" | "register" | "access";
+interface Notification {
+  id: string;
+  type: string;
+  title: string;
+  message: string;
+  read: boolean;
+  data?: any;
+  createdAt: string;
+}
+
+interface GroupCategory {
+  id: string;
+  name: string;
+  emoji: string;
+  isDefault: boolean;
+}
+
+type Screen = "identity" | "lock" | "main" | "register" | "access" | "groups" | "groupSettings" | "members" | "notifications" | "notificationSettings" | "reports" | "settings";
 type Tab = "home" | "expenses" | "balances" | "stats" | "history" | "profile";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -109,6 +139,7 @@ const DEFAULT_MEMBERS: Member[] = [
 ];
 
 const STORAGE_KEY = "equilibra_data";
+const GROUP_ID = "equilibra-fixed-group";
 
 const CHART_COLORS = ["#34d399", "#60a5fa", "#f472b6", "#fbbf24", "#a78bfa", "#fb923c", "#2dd4bf", "#e879f9"];
 
@@ -402,6 +433,28 @@ function App() {
   const confirmPaymentMutation = trpc.equilibra.confirmPayment.useMutation();
   const refusePaymentMutation = trpc.equilibra.refusePayment.useMutation();
   const updateBiometricMutation = trpc.equilibra.updateMemberBiometric.useMutation();
+  const createGroupMutation = trpc.equilibra.createGroup.useMutation();
+  const joinGroupByPinMutation = trpc.equilibra.joinGroupByPin.useMutation();
+  const joinGroupByInviteMutation = trpc.equilibra.joinGroupByInvite.useMutation();
+  const generateInviteMutation = trpc.equilibra.generateInvite.useMutation();
+  const approveMemberMutation = trpc.equilibra.approveMember.useMutation();
+  const refuseMemberMutation = trpc.equilibra.refuseMember.useMutation();
+  const expelMemberMutation = trpc.equilibra.expelMember.useMutation();
+  const changeMemberRoleMutation = trpc.equilibra.changeMemberRole.useMutation();
+  const updateGroupSettingsMutation = trpc.equilibra.updateGroupSettings.useMutation();
+  const createCategoryMutation = trpc.equilibra.createCategory.useMutation();
+  const deleteCategoryMutation = trpc.equilibra.deleteCategory.useMutation();
+  const markNotificationReadMutation = trpc.equilibra.markNotificationRead.useMutation();
+  const markAllNotificationsReadMutation = trpc.equilibra.markAllNotificationsRead.useMutation();
+  const updateNotificationSettingsMutation = trpc.equilibra.updateNotificationSettings.useMutation();
+  const getGroupStatsQuery = trpc.equilibra.getGroupStats.useQuery(undefined, { enabled: !isNetlify });
+  const exportCSVMutation = trpc.equilibra.exportCSV.useMutation();
+  const cancelPaymentMutation = trpc.equilibra.cancelPaymentRequest.useMutation();
+  const resendPaymentMutation = trpc.equilibra.resendPaymentRequest.useMutation();
+  const markAsPaidMutation = trpc.equilibra.markAsPaid.useMutation();
+  const confirmReceiptMutation = trpc.equilibra.confirmReceipt.useMutation();
+  const reportNotReceivedMutation = trpc.equilibra.reportNotReceived.useMutation();
+  const disputePaymentMutation = trpc.equilibra.disputePayment.useMutation();
 
   // State
   const [screen, setScreen] = useState<Screen>("identity");
@@ -415,8 +468,31 @@ function App() {
   const [showAddExpense, setShowAddExpense] = useState(false);
   const [biometricEnabled, setBiometricEnabled] = useState<Record<string, boolean>>({});
   const [biometricAvailable, setBiometricAvailable] = useState(false);
-  const [theme, setTheme] = useState<"light" | "dark">("dark");
-  const [monthlyBudget, setMonthlyBudget] = useState<number>(1000);
+  const [monthlyBudget, setMonthlyBudget] = useState<number>(() => {
+    const v = localStorage.getItem('equilibra_monthly_budget');
+    return v ? parseFloat(v) : 1000;
+  });
+  const [currency, setCurrency] = useState<string>(() => localStorage.getItem('equilibra_currency') || "MAD");
+  const [autoReminders, setAutoReminders] = useState(() => localStorage.getItem('equilibra_auto_reminders') !== 'false');
+  const [privacyMode, setPrivacyMode] = useState(() => localStorage.getItem('equilibra_privacy_mode') === 'true');
+  const [offlineMode, setOfflineMode] = useState(() => localStorage.getItem('equilibra_offline_mode') === 'true');
+  const [pushNotifications, setPushNotifications] = useState(() => localStorage.getItem('equilibra_push_notifications') !== 'false');
+  const [reminderDelay, setReminderDelay] = useState(() => parseInt(localStorage.getItem('equilibra_reminder_delay') || '3'));
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [categories, setCategories] = useState<GroupCategory[]>([]);
+  const [selectedGroupId, setSelectedGroupId] = useState<string>(GROUP_ID);
+  const [groupPin, setGroupPin] = useState<string | null>(null);
+  const [requireApproval, setRequireApproval] = useState(false);
+
+  const getNotificationsQuery = trpc.equilibra.getNotifications.useQuery(
+    { memberId: currentMemberId },
+    { enabled: !!currentMemberId && !isNetlify, refetchInterval: 5000 }
+  );
+  const getNotificationSettingsQuery = trpc.equilibra.getNotificationSettings.useQuery(
+    { memberId: currentMemberId },
+    { enabled: !!currentMemberId && !isNetlify }
+  );
 
   // Notifications hook
   const { permission: notificationPermission, requestPermission: requestNotificationPermission, showNotification } = useNotifications();
@@ -445,15 +521,6 @@ function App() {
     checkBiometricAvailable().then(setBiometricAvailable);
   }, []);
 
-  // Initialize theme from localStorage or system preference
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('theme') as "light" | "dark" | null;
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const initialTheme = savedTheme || (prefersDark ? 'dark' : 'light');
-    setTheme(initialTheme);
-    document.documentElement.classList.toggle('dark', initialTheme === 'dark');
-  }, []);
-
   // Load budget from localStorage
   useEffect(() => {
     const savedBudget = localStorage.getItem('equilibra_monthly_budget');
@@ -462,21 +529,20 @@ function App() {
     }
   }, []);
 
-  // Toggle theme
-  const toggleTheme = useCallback(() => {
-    setTheme((prev) => {
-      const newTheme = prev === 'dark' ? 'light' : 'dark';
-      localStorage.setItem('theme', newTheme);
-      document.documentElement.classList.toggle('dark', newTheme === 'dark');
-      return newTheme;
-    });
-  }, []);
-
   // Update monthly budget
   const updateBudget = useCallback((newBudget: number) => {
     setMonthlyBudget(newBudget);
     localStorage.setItem('equilibra_monthly_budget', newBudget.toString());
   }, []);
+
+  // Persist all settings to localStorage
+  const updateCurrency = useCallback((c: string) => { setCurrency(c); localStorage.setItem('equilibra_currency', c); }, []);
+  const updateAutoReminders = useCallback(() => { setAutoReminders(p => { const v = !p; localStorage.setItem('equilibra_auto_reminders', String(v)); return v; }); }, []);
+  const updatePrivacyMode = useCallback(() => { setPrivacyMode(p => { const v = !p; localStorage.setItem('equilibra_privacy_mode', String(v)); return v; }); }, []);
+  const updateOfflineMode = useCallback(() => { setOfflineMode(p => { const v = !p; localStorage.setItem('equilibra_offline_mode', String(v)); return v; }); }, []);
+  const updatePushNotifications = useCallback(() => { setPushNotifications(p => { const v = !p; localStorage.setItem('equilibra_push_notifications', String(v)); return v; }); }, []);
+  const updateReminderDelay = useCallback((d: number) => { setReminderDelay(d); localStorage.setItem('equilibra_reminder_delay', String(d)); }, []);
+  const clearAllData = useCallback(() => { localStorage.clear(); window.location.reload(); }, []);
 
   // Handle access code submission
   const handleAccessCode = useCallback((code: string) => {
@@ -535,25 +601,31 @@ function App() {
     if (isNetlify) return;
     if (groupData && !isLoading) {
       if (groupData.members?.length > 0) {
-        setMembers(groupData.members);
+        setMembers(groupData.members.map(m => ({ ...m, role: m.role || "member", status: m.status || "active" })));
       }
+      if (groupData.categories?.length > 0) {
+        setCategories(groupData.categories);
+      }
+      if (groupData.pinCode !== undefined) setGroupPin(groupData.pinCode);
+      if (groupData.requireApproval !== undefined) setRequireApproval(groupData.requireApproval);
       if (groupData.expenses?.length > 0) {
-        // Transform backend expenses to frontend format
         const transformedExpenses: Expense[] = groupData.expenses.map((e) => ({
           id: e.id,
           description: e.description,
           amount: e.amount,
           payerId: e.payerId,
           category: e.category,
-          categoryEmoji: CATEGORIES.find((c) => c.name === e.category)?.emoji || "📦",
+          categoryEmoji: categories.find((c) => c.name === e.category)?.emoji || CATEGORIES.find((c) => c.name === e.category)?.emoji || "📦",
           date: new Date(e.date).getTime(),
           participants: e.participants,
           photoUrl: e.photoUrl || undefined,
+          status: e.status || "validated",
+          isRecurring: e.isRecurring || false,
+          recurrenceInterval: e.recurrenceInterval || undefined,
         }));
         setExpenses(transformedExpenses);
       }
       if (groupData.pending?.length > 0) {
-        // Transform backend pending payments to frontend format
         const transformedPending: PendingPayment[] = groupData.pending.map((p) => ({
           id: p.id,
           fromId: p.fromId,
@@ -561,7 +633,8 @@ function App() {
           toId: p.toId,
           toName: p.toName || members.find(m => m.id === p.toId)?.name || "Inconnu",
           amount: p.amount,
-          status: (p.status === "confirmed" ? "completed" : p.status) as "pending" | "accepted" | "refused" | "completed",
+          originalAmount: p.originalAmount,
+          status: (p.status === "confirmed" ? "completed" : p.status) as PendingPayment["status"],
           response: (p.status === "confirmed" ? "accepted" : undefined) as "accepted" | "refused" | undefined,
           expenseId: (p as any).expenseId,
           createdAt: p.createdAt ? new Date(p.createdAt).getTime() : new Date((p as any).date || Date.now()).getTime(),
@@ -569,11 +642,34 @@ function App() {
           confirmedBy: (p as any).confirmedBy,
           notificationSent: (p as any).notificationSent || false,
           notificationCount: (p as any).notificationCount || 0,
+          attemptCount: (p as any).attemptCount || 1,
+          requestNote: (p as any).requestNote,
+          acceptNote: (p as any).acceptNote,
+          paidAt: (p as any).paidAt ? new Date((p as any).paidAt).getTime() : undefined,
+          confirmedAt: (p as any).confirmedAt ? new Date((p as any).confirmedAt).getTime() : undefined,
+          disputeNote: (p as any).disputeNote,
+          isGroupRequest: (p as any).isGroupRequest === "true" || (p as any).isGroupRequest === true,
+          groupId: (p as any).requestGroupId,
         }));
         setPendingPayments(transformedPending);
       }
     }
   }, [groupData, isLoading]);
+
+  // Notifications sync
+  useEffect(() => {
+    if (getNotificationsQuery.data) {
+      setNotifications(getNotificationsQuery.data);
+      setUnreadCount(getNotificationsQuery.data.filter((n: Notification) => !n.read).length);
+    }
+  }, [getNotificationsQuery.data]);
+
+  // Stats sync
+  useEffect(() => {
+    if (getGroupStatsQuery.data) {
+      // Stats are available via getGroupStatsQuery.data
+    }
+  }, [getGroupStatsQuery.data]);
 
   // Load data from localStorage (fallback) - Run only once on mount
   useEffect(() => {
@@ -879,10 +975,12 @@ function App() {
           payerId: expense.payerId,
           participants: expense.participants,
           photoUrl: expense.photoUrl,
+          status: expense.status as "pending" | "validated" | "refused" | undefined,
+          isRecurring: expense.isRecurring,
+          recurrenceInterval: expense.recurrenceInterval as "weekly" | "monthly" | "yearly" | undefined,
         });
         
         if (result.success) {
-          // Optimistic update
           const newExp: Expense = { 
             ...expense, 
             id: result.expenseId || `exp_${Date.now()}`, 
@@ -891,14 +989,13 @@ function App() {
           };
           setExpenses((prev) => [...prev, newExp]);
           toast.success("Dépense ajoutée");
-          refetch(); // Refresh from backend
+          refetch();
           return;
         }
       } catch (error) {
         devLog("Backend add failed, using local storage");
       }
     }
-    // Fallback to local storage
     const newExp: Expense = { 
       ...expense, 
       id: `exp_${Date.now()}`, 
@@ -1355,9 +1452,136 @@ function App() {
     );
   }
 
+  if (screen === "notifications") {
+    return (
+      <AppShell>
+        <NotificationsScreen
+          notifications={notifications}
+          currentMemberId={currentMemberId}
+          onBack={() => setScreen("main")}
+          onMarkRead={async (id) => {
+            await markNotificationReadMutation.mutateAsync({ notificationId: id });
+            setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+            setUnreadCount(prev => Math.max(0, prev - 1));
+          }}
+          onMarkAllRead={async () => {
+            await markAllNotificationsReadMutation.mutateAsync({ memberId: currentMemberId });
+            setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+            setUnreadCount(0);
+          }}
+        />
+      </AppShell>
+    );
+  }
+
+  if (screen === "notificationSettings") {
+    return (
+      <AppShell>
+        <NotificationSettingsScreen
+          settings={getNotificationSettingsQuery.data}
+          onBack={() => setScreen("main")}
+          onSave={async (settings) => {
+            await updateNotificationSettingsMutation.mutateAsync({ memberId: currentMemberId, ...settings });
+            toast.success("Paramètres de notifications sauvegardés");
+            setScreen("main");
+          }}
+        />
+      </AppShell>
+    );
+  }
+
+  if (screen === "groupSettings") {
+    return (
+      <AppShell>
+        <SettingsScreen
+          onBack={() => setScreen("main")}
+          monthlyBudget={monthlyBudget}
+          onSetBudget={updateBudget}
+          currency={currency}
+          onSetCurrency={updateCurrency}
+          autoReminders={autoReminders}
+          onToggleReminders={updateAutoReminders}
+          privacyMode={privacyMode}
+          onTogglePrivacy={updatePrivacyMode}
+          offlineMode={offlineMode}
+          onToggleOffline={updateOfflineMode}
+          pushNotifications={pushNotifications}
+          onTogglePushNotifications={updatePushNotifications}
+          reminderDelay={reminderDelay}
+          onSetReminderDelay={updateReminderDelay}
+          onClearData={clearAllData}
+          biometricEnabled={biometricEnabled[currentMemberId] || false}
+          onToggleBiometric={toggleBiometric}
+        />
+      </AppShell>
+    );
+  }
+
+  if (screen === "settings") {
+    return (
+      <AppShell>
+        <SettingsScreen
+          onBack={() => setScreen("main")}
+          monthlyBudget={monthlyBudget}
+          onSetBudget={updateBudget}
+          currency={currency}
+          onSetCurrency={updateCurrency}
+          autoReminders={autoReminders}
+          onToggleReminders={updateAutoReminders}
+          privacyMode={privacyMode}
+          onTogglePrivacy={updatePrivacyMode}
+          offlineMode={offlineMode}
+          onToggleOffline={updateOfflineMode}
+          pushNotifications={pushNotifications}
+          onTogglePushNotifications={updatePushNotifications}
+          reminderDelay={reminderDelay}
+          onSetReminderDelay={updateReminderDelay}
+          onClearData={clearAllData}
+          biometricEnabled={biometricEnabled[currentMemberId] || false}
+          onToggleBiometric={toggleBiometric}
+        />
+      </AppShell>
+    );
+  }
+
+  if (screen === "members") {
+    return (
+      <AppShell>
+        <MemberManagement
+          members={members}
+          currentMemberId={currentMemberId}
+          expenses={expenses}
+          onRemoveMember={removeMember}
+          onAddMember={() => { /* invite modal */ }}
+          onChangeRole={async (memberId, role) => {
+            await changeMemberRoleMutation.mutateAsync({ memberId, role: role as "admin" | "member" });
+            setMembers(prev => prev.map(m => m.id === memberId ? { ...m, role } : m));
+            toast.success(`Rôle mis à jour`);
+          }}
+          onBack={() => setScreen("main")}
+        />
+      </AppShell>
+    );
+  }
+
+  if (screen === "reports") {
+    return (
+      <AppShell>
+        <ReportsScreenEnhanced
+          expenses={expenses}
+          members={members}
+          onBack={() => setScreen("main")}
+          pendingPayments={[...pendingPayments, ...completedPayments]}
+          completedPayments={completedPayments}
+          monthlyBudget={monthlyBudget}
+        />
+      </AppShell>
+    );
+  }
+
   return (
     <AppShell>
-      <div className="min-h-screen bg-background pb-24">
+      <div className="min-h-screen pb-24">
         <AnimatePresence mode="wait">
           {activeTab === "home" && (
             <HomeTab
@@ -1412,12 +1636,14 @@ function App() {
             <PaymentHistory
               key="history"
               payments={[...pendingPayments, ...completedPayments]}
+              expenses={expenses}
               members={members}
               currentMemberId={currentMemberId}
             />
           )}
           {activeTab === "stats" && (
-            <StatsTab key="stats" expenses={expenses} members={members} currentMemberId={currentMemberId} />
+            <StatsTab key="stats" expenses={expenses} members={members} currentMemberId={currentMemberId}
+              pendingPayments={pendingPayments} completedPayments={completedPayments} monthlyBudget={monthlyBudget} />
           )}
           {activeTab === "profile" && (
             <ProfileTab
@@ -1430,21 +1656,25 @@ function App() {
               onLogout={handleLogout}
               onAddMember={currentMemberId === "admin" ? addMember : undefined}
               onRemoveMember={currentMemberId === "admin" ? removeMember : undefined}
-              theme={theme}
-              onToggleTheme={toggleTheme}
               isLocked={!!localStorage.getItem('equilibra_locked_member')}
+              unreadCount={unreadCount}
+              onOpenNotifications={() => setScreen("notifications")}
+              onOpenReports={() => setScreen("reports")}
+              onOpenGroupSettings={() => setScreen("groupSettings")}
+              onOpenMembers={() => setScreen("members")}
             />
           )}
         </AnimatePresence>
 
         {/* Bottom Navigation - iOS style */}
-        <nav className="fixed bottom-0 left-0 right-0 bg-background/80 backdrop-blur-2xl border-t border-white/5 z-50 safe-area-bottom">
+        <nav className="fixed bottom-0 left-0 right-0 bg-card/60 backdrop-blur-2xl border-t border-border z-50 safe-area-bottom">
           <div className="max-w-md mx-auto flex justify-around items-center h-20 px-2">
             {([
               { id: "home" as Tab, icon: Home, label: "Accueil" },
               { id: "expenses" as Tab, icon: Receipt, label: "Dépenses" },
               { id: "balances" as Tab, icon: Scale, label: "Soldes" },
               { id: "history" as Tab, icon: History, label: "Historique" },
+              { id: "stats" as Tab, icon: BarChart3, label: "Stats" },
               { id: "profile" as Tab, icon: User, label: "Profil" },
             ]).map((tab) => (
               <button
@@ -1493,6 +1723,7 @@ function App() {
               currentMemberId={currentMemberId}
               onAdd={addExpense}
               onClose={() => setShowAddExpense(false)}
+              customCategories={categories}
             />
           )}
         </AnimatePresence>
@@ -1503,15 +1734,195 @@ function App() {
 
 // ─── App Shell ────────────────────────────────────────────────────────────────
 function AppShell({ children }: { children: React.ReactNode }) {
+  const { theme } = useThemeContext();
   return (
     <ErrorBoundary>
-      <ThemeProvider defaultTheme="dark">
-        <TooltipProvider>
-          <Toaster position="top-center" richColors theme="dark" />
-          {children}
-        </TooltipProvider>
-      </ThemeProvider>
+      <TooltipProvider>
+        <Toaster position="top-center" richColors theme={theme} />
+        {children}
+      </TooltipProvider>
     </ErrorBoundary>
+  );
+}
+
+// ─── Notifications Screen ────────────────────────────────────────────────────
+function NotificationsScreen({ notifications, currentMemberId, onBack, onMarkRead, onMarkAllRead }: {
+  notifications: Notification[];
+  currentMemberId: string;
+  onBack: () => void;
+  onMarkRead: (id: string) => void;
+  onMarkAllRead: () => void;
+}) {
+  const unread = notifications.filter(n => !n.read).length;
+  const [filter, setFilter] = useState<"all" | "unread">("all");
+
+  const filtered = filter === "unread" ? notifications.filter(n => !n.read) : notifications;
+
+  const getIcon = (type: string) => {
+    switch (type) {
+      case "payment_request": return "💸";
+      case "payment_accepted": return "✅";
+      case "payment_refused": return "❌";
+      case "payment_reminder": return "⏰";
+      case "expense_added": return "🧾";
+      case "member_joined": return "👥";
+      case "member_expelled": return "🚪";
+      default: return "🔔";
+    }
+  };
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-md mx-auto px-5 pt-12 space-y-5">
+      <div className="flex items-center gap-3">
+        <motion.button whileTap={{ scale: 0.9 }} onClick={onBack}
+          className="w-10 h-10 rounded-2xl bg-card/30 border border-border flex items-center justify-center">
+          <ChevronRight size={20} className="rotate-180" />
+        </motion.button>
+        <div className="flex-1">
+          <h1 className="text-3xl font-bold tracking-tight">Notifications</h1>
+          <p className="text-sm text-muted-foreground">{unread} non lues</p>
+        </div>
+        {unread > 0 && (
+          <motion.button whileTap={{ scale: 0.95 }} onClick={onMarkAllRead}
+            className="text-xs text-primary font-semibold px-4 py-2 rounded-2xl bg-primary/10 border border-primary/20">
+            Tout lire
+          </motion.button>
+        )}
+      </div>
+
+      {/* Filter */}
+      <div className="flex gap-2 bg-card/30 border border-border rounded-2xl p-1">
+        {(["all", "unread"] as const).map(f => (
+          <button key={f} onClick={() => setFilter(f)}
+            className={`flex-1 py-2.5 rounded-xl text-xs font-semibold transition-all ${filter === f ? "bg-primary text-primary-foreground shadow-lg shadow-primary/30" : "text-muted-foreground"}`}>
+            {f === "all" ? "Toutes" : "Non lues"}
+            {f === "unread" && unread > 0 && <span className="ml-1.5 text-[10px]">({unread})</span>}
+          </button>
+        ))}
+      </div>
+
+      {/* Notification List */}
+      {filtered.length === 0 ? (
+        <div className="text-center py-20">
+          <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="w-24 h-24 mx-auto mb-5 rounded-full bg-muted/30 flex items-center justify-center">
+            <span className="text-5xl">🔔</span>
+          </motion.div>
+          <p className="text-muted-foreground text-sm">
+            {filter === "unread" ? "Tout est lu !" : "Aucune notification"}
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {filtered.map((notif, i) => (
+            <motion.div key={notif.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}
+              onClick={() => !notif.read && onMarkRead(notif.id)}
+              className={`glass-card-enhanced rounded-2xl p-4 flex items-start gap-3 transition-all cursor-pointer ${!notif.read ? "border-primary/20 bg-primary/5" : ""}`}>
+              <div className="w-10 h-10 rounded-xl bg-muted/30 flex items-center justify-center text-xl shrink-0">
+                {getIcon(notif.type)}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <p className={`text-sm font-semibold truncate ${notif.read ? "text-muted-foreground" : ""}`}>
+                    {notif.title}
+                  </p>
+                  {!notif.read && <div className="w-2 h-2 rounded-full bg-primary shrink-0" />}
+                </div>
+                <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{notif.message}</p>
+                <p className="text-[10px] text-muted-foreground/60 mt-1.5">
+                  {new Date(notif.createdAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                </p>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
+// ─── Notification Settings Screen ────────────────────────────────────────────
+function NotificationSettingsScreen({ settings, onBack, onSave }: {
+  settings?: { pushEnabled: boolean; emailEnabled: boolean; reminderFrequency: string; quietHoursStart?: string; quietHoursEnd?: string };
+  onBack: () => void;
+  onSave: (settings: { pushEnabled?: boolean; emailEnabled?: boolean; reminderFrequency?: string }) => void;
+}) {
+  const [pushEnabled, setPushEnabled] = useState(settings?.pushEnabled ?? true);
+  const [emailEnabled, setEmailEnabled] = useState(settings?.emailEnabled ?? false);
+  const [reminderFrequency, setReminderFrequency] = useState(settings?.reminderFrequency ?? "24h");
+
+  const spring = { type: "spring" as const, stiffness: 300, damping: 30 };
+  const Toggle = ({ enabled, onToggle }: { enabled: boolean; onToggle: () => void }) => (
+    <motion.button whileTap={{ scale: 0.95 }} onClick={onToggle}
+      className={`w-[52px] h-8 rounded-full transition-all duration-300 relative ${enabled ? "bg-primary shadow-lg shadow-primary/30" : "bg-secondary"}`}>
+      <motion.div animate={{ x: enabled ? 22 : 3 }} transition={spring}
+        className="absolute top-1 w-6 h-6 rounded-full bg-white shadow-md" />
+    </motion.button>
+  );
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-md mx-auto px-5 pt-12 space-y-5">
+      <div className="flex items-center gap-3">
+        <motion.button whileTap={{ scale: 0.9 }} onClick={onBack}
+          className="w-10 h-10 rounded-2xl bg-card/30 border border-border flex items-center justify-center">
+          <ChevronRight size={20} className="rotate-180" />
+        </motion.button>
+        <div className="flex-1">
+          <h1 className="text-3xl font-bold tracking-tight">Notifications</h1>
+          <p className="text-sm text-muted-foreground">Paramètres des alertes</p>
+        </div>
+        <motion.button whileTap={{ scale: 0.95 }} onClick={() => onSave({ pushEnabled, emailEnabled, reminderFrequency })}
+          className="text-sm text-primary font-semibold px-4 py-2 rounded-2xl bg-primary/10 border border-primary/20">
+          Sauver
+        </motion.button>
+      </div>
+
+      {/* Push & Email */}
+      <div className="glass-card-enhanced rounded-[1.5rem] p-5 space-y-4">
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Canaux</p>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center"><span className="text-lg">🔔</span></div>
+            <div>
+              <p className="text-sm font-semibold">Notifications push</p>
+              <p className="text-[11px] text-muted-foreground">Alertes en temps réel</p>
+            </div>
+          </div>
+          <Toggle enabled={pushEnabled} onToggle={() => setPushEnabled(!pushEnabled)} />
+        </div>
+        <div className="h-px bg-muted/30" />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-blue-500/10 flex items-center justify-center"><span className="text-lg">✉️</span></div>
+            <div>
+              <p className="text-sm font-semibold">Notifications email</p>
+              <p className="text-[11px] text-muted-foreground">Résumé par email</p>
+            </div>
+          </div>
+          <Toggle enabled={emailEnabled} onToggle={() => setEmailEnabled(!emailEnabled)} />
+        </div>
+      </div>
+
+      {/* Reminder Frequency */}
+      <div className="glass-card-enhanced rounded-[1.5rem] p-5 space-y-3">
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Fréquence des rappels</p>
+        {[
+          { id: "24h", label: "Quotidien", desc: "Tous les jours" },
+          { id: "3days", label: "Tous les 3 jours", desc: "Rappel régulier" },
+          { id: "7days", label: "Hebdomadaire", desc: "Une fois par semaine" },
+        ].map(opt => (
+          <button key={opt.id} onClick={() => setReminderFrequency(opt.id)}
+            className={`w-full p-4 rounded-2xl border text-left transition-all flex items-center gap-3 ${reminderFrequency === opt.id ? "bg-primary/10 border-primary/30" : "bg-card/30 border-border"}`}>
+            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${reminderFrequency === opt.id ? "border-primary" : "border-muted-foreground/30"}`}>
+              {reminderFrequency === opt.id && <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="w-2.5 h-2.5 rounded-full bg-primary" />}
+            </div>
+            <div>
+              <p className="text-sm font-semibold">{opt.label}</p>
+              <p className="text-[11px] text-muted-foreground">{opt.desc}</p>
+            </div>
+          </button>
+        ))}
+      </div>
+    </motion.div>
   );
 }
 
@@ -1582,7 +1993,7 @@ function AccessScreen({ onSubmit }: { onSubmit: (code: string) => void }) {
           onChange={(e) => setCode(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
           placeholder="Code confidentiel"
-          className="w-full px-6 py-4 rounded-2xl bg-card/50 border border-white/5 focus:border-primary/30 focus:bg-card focus:shadow-xl focus:shadow-primary/5 transition-all duration-300 text-center text-lg font-semibold tracking-widest"
+          className="w-full px-6 py-4 rounded-2xl bg-card/50 border border-border focus:border-primary/30 focus:bg-card focus:shadow-xl focus:shadow-primary/5 transition-all duration-300 text-center text-lg font-semibold tracking-widest"
           maxLength={20}
           autoFocus
         />
@@ -1653,7 +2064,7 @@ function IdentityScreen({ members, onSelect }: { members: Member[]; onSelect: (i
             whileTap={{ scale: 0.95 }}
             whileHover={{ scale: 1.02 }}
             onClick={() => handleSelect(member.id)}
-            className="flex flex-col items-center gap-3 p-6 rounded-3xl bg-card/50 border border-white/5 hover:border-primary/30 hover:bg-card hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 press-scale backdrop-blur-sm"
+            className="flex flex-col items-center gap-3 p-6 rounded-3xl bg-card/50 border border-border hover:border-primary/30 hover:bg-card hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 press-scale backdrop-blur-sm"
           >
             <motion.span 
               className="text-4xl"
@@ -1729,7 +2140,7 @@ function RegisterScreen({ onRegister }: { onRegister: (name: string, avatar: str
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Ex: Marie"
-            className="w-full bg-card/50 border border-white/5 rounded-2xl px-4 py-4 text-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/20 transition-all"
+            className="w-full bg-card/50 border border-border rounded-2xl px-4 py-4 text-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/20 transition-all"
           />
         </div>
 
@@ -1747,7 +2158,7 @@ function RegisterScreen({ onRegister }: { onRegister: (name: string, avatar: str
                 className={`p-4 rounded-2xl flex items-center justify-center transition-all ${
                   avatar === emoji
                     ? "bg-primary/20 border-2 border-primary shadow-lg shadow-primary/20"
-                    : "bg-card/50 border border-white/5 hover:bg-card/80"
+                    : "bg-card/50 border border-border hover:bg-card/80"
                 }`}
               >
                 <span className="text-3xl">{emoji}</span>
@@ -2045,7 +2456,7 @@ function HomeTab({
         className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary via-primary/90 to-primary/70 p-6 text-primary-foreground shadow-2xl shadow-primary/30"
       >
         <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full -translate-y-12 translate-x-12 blur-xl" />
-        <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full translate-y-10 -translate-x-10 blur-lg" />
+        <div className="absolute bottom-0 left-0 w-32 h-32 bg-muted/30 rounded-full translate-y-10 -translate-x-10 blur-lg" />
         <div className="relative z-10">
           <p className="text-sm opacity-80 mb-1 font-medium">Votre solde</p>
           <p className="text-4xl font-bold tracking-tight">{formatCurrency(balance)}</p>
@@ -2073,7 +2484,7 @@ function HomeTab({
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="bg-card/50 backdrop-blur-sm border border-white/5 rounded-2xl p-4"
+        className="bg-card/50 backdrop-blur-sm border border-border rounded-2xl p-4"
       >
         <div className="flex items-center justify-between mb-3">
           <div>
@@ -2128,7 +2539,7 @@ function HomeTab({
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15 }}
-          className="bg-card/50 backdrop-blur-sm border border-white/5 rounded-2xl p-4"
+          className="bg-card/50 backdrop-blur-sm border border-border rounded-2xl p-4"
         >
           <h3 className="text-sm font-semibold mb-3">Détail des comptes</h3>
           
@@ -2196,7 +2607,7 @@ function HomeTab({
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="bg-card/50 backdrop-blur-sm border border-white/5 rounded-2xl p-4"
+          className="bg-card/50 backdrop-blur-sm border border-border rounded-2xl p-4"
         >
           <p className="text-[11px] text-muted-foreground mb-1 font-medium uppercase tracking-wide">Total dépensé</p>
           <p className="text-xl font-bold">{formatCurrency(totalSpent)}</p>
@@ -2205,7 +2616,7 @@ function HomeTab({
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.25 }}
-          className="bg-card/50 backdrop-blur-sm border border-white/5 rounded-2xl p-4"
+          className="bg-card/50 backdrop-blur-sm border border-border rounded-2xl p-4"
         >
           <p className="text-[11px] text-muted-foreground mb-1 font-medium uppercase tracking-wide">Dépenses</p>
           <p className="text-xl font-bold">{expenseCount}</p>
@@ -2254,7 +2665,7 @@ function HomeTab({
                   key={p.id}
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
-                  className="bg-card/30 backdrop-blur-sm border border-white/5 rounded-2xl p-3 flex items-center justify-between opacity-70"
+                  className="bg-card/30 backdrop-blur-sm border border-border rounded-2xl p-3 flex items-center justify-between opacity-70"
                 >
                   <div className="flex items-center gap-3">
                     <span className="text-xl">{from?.avatar}</span>
@@ -2298,7 +2709,7 @@ function HomeTab({
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.04 }}
-                  className="bg-card/50 backdrop-blur-sm border border-white/5 rounded-2xl p-4 flex items-center gap-3"
+                  className="bg-card/50 backdrop-blur-sm border border-border rounded-2xl p-4 flex items-center gap-3"
                 >
                   <div className="w-11 h-11 rounded-2xl bg-secondary/50 flex items-center justify-center text-lg">
                     {exp.categoryEmoji}
@@ -2361,7 +2772,7 @@ function ExpensesTab({
           placeholder="Rechercher une dépense..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full bg-card/50 backdrop-blur-sm border border-white/5 rounded-2xl px-4 py-3.5 text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/20 transition-all"
+          className="w-full bg-card/50 backdrop-blur-sm border border-border rounded-2xl px-4 py-3.5 text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/20 transition-all"
         />
       </div>
 
@@ -2383,7 +2794,7 @@ function ExpensesTab({
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: i * 0.03 }}
-                className="bg-card/50 backdrop-blur-sm border border-white/5 rounded-2xl p-4"
+                className="bg-card/50 backdrop-blur-sm border border-border rounded-2xl p-4"
               >
                 <div className="flex items-center gap-3 mb-3">
                   <div className="w-11 h-11 rounded-2xl bg-secondary/50 flex items-center justify-center text-xl">
@@ -2428,7 +2839,7 @@ function ExpensesTab({
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/5">
+                <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
                   <div className="flex items-center gap-2">
                     {exp.payerId === currentMemberId && (
                       <span className="text-[10px] text-green-400 bg-green-500/10 px-2 py-1 rounded-full">Vous avez payé</span>
@@ -2537,7 +2948,7 @@ function BalancesTab({
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.05 }}
               onClick={() => setSelectedMember(selectedMember === member.id ? null : member.id)}
-              className={`w-full bg-card/50 backdrop-blur-sm border border-white/5 rounded-2xl p-4 flex items-center gap-3 transition-all ${
+              className={`w-full bg-card/50 backdrop-blur-sm border border-border rounded-2xl p-4 flex items-center gap-3 transition-all ${
                 selectedMember === member.id ? 'border-primary/30 bg-card/70' : 'hover:border-primary/20'
               }`}
             >
@@ -2584,7 +2995,7 @@ function BalancesTab({
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            className="bg-card/50 backdrop-blur-sm border border-white/5 rounded-2xl p-4 space-y-4"
+            className="bg-card/50 backdrop-blur-sm border border-border rounded-2xl p-4 space-y-4"
           >
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-semibold">Détail pour {members.find(m => m.id === selectedMember)?.name}</h3>
@@ -2696,7 +3107,7 @@ function BalancesTab({
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.05 }}
-                  className="bg-card/50 backdrop-blur-sm border border-white/5 rounded-2xl p-4"
+                  className="bg-card/50 backdrop-blur-sm border border-border rounded-2xl p-4"
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -2728,94 +3139,139 @@ function BalancesTab({
   );
 }
 
-// ─── Stats Tab (with Recharts) ───────────────────────────────────────────────
-function StatsTab({ expenses, members, currentMemberId }: { expenses: Expense[]; members: Member[]; currentMemberId: string }) {
-  // Filter expenses for current member only
+// ─── Stats Tab (Premium) ────────────────────────────────────────────────────
+function StatsTab({ expenses, members, currentMemberId, pendingPayments, completedPayments, monthlyBudget }: {
+  expenses: Expense[];
+  members: Member[];
+  currentMemberId: string;
+  pendingPayments: PendingPayment[];
+  completedPayments: PendingPayment[];
+  monthlyBudget: number;
+}) {
+  type Period = "week" | "month" | "year" | "all";
+  const [period, setPeriod] = useState<Period>("month");
+  const [selectedMember, setSelectedMember] = useState<string | null>(null);
+
+  const now = new Date();
+  const periodStart = useMemo(() => {
+    const d = new Date(now);
+    if (period === "week") d.setDate(d.getDate() - 7);
+    else if (period === "month") d.setMonth(d.getMonth() - 1);
+    else if (period === "year") d.setFullYear(d.getFullYear() - 1);
+    else return new Date(0);
+    return d;
+  }, [period]);
+
+  const filteredExpenses = useMemo(() => {
+    return expenses.filter(e => new Date(e.date) >= periodStart);
+  }, [expenses, periodStart]);
+
+  const prevPeriodStart = useMemo(() => {
+    const d = new Date(periodStart);
+    const diff = now.getTime() - periodStart.getTime();
+    d.setTime(d.getTime() - diff);
+    return d;
+  }, [periodStart]);
+
+  const prevExpenses = useMemo(() => {
+    return expenses.filter(e => {
+      const d = new Date(e.date);
+      return d >= prevPeriodStart && d < periodStart;
+    });
+  }, [expenses, periodStart, prevPeriodStart]);
+
+  const currentTotal = filteredExpenses.reduce((s, e) => s + e.amount, 0);
+  const prevTotal = prevExpenses.reduce((s, e) => s + e.amount, 0);
+  const trend = prevTotal > 0 ? ((currentTotal - prevTotal) / prevTotal) * 100 : 0;
+
   const memberExpenses = useMemo(() => {
-    return expenses.filter(e => e.payerId === currentMemberId || e.participants.includes(currentMemberId));
-  }, [expenses, currentMemberId]);
+    if (!selectedMember) return filteredExpenses;
+    return filteredExpenses.filter(e => e.payerId === selectedMember || e.participants.includes(selectedMember));
+  }, [filteredExpenses, selectedMember]);
+
+  const memberPrevExpenses = useMemo(() => {
+    if (!selectedMember) return prevExpenses;
+    return prevExpenses.filter(e => e.payerId === selectedMember || e.participants.includes(selectedMember));
+  }, [prevExpenses, selectedMember]);
+
+  const memberCurrentTotal = memberExpenses.reduce((s, e) => s + e.amount, 0);
+  const memberPrevTotal = memberPrevExpenses.reduce((s, e) => s + e.amount, 0);
+  const memberTrend = memberPrevTotal > 0 ? ((memberCurrentTotal - memberPrevTotal) / memberPrevTotal) * 100 : 0;
 
   const categoryData = useMemo(() => {
-    const totals: Record<string, number> = {};
-    memberExpenses.forEach((e) => {
-      const key = `${e.categoryEmoji} ${e.category}`;
-      totals[key] = (totals[key] || 0) + e.amount;
+    const totals: Record<string, { value: number; emoji: string }> = {};
+    memberExpenses.forEach(e => {
+      if (!totals[e.category]) totals[e.category] = { value: 0, emoji: e.categoryEmoji };
+      totals[e.category].value += e.amount;
     });
     return Object.entries(totals)
-      .map(([name, value]) => ({ name, value: Math.round(value * 100) / 100 }))
+      .map(([name, d]) => ({ name, value: Math.round(d.value * 100) / 100, emoji: d.emoji }))
       .sort((a, b) => b.value - a.value);
   }, [memberExpenses]);
 
-  const memberData = useMemo(() => {
+  const memberBarData = useMemo(() => {
     const totals: Record<string, number> = {};
-    memberExpenses.forEach((e) => {
-      totals[e.payerId] = (totals[e.payerId] || 0) + e.amount;
-    });
-    return members.map((m) => ({
-      name: m.avatar + " " + m.name,
+    memberExpenses.forEach(e => { totals[e.payerId] = (totals[e.payerId] || 0) + e.amount; });
+    return members.map(m => ({
+      name: m.name,
+      avatar: m.avatar,
       total: Math.round((totals[m.id] || 0) * 100) / 100,
     }));
   }, [memberExpenses, members]);
 
   const trendData = useMemo(() => {
     const byDay: Record<string, number> = {};
-    memberExpenses.forEach((e) => {
+    memberExpenses.forEach(e => {
       const day = new Intl.DateTimeFormat("fr-FR", { day: "2-digit", month: "2-digit" }).format(new Date(e.date));
       byDay[day] = (byDay[day] || 0) + e.amount;
     });
     return Object.entries(byDay)
       .map(([date, total]) => ({ date, total: Math.round(total * 100) / 100 }))
-      .slice(-10);
+      .slice(-14);
   }, [memberExpenses]);
 
-  // Monthly breakdown
   const monthlyData = useMemo(() => {
     const byMonth: Record<string, number> = {};
-    memberExpenses.forEach((e) => {
+    memberExpenses.forEach(e => {
       const month = new Intl.DateTimeFormat("fr-FR", { month: "short", year: "2-digit" }).format(new Date(e.date));
       byMonth[month] = (byMonth[month] || 0) + e.amount;
     });
     return Object.entries(byMonth)
       .map(([month, total]) => ({ month, total: Math.round(total * 100) / 100 }))
-      .slice(-6);
+      .slice(-8);
   }, [memberExpenses]);
 
-  // Average per person
-  const averagePerPerson = useMemo(() => {
-    if (members.length === 0) return 0;
-    const total = memberExpenses.reduce((s, e) => s + e.amount, 0);
-    return Math.round((total / members.length) * 100) / 100;
-  }, [memberExpenses, members]);
+  const pieColors = ["#34d399", "#60a5fa", "#f472b6", "#fbbf24", "#a78bfa", "#fb923c", "#2dd4bf", "#e879f9", "#f87171", "#4ade80"];
 
-  // Most expensive category
-  const topCategory = useMemo(() => {
-    if (categoryData.length === 0) return null;
-    return categoryData[0];
-  }, [categoryData]);
+  const averagePerPerson = members.length > 0 ? memberCurrentTotal / members.length : 0;
+  const topCategory = categoryData[0] || null;
+  const biggestSpender = memberBarData.sort((a, b) => b.total - a.total)[0] || null;
+  const budgetUsed = monthlyBudget > 0 ? (currentTotal / monthlyBudget) * 100 : 0;
+  const currentMonthTotal = expenses.filter(e => {
+    const d = new Date(e.date);
+    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  }).reduce((s, e) => s + e.amount, 0);
 
-  const totalExpenses = memberExpenses.reduce((s, e) => s + e.amount, 0);
+  const totalPayments = pendingPayments.length + completedPayments.length;
+  const completedCount = completedPayments.length;
+  const pendingCount = pendingPayments.filter(p => p.status === "pending").length;
+  const disputedCount = pendingPayments.filter(p => p.status === "disputed").length;
 
   return (
-    <motion.div {...fadeUp} className="relative max-w-md mx-auto px-5 pt-12 space-y-6 overflow-hidden">
+    <motion.div {...fadeUp} className="relative max-w-md mx-auto px-5 pt-12 space-y-5 overflow-hidden">
       <div className="pointer-events-none absolute -top-20 -right-24 h-64 w-64 rounded-full bg-primary/20 blur-3xl" />
       <div className="pointer-events-none absolute top-64 -left-28 h-56 w-56 rounded-full bg-violet-500/10 blur-3xl" />
 
-      <motion.header
-        initial={{ opacity: 0, y: 14 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="glass-card-enhanced relative overflow-hidden rounded-[2rem] p-6"
-      >
+      <motion.header initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} className="glass-card-enhanced relative overflow-hidden rounded-[2rem] p-6">
         <div className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-white/60 to-transparent" />
         <div className="relative flex items-start justify-between gap-4">
           <div>
             <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">
-              <Sparkles size={12} />
-              Aperçu intelligent
+              <BarChart3 size={12} />
+              Tableau de bord
             </div>
             <h1 className="text-3xl font-bold tracking-[-0.04em]">Statistiques</h1>
-            <p className="mt-2 max-w-[16rem] text-sm leading-relaxed text-muted-foreground">
-              Une vision claire de vos dépenses et de leur évolution.
-            </p>
+            <p className="mt-1 text-sm text-muted-foreground">Analyse complète de vos dépenses</p>
           </div>
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-gradient-to-br from-primary to-violet-500 text-white shadow-lg shadow-primary/25">
             <BarChart3 size={22} />
@@ -2823,134 +3279,184 @@ function StatsTab({ expenses, members, currentMemberId }: { expenses: Expense[];
         </div>
       </motion.header>
 
+      {/* Period Selector */}
+      <div className="flex gap-2 bg-card/50 backdrop-blur-sm border border-border rounded-2xl p-1.5">
+        {([["week", "Semaine"], ["month", "Mois"], ["year", "Année"], ["all", "Tout"]] as [Period, string][]).map(([key, label]) => (
+          <button key={key} onClick={() => setPeriod(key)}
+            className={`flex-1 py-2.5 rounded-xl text-xs font-semibold transition-all ${period === key ? "bg-primary text-primary-foreground shadow-lg shadow-primary/30" : "text-muted-foreground hover:text-foreground"}`}>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* Member Filter */}
+      <div className="flex gap-2 items-center">
+        <MemberSelect
+          members={members}
+          selected={selectedMember}
+          onChange={setSelectedMember}
+          allLabel="Tout le groupe"
+          className="flex-1"
+        />
+      </div>
+
       {memberExpenses.length === 0 ? (
         <div className="text-center py-16 text-muted-foreground text-sm">
           <div className="text-5xl mb-4">📊</div>
-          Ajoutez des dépenses pour voir les statistiques
+          <p>Aucune dépense pour cette période</p>
         </div>
       ) : (
         <>
-          {/* Summary Cards */}
+          {/* Main Stats Cards */}
           <div className="grid grid-cols-2 gap-3">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="glass-card-enhanced rounded-[1.5rem] p-4 text-center"
-            >
-              <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Total</p>
-              <p className="text-xl font-bold mt-1">{formatCurrency(totalExpenses)}</p>
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="glass-card-enhanced rounded-[1.5rem] p-4">
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">Total</p>
+              <p className="text-xl font-bold mt-1">{formatCurrency(memberCurrentTotal)}</p>
+              {trend !== 0 && (
+                <p className={`text-[10px] font-semibold mt-1 flex items-center gap-1 ${trend > 0 ? "text-red-400" : "text-green-400"}`}>
+                  {trend > 0 ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
+                  {Math.abs(trend).toFixed(0)}% vs période préc.
+                </p>
+              )}
             </motion.div>
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.1 }}
-              className="glass-card-enhanced rounded-[1.5rem] p-4 text-center"
-            >
-              <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Moyenne/personne</p>
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.05 }} className="glass-card-enhanced rounded-[1.5rem] p-4">
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">Moyenne/personne</p>
               <p className="text-xl font-bold mt-1">{formatCurrency(averagePerPerson)}</p>
+              <p className="text-[10px] text-muted-foreground mt-1">{memberExpenses.length} dépenses</p>
             </motion.div>
+          </div>
+
+          {/* Budget Tracker */}
+          {monthlyBudget > 0 && !selectedMember && (
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="glass-card-enhanced rounded-[1.5rem] p-5">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-sm font-semibold">Budget mensuel</p>
+                <p className="text-sm font-bold">{formatCurrency(currentMonthTotal)} / {formatCurrency(monthlyBudget)}</p>
+              </div>
+              <div className="h-3 bg-muted rounded-full overflow-hidden">
+                <motion.div initial={{ width: 0 }} animate={{ width: `${Math.min(budgetUsed, 100)}%` }}
+                  transition={{ duration: 1, ease: "easeOut" }}
+                  className={`h-full rounded-full ${budgetUsed > 100 ? "bg-red-500" : budgetUsed > 80 ? "bg-yellow-500" : "bg-primary"}`} />
+              </div>
+              <div className="flex justify-between mt-2">
+                <p className="text-[10px] text-muted-foreground">{budgetUsed.toFixed(0)}% utilisé</p>
+                <p className={`text-[10px] font-semibold ${budgetUsed > 100 ? "text-red-400" : "text-muted-foreground"}`}>
+                  {budgetUsed > 100 ? `Dépassé de ${formatCurrency(currentMonthTotal - monthlyBudget)}` : `Reste ${formatCurrency(monthlyBudget - currentMonthTotal)}`}
+                </p>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Key Metrics Row */}
+          <div className="grid grid-cols-3 gap-2">
+            <div className="glass-card-enhanced rounded-2xl p-3 text-center">
+              <p className="text-lg font-bold">{totalPayments}</p>
+              <p className="text-[10px] text-muted-foreground">Paiements</p>
+            </div>
+            <div className="glass-card-enhanced rounded-2xl p-3 text-center">
+              <p className="text-lg font-bold text-green-400">{completedCount}</p>
+              <p className="text-[10px] text-muted-foreground">Confirmés</p>
+            </div>
+            <div className="glass-card-enhanced rounded-2xl p-3 text-center">
+              <p className="text-lg font-bold text-orange-400">{pendingCount}</p>
+              <p className="text-[10px] text-muted-foreground">En attente</p>
+            </div>
           </div>
 
           {/* Top Category */}
           {topCategory && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.15 }}
-              className="glass-card-enhanced relative overflow-hidden rounded-[1.75rem] border-primary/20 p-5"
-            >
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
+              className="glass-card-enhanced relative overflow-hidden rounded-[1.75rem] border-primary/20 p-5">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-primary font-semibold uppercase tracking-wide">Catégorie principale</p>
-                  <p className="text-lg font-bold mt-1">{topCategory.name}</p>
+                <div className="flex items-center gap-3">
+                  <span className="text-3xl">{topCategory.emoji}</span>
+                  <div>
+                    <p className="text-xs text-primary font-semibold uppercase tracking-wide">Catégorie principale</p>
+                    <p className="text-lg font-bold mt-0.5">{topCategory.name}</p>
+                  </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-2xl font-bold text-primary">{formatCurrency(topCategory.value)}</p>
-                  <p className="text-xs text-muted-foreground">{Math.round((topCategory.value / totalExpenses) * 100)}% du total</p>
+                  <p className="text-lg font-bold text-primary">{formatCurrency(topCategory.value)}</p>
+                  <p className="text-[10px] text-muted-foreground">{((topCategory.value / memberCurrentTotal) * 100).toFixed(0)}% du total</p>
                 </div>
               </div>
             </motion.div>
           )}
 
+          {/* Biggest Spender */}
+          {biggestSpender && biggestSpender.total > 0 && (
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }}
+              className="glass-card-enhanced rounded-[1.5rem] p-4 flex items-center gap-4">
+              <span className="text-3xl">{biggestSpender.avatar}</span>
+              <div className="flex-1">
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">Plus gros dépensier</p>
+                <p className="text-sm font-bold">{biggestSpender.name}</p>
+              </div>
+              <p className="text-lg font-bold">{formatCurrency(biggestSpender.total)}</p>
+            </motion.div>
+          )}
+
           {/* Pie Chart - By Category */}
-          <div className="glass-card-enhanced relative overflow-hidden rounded-[1.75rem] p-5">
-            <h3 className="text-sm font-semibold mb-4">Par catégorie</h3>
-            <div className="h-52">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={categoryData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={80}
-                    paddingAngle={3}
-                    dataKey="value"
-                  >
-                    {categoryData.map((_, index) => (
-                      <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <RechartsTooltip
-                    contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "12px" }}
-                    labelStyle={{ color: "hsl(var(--foreground))" }}
-                    formatter={(value: number) => [formatCurrency(value), "Montant"]}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
+          {categoryData.length > 0 && (
+            <div className="glass-card-enhanced relative overflow-hidden rounded-[1.75rem] p-5">
+              <h3 className="text-sm font-semibold mb-4">Répartition par catégorie</h3>
+              <div className="h-52">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={categoryData} cx="50%" cy="50%" innerRadius={45} outerRadius={78} paddingAngle={3} dataKey="value">
+                      {categoryData.map((_, i) => <Cell key={`c-${i}`} fill={pieColors[i % pieColors.length]} />)}
+                    </Pie>
+                    <RechartsTooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12, fontSize: 12 }}
+                      formatter={(value: number) => [formatCurrency(value), "Montant"]} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="space-y-2 mt-2">
+                {categoryData.map((cat, i) => (
+                  <div key={cat.name} className="flex items-center gap-3">
+                    <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: pieColors[i % pieColors.length] }} />
+                    <span className="text-xs text-muted-foreground flex-1 truncate">{cat.emoji} {cat.name}</span>
+                    <span className="text-xs font-semibold">{formatCurrency(cat.value)}</span>
+                    <span className="text-[10px] text-muted-foreground w-10 text-right">{((cat.value / memberCurrentTotal) * 100).toFixed(0)}%</span>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className="grid grid-cols-2 gap-2 mt-3">
-              {categoryData.map((cat, i) => (
-                <div key={cat.name} className="flex items-center gap-2 text-xs">
-                  <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }} />
-                  <span className="text-muted-foreground truncate">{cat.name}</span>
-                  <span className="ml-auto font-medium">{formatCurrency(cat.value)}</span>
-                </div>
-              ))}
-            </div>
-          </div>
+          )}
 
           {/* Bar Chart - By Member */}
           <div className="glass-card-enhanced relative overflow-hidden rounded-[1.75rem] p-5">
-            <h3 className="text-sm font-semibold mb-4">Par membre</h3>
+            <h3 className="text-sm font-semibold mb-4">Dépenses par membre</h3>
             <div className="h-48">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={memberData} barCategoryGap="30%">
+                <BarChart data={memberBarData} barCategoryGap="30%">
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                   <XAxis dataKey="name" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
                   <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
-                  <RechartsTooltip
-                    contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "12px" }}
-                    formatter={(value: number) => [formatCurrency(value), "Dépensé"]}
-                  />
-                  <Bar dataKey="total" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} />
+                  <RechartsTooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12, fontSize: 12 }}
+                    formatter={(value: number) => [formatCurrency(value), "Dépensé"]} />
+                  <Bar dataKey="total" radius={[6, 6, 0, 0]}>
+                    {memberBarData.map((_, i) => <Cell key={`m-${i}`} fill={pieColors[i % pieColors.length]} />)}
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
             </div>
           </div>
 
-          {/* Line Chart - Trend */}
+          {/* Trend Line */}
           {trendData.length > 1 && (
             <div className="glass-card-enhanced relative overflow-hidden rounded-[1.75rem] p-5">
-              <h3 className="text-sm font-semibold mb-4">Tendance (10 derniers jours)</h3>
+              <h3 className="text-sm font-semibold mb-4">Évolution quotidienne</h3>
               <div className="h-44">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={trendData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                     <XAxis dataKey="date" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
                     <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
-                    <RechartsTooltip
-                      contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "12px" }}
-                      formatter={(value: number) => [formatCurrency(value), "Total"]}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="total"
-                      stroke="hsl(var(--primary))"
-                      strokeWidth={2.5}
-                      dot={{ fill: "hsl(var(--primary))", strokeWidth: 0, r: 4 }}
-                      activeDot={{ r: 6, fill: "hsl(var(--primary))" }}
-                    />
+                    <RechartsTooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12, fontSize: 12 }}
+                      formatter={(value: number) => [formatCurrency(value), "Total"]} />
+                    <Line type="monotone" dataKey="total" stroke="hsl(var(--primary))" strokeWidth={2.5}
+                      dot={{ fill: "hsl(var(--primary))", strokeWidth: 0, r: 3 }} activeDot={{ r: 5, fill: "hsl(var(--primary))" }} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
@@ -2967,10 +3473,8 @@ function StatsTab({ expenses, members, currentMemberId }: { expenses: Expense[];
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                     <XAxis dataKey="month" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
                     <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
-                    <RechartsTooltip
-                      contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "12px" }}
-                      formatter={(value: number) => [formatCurrency(value), "Total"]}
-                    />
+                    <RechartsTooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12, fontSize: 12 }}
+                      formatter={(value: number) => [formatCurrency(value), "Total"]} />
                     <Bar dataKey="total" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
@@ -2993,9 +3497,12 @@ function ProfileTab({
   onLogout,
   onAddMember,
   onRemoveMember,
-  theme,
-  onToggleTheme,
   isLocked,
+  unreadCount,
+  onOpenNotifications,
+  onOpenReports,
+  onOpenGroupSettings,
+  onOpenMembers,
 }: {
   currentMember: Member;
   members: Member[];
@@ -3005,10 +3512,14 @@ function ProfileTab({
   onLogout: () => void;
   onAddMember?: (name: string, avatar: string) => void;
   onRemoveMember?: (memberId: string) => void;
-  theme: "light" | "dark";
-  onToggleTheme: () => void;
   isLocked: boolean;
+  unreadCount?: number;
+  onOpenNotifications?: () => void;
+  onOpenReports?: () => void;
+  onOpenGroupSettings?: () => void;
+  onOpenMembers?: () => void;
 }) {
+  const { theme, toggleTheme } = useThemeContext();
   const shareUrl = window.location.href;
   const haptic = useHaptic();
 
@@ -3077,7 +3588,7 @@ function ProfileTab({
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="bg-card/50 backdrop-blur-sm border border-white/5 rounded-2xl overflow-hidden shadow-lg shadow-primary/5"
+        className="bg-card/50 backdrop-blur-sm border border-border rounded-2xl overflow-hidden shadow-lg shadow-primary/5"
       >
         <div className="p-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -3116,7 +3627,7 @@ function ProfileTab({
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="bg-card/50 backdrop-blur-sm border border-white/5 rounded-2xl p-4 shadow-lg shadow-primary/5"
+        className="bg-card/50 backdrop-blur-sm border border-border rounded-2xl p-4 shadow-lg shadow-primary/5"
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -3137,7 +3648,7 @@ function ProfileTab({
             whileTap={{ scale: 0.95 }}
             onClick={() => {
               haptic("medium");
-              onToggleTheme();
+              toggleTheme();
             }}
             className={`w-[52px] h-8 rounded-full transition-all duration-300 relative ${
               theme === "dark" ? "bg-primary shadow-lg shadow-primary/30" : "bg-secondary"
@@ -3151,6 +3662,67 @@ function ProfileTab({
           </motion.button>
         </div>
       </motion.div>
+
+      {/* Quick Actions */}
+      <div className="grid grid-cols-2 gap-3">
+        {onOpenNotifications && (
+          <motion.button
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15 }}
+            whileTap={{ scale: 0.97 }}
+            onClick={() => { haptic("light"); onOpenNotifications(); }}
+            className="p-4 rounded-2xl bg-card border border-border flex flex-col items-center gap-2 relative"
+          >
+            <span className="text-2xl">🔔</span>
+            <span className="text-xs font-medium">Notifications</span>
+            {unreadCount && unreadCount > 0 ? (
+              <span className="absolute top-2 right-2 w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
+                {unreadCount}
+              </span>
+            ) : null}
+          </motion.button>
+        )}
+        {onOpenReports && (
+          <motion.button
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.17 }}
+            whileTap={{ scale: 0.97 }}
+            onClick={() => { haptic("light"); onOpenReports(); }}
+            className="p-4 rounded-2xl bg-card border border-border flex flex-col items-center gap-2"
+          >
+            <span className="text-2xl">📊</span>
+            <span className="text-xs font-medium">Rapports</span>
+          </motion.button>
+        )}
+        {onOpenGroupSettings && (
+          <motion.button
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.19 }}
+            whileTap={{ scale: 0.97 }}
+            onClick={() => { haptic("light"); onOpenGroupSettings(); }}
+            className="p-4 rounded-2xl bg-card border border-border flex flex-col items-center gap-2"
+          >
+            <span className="text-2xl">⚙️</span>
+            <span className="text-xs font-medium">Paramètres</span>
+          </motion.button>
+        )}
+        {onOpenMembers && (
+          <motion.button
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.21 }}
+            whileTap={{ scale: 0.97 }}
+            onClick={() => { haptic("light"); onOpenMembers(); }}
+            className="p-4 rounded-2xl bg-card border border-border flex flex-col items-center gap-2"
+          >
+            <span className="text-2xl">👥</span>
+            <span className="text-xs font-medium">Membres</span>
+          </motion.button>
+        )}
+      </div>
 
       {/* Share Section - Admin Only */}
       {currentMember.id === "admin" && (
@@ -3225,7 +3797,7 @@ function ProfileTab({
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="bg-card/50 backdrop-blur-sm border border-white/5 rounded-2xl overflow-hidden shadow-lg shadow-primary/5"
+        className="bg-card/50 backdrop-blur-sm border border-border rounded-2xl overflow-hidden shadow-lg shadow-primary/5"
       >
         <div className="p-4 pb-2 flex items-center justify-between">
           <div>
@@ -3240,7 +3812,7 @@ function ProfileTab({
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.25 + i * 0.05 }}
             whileHover={{ backgroundColor: "hsl(var(--card)/70)" }}
-            className="px-4 py-3.5 flex items-center gap-3 border-t border-white/5 cursor-pointer"
+            className="px-4 py-3.5 flex items-center gap-3 border-t border-border cursor-pointer"
           >
             <motion.span 
               className="text-2xl"
@@ -3344,17 +3916,23 @@ function AddExpenseSheet({
   currentMemberId,
   onAdd,
   onClose,
+  customCategories,
 }: {
   members: Member[];
   currentMemberId: string;
   onAdd: (expense: Omit<Expense, "id" | "date">) => void;
   onClose: () => void;
+  customCategories?: GroupCategory[];
 }) {
   const [step, setStep] = useState(0);
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState(CATEGORIES[0]);
   const [payerId, setPayerId] = useState(currentMemberId);
   const [participants, setParticipants] = useState(members.map((m) => m.id));
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [recurrenceInterval, setRecurrenceInterval] = useState<"weekly" | "monthly" | "yearly">("monthly");
+
+  const allCategories = [...CATEGORIES, ...(customCategories || []).map(c => ({ name: c.name, emoji: c.emoji }))];
 
   const toggleParticipant = (id: string) => {
     setParticipants((prev) =>
@@ -3378,6 +3956,8 @@ function AddExpenseSheet({
       category: category.name,
       categoryEmoji: category.emoji,
       participants,
+      isRecurring,
+      recurrenceInterval: isRecurring ? recurrenceInterval : undefined,
     });
     onClose();
   };
@@ -3394,7 +3974,7 @@ function AddExpenseSheet({
               placeholder="0.00"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              className="w-full bg-card/50 border border-white/5 rounded-3xl px-6 py-6 text-5xl font-bold text-center focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/20 transition-all"
+              className="w-full bg-card/50 border border-border rounded-3xl px-6 py-6 text-5xl font-bold text-center focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/20 transition-all"
             />
             <span className="absolute right-6 top-1/2 -translate-y-1/2 text-muted-foreground font-bold text-2xl">MAD</span>
           </div>
@@ -3417,7 +3997,7 @@ function AddExpenseSheet({
       title: "C'est pour quoi ?",
       content: (
         <div className="grid grid-cols-2 gap-3">
-          {CATEGORIES.map((cat) => (
+          {allCategories.map((cat) => (
             <motion.button
               key={cat.name}
               whileTap={{ scale: 0.95 }}
@@ -3425,7 +4005,7 @@ function AddExpenseSheet({
               className={`p-4 rounded-2xl flex flex-col items-center gap-2 transition-all ${
                 category.name === cat.name
                   ? "bg-primary text-primary-foreground shadow-lg shadow-primary/30"
-                  : "bg-card/50 border border-white/5 hover:bg-card/80"
+                  : "bg-card/50 border border-border hover:bg-card/80"
               }`}
             >
               <span className="text-3xl">{cat.emoji}</span>
@@ -3447,7 +4027,7 @@ function AddExpenseSheet({
               className={`w-full p-4 rounded-2xl flex items-center gap-4 transition-all ${
                 payerId === member.id
                   ? "bg-primary text-primary-foreground shadow-lg shadow-primary/30"
-                  : "bg-card/50 border border-white/5 hover:bg-card/80"
+                  : "bg-card/50 border border-border hover:bg-card/80"
               }`}
             >
               <span className="text-3xl">{member.avatar}</span>
@@ -3470,7 +4050,7 @@ function AddExpenseSheet({
               className={`w-full p-4 rounded-2xl flex items-center gap-4 transition-all ${
                 participants.includes(member.id)
                   ? "bg-primary text-primary-foreground shadow-lg shadow-primary/30"
-                  : "bg-card/50 border border-white/5 hover:bg-card/80 opacity-50"
+                  : "bg-card/50 border border-border hover:bg-card/80 opacity-50"
               }`}
             >
               <span className="text-3xl">{member.avatar}</span>
@@ -3485,6 +4065,48 @@ function AddExpenseSheet({
           >
             Tout sélectionner
           </motion.button>
+        </div>
+      ),
+    },
+    {
+      title: "Dépense récurrente ?",
+      content: (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between p-4 rounded-2xl bg-card border border-border">
+            <div>
+              <p className="text-sm font-semibold">Dépense récurrente</p>
+              <p className="text-xs text-muted-foreground">Se répète automatiquement</p>
+            </div>
+            <button
+              onClick={() => setIsRecurring(!isRecurring)}
+              className={`w-[52px] h-8 rounded-full transition-all duration-300 relative ${
+                isRecurring ? "bg-primary" : "bg-muted"
+              }`}
+            >
+              <motion.div
+                animate={{ x: isRecurring ? 22 : 2 }}
+                className="absolute top-1 w-6 h-6 rounded-full bg-white shadow"
+              />
+            </button>
+          </div>
+          {isRecurring && (
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-muted-foreground">Fréquence</p>
+              {([["weekly", "Hebdomadaire"], ["monthly", "Mensuel"], ["yearly", "Annuel"]] as const).map(([val, label]) => (
+                <button
+                  key={val}
+                  onClick={() => setRecurrenceInterval(val)}
+                  className={`w-full p-4 rounded-2xl border text-left transition-all ${
+                    recurrenceInterval === val
+                      ? "bg-primary/10 border-primary/30"
+                      : "bg-card border-border"
+                  }`}
+                >
+                  <p className="text-sm font-medium">{label}</p>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       ),
     },

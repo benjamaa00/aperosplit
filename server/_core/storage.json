@@ -1,0 +1,33 @@
+{
+  "members": [
+    {
+      "id": "admin",
+      "name": "Mohamed",
+      "avatar": "👨‍💼"
+    },
+    {
+      "id": "2",
+      "name": "Amine",
+      "avatar": "👨"
+    },
+    {
+      "id": "3",
+      "name": "Isma",
+      "avatar": "👨‍🦱"
+    },
+    {
+      "id": "4",
+      "name": "Rachid",
+      "avatar": "👨‍🦲"
+    },
+    {
+      "id": "5",
+      "name": "Yasmina",
+      "avatar": "👩"
+    }
+  ],
+  "expenses": [],
+  "pendingPayments": [],
+  "completedPayments": [],
+  "biometricEnabled": {}
+}

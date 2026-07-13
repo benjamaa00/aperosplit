@@ -9,7 +9,7 @@ interface PendingPayment {
   toName: string;
   amount: number;
   originalAmount?: number;
-  status: "pending" | "accepted" | "refused" | "resent" | "in_progress" | "completed" | "permanently_refused" | "disputed";
+  status: "pending" | "accepted" | "refused" | "resent" | "in_progress" | "completed" | "permanently_refused" | "disputed" | "paid";
   comment?: string;
   attemptCount?: number;
   notificationCount?: number;
@@ -63,7 +63,7 @@ export function PaymentRequestCard({
       case "refused": return "bg-red-500/10 text-red-400 border-red-500/20";
       case "resent": return "bg-yellow-500/10 text-yellow-400 border-yellow-500/20";
       case "disputed": return "bg-purple-500/10 text-purple-400 border-purple-500/20";
-      case "permanently_refused": return "bg-gray-500/10 text-gray-400 border-gray-500/20";
+      case "permanently_refused": return "bg-muted/50 text-muted-foreground border-border";
       default: return "bg-blue-500/10 text-blue-400 border-blue-500/20";
     }
   };

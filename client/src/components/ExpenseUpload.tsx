@@ -47,9 +47,9 @@ export function ExpenseUpload({ onUploadSuccess }: { onUploadSuccess: (url: stri
           </button>
         </div>
       ) : (
-        <label className="flex flex-col items-center justify-center border-2 border-dashed border-slate-700 rounded-lg p-6 cursor-pointer hover:border-emerald-400 transition-colors">
-          <Upload size={24} className="text-slate-500 mb-2" />
-          <span className="text-sm text-slate-400">Cliquez pour ajouter une photo</span>
+        <label className="flex flex-col items-center justify-center border-2 border-dashed border-border rounded-lg p-6 cursor-pointer hover:border-primary/50 transition-colors">
+          <Upload size={24} className="text-muted-foreground mb-2" />
+          <span className="text-sm text-muted-foreground">Cliquez pour ajouter une photo</span>
           <input
             type="file"
             accept="image/*"

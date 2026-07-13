@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Fingerprint, Lock, Unlock } from "lucide-react";
+import { Fingerprint } from "lucide-react";
 
 export function BiometricAuth({ enabled, onToggle }: { enabled: boolean; onToggle: () => void }) {
   const [loading, setLoading] = useState(false);
@@ -8,7 +8,6 @@ export function BiometricAuth({ enabled, onToggle }: { enabled: boolean; onToggl
     setLoading(true);
     try {
       if (!enabled) {
-        // Register biometric
         const credential = await navigator.credentials.create({
           publicKey: {
             challenge: new Uint8Array(32),
@@ -28,7 +27,6 @@ export function BiometricAuth({ enabled, onToggle }: { enabled: boolean; onToggl
           onToggle();
         }
       } else {
-        // Disable biometric
         onToggle();
       }
     } catch (error) {
@@ -39,13 +37,13 @@ export function BiometricAuth({ enabled, onToggle }: { enabled: boolean; onToggl
   };
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+    <div className="glass-card border border-border rounded-2xl p-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Fingerprint size={20} className="text-emerald-400" />
+          <Fingerprint size={20} className="text-primary" />
           <div>
-            <div className="font-semibold text-sm">Biométrie</div>
-            <div className="text-xs text-slate-500">{enabled ? "Activée" : "Désactivée"}</div>
+            <div className="font-semibold text-sm text-foreground">Biométrie</div>
+            <div className="text-xs text-muted-foreground">{enabled ? "Activée" : "Désactivée"}</div>
           </div>
         </div>
         <button
@@ -53,8 +51,8 @@ export function BiometricAuth({ enabled, onToggle }: { enabled: boolean; onToggl
           disabled={loading}
           className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-all ${
             enabled
-              ? "bg-rose-500/20 text-rose-400 hover:bg-rose-500/30"
-              : "bg-emerald-400/20 text-emerald-400 hover:bg-emerald-400/30"
+              ? "bg-red-500/10 text-red-400 hover:bg-red-500/20"
+              : "bg-primary/10 text-primary hover:bg-primary/20"
           }`}
         >
           {loading ? "..." : enabled ? "Désactiver" : "Activer"}

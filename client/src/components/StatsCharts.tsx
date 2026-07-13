@@ -1,5 +1,6 @@
 import React from "react";
-import { BarChart, Bar, PieChart, Pie, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from "recharts";
+import { useThemeContext } from "@/contexts/ThemeContext";
+import { BarChart, Bar, PieChart, Pie, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 
 const COLORS = ["#10b981", "#f43f5e", "#3b82f6", "#f59e0b", "#8b5cf6", "#ec4899", "#14b8a6", "#f97316"];
 
@@ -15,8 +16,8 @@ export function ExpensesByCategory({ expenses }: { expenses: any[] }) {
   }, []);
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4">
-      <h3 className="font-semibold text-sm mb-4">Dépenses par catégorie</h3>
+    <div className="glass-card border border-border rounded-2xl p-4">
+      <h3 className="font-semibold text-sm mb-4 text-foreground">Dépenses par catégorie</h3>
       <ResponsiveContainer width="100%" height={250}>
         <PieChart>
           <Pie data={data} dataKey="amount" nameKey="category" cx="50%" cy="50%" outerRadius={80} label>
@@ -38,15 +39,15 @@ export function ExpensesByMember({ expenses, members }: { expenses: any[]; membe
   });
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4">
-      <h3 className="font-semibold text-sm mb-4">Dépenses par membre</h3>
+    <div className="glass-card border border-border rounded-2xl p-4">
+      <h3 className="font-semibold text-sm mb-4 text-foreground">Dépenses par membre</h3>
       <ResponsiveContainer width="100%" height={250}>
         <BarChart data={data}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#475569" />
-          <XAxis dataKey="name" stroke="#94a3b8" />
-          <YAxis stroke="#94a3b8" />
-          <Tooltip contentStyle={{ backgroundColor: "#1e293b", border: "1px solid #475569" }} />
-          <Bar dataKey="amount" fill="#10b981" />
+          <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+          <XAxis dataKey="name" className="text-xs" tick={{ fill: "var(--muted-foreground)" }} />
+          <YAxis tick={{ fill: "var(--muted-foreground)" }} />
+          <Tooltip contentStyle={{ backgroundColor: "var(--card)", border: "1px solid var(--border)", borderRadius: "12px", color: "var(--foreground)" }} />
+          <Bar dataKey="amount" fill="var(--primary)" radius={[4, 4, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
     </div>
@@ -69,15 +70,15 @@ export function ExpensesTrend({ expenses }: { expenses: any[] }) {
     .slice(-30);
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4">
-      <h3 className="font-semibold text-sm mb-4">Tendance des dépenses</h3>
+    <div className="glass-card border border-border rounded-2xl p-4">
+      <h3 className="font-semibold text-sm mb-4 text-foreground">Tendance des dépenses</h3>
       <ResponsiveContainer width="100%" height={250}>
         <LineChart data={data}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#475569" />
-          <XAxis dataKey="date" stroke="#94a3b8" />
-          <YAxis stroke="#94a3b8" />
-          <Tooltip contentStyle={{ backgroundColor: "#1e293b", border: "1px solid #475569" }} />
-          <Line type="monotone" dataKey="cumulative" stroke="#10b981" strokeWidth={2} dot={false} />
+          <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+          <XAxis dataKey="date" tick={{ fill: "var(--muted-foreground)" }} />
+          <YAxis tick={{ fill: "var(--muted-foreground)" }} />
+          <Tooltip contentStyle={{ backgroundColor: "var(--card)", border: "1px solid var(--border)", borderRadius: "12px", color: "var(--foreground)" }} />
+          <Line type="monotone" dataKey="cumulative" stroke="var(--primary)" strokeWidth={2} dot={false} />
         </LineChart>
       </ResponsiveContainer>
     </div>

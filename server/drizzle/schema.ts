@@ -1,17 +1,7 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, json, decimal } from "drizzle-orm/mysql-core";
+import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, json, decimal, boolean } from "drizzle-orm/mysql-core";
 
-/**
- * Core user table backing auth flow.
- * Extend this file with additional tables as your product grows.
- * Columns use camelCase to match both database fields and generated types.
- */
 export const users = mysqlTable("users", {
-  /**
-   * Surrogate primary key. Auto-incremented numeric value managed by the database.
-   * Use this for relations between tables.
-   */
   id: int("id").autoincrement().primaryKey(),
-  /** Manus OAuth identifier (openId) returned from the OAuth callback. Unique per user. */
   openId: varchar("openId", { length: 64 }).notNull().unique(),
   name: text("name"),
   email: varchar("email", { length: 320 }),
@@ -25,11 +15,12 @@ export const users = mysqlTable("users", {
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
-// Équilibra Groupe - Shared group data
 export const groups = mysqlTable("groups", {
   id: varchar("id", { length: 64 }).primaryKey(),
   name: varchar("name", { length: 255 }).notNull(),
   shareUrl: text("shareUrl"),
+  pinCode: varchar("pinCode", { length: 32 }),
+  requireApproval: boolean("requireApproval").default(false).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
@@ -42,9 +33,13 @@ export const members = mysqlTable("members", {
   groupId: varchar("groupId", { length: 64 }).notNull(),
   name: varchar("name", { length: 255 }).notNull(),
   avatar: varchar("avatar", { length: 10 }).notNull(),
+  role: varchar("role", { length: 16 }).default("member").notNull(),
+  status: varchar("status", { length: 16 }).default("active").notNull(),
+  userId: varchar("userId", { length: 128 }),
   credentialId: text("credentialId"),
   biometricEnabled: text("biometricEnabled").default("false"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
+  joinedAt: timestamp("joinedAt").defaultNow().notNull(),
 });
 
 export type Member = typeof members.$inferSelect;
@@ -59,6 +54,11 @@ export const expenses = mysqlTable("expenses", {
   payerId: varchar("payerId", { length: 64 }).notNull(),
   participants: json("participants").$type<string[]>().notNull(),
   photoUrl: text("photoUrl"),
+  status: varchar("status", { length: 16 }).default("validated").notNull(),
+  isRecurring: boolean("isRecurring").default(false).notNull(),
+  recurrenceInterval: varchar("recurrenceInterval", { length: 16 }),
+  recurrenceEndDate: timestamp("recurrenceEndDate"),
+  validatedBy: varchar("validatedBy", { length: 64 }),
   date: timestamp("date").defaultNow().notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
@@ -87,8 +87,20 @@ export const pendingPayments = mysqlTable("pending_payments", {
   toId: varchar("toId", { length: 64 }).notNull(),
   toName: varchar("toName", { length: 255 }).notNull(),
   amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
-  status: mysqlEnum("status", ["pending", "confirmed", "refused"]).default("pending").notNull(),
+  originalAmount: decimal("originalAmount", { precision: 10, scale: 2 }),
+  status: varchar("status", { length: 20 }).default("pending").notNull(),
+  expenseId: varchar("expenseId", { length: 128 }),
+  notificationCount: int("notificationCount").default(1),
+  attemptCount: int("attemptCount").default(1),
+  isGroupRequest: boolean("isGroupRequest").default(false),
+  requestGroupId: varchar("requestGroupId", { length: 128 }),
+  requestNote: text("requestNote"),
+  acceptNote: text("acceptNote"),
+  paidAt: timestamp("paidAt"),
+  confirmedAt: timestamp("confirmedAt"),
+  disputeNote: text("disputeNote"),
   date: timestamp("date").defaultNow().notNull(),
+  respondedAt: timestamp("respondedAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
@@ -110,3 +122,58 @@ export const history = mysqlTable("history", {
 
 export type History = typeof history.$inferSelect;
 export type InsertHistory = typeof history.$inferInsert;
+
+export const notifications = mysqlTable("notifications", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  groupId: varchar("groupId", { length: 64 }),
+  memberId: varchar("memberId", { length: 64 }).notNull(),
+  type: varchar("type", { length: 64 }).notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  message: text("message").notNull(),
+  read: boolean("read").default(false).notNull(),
+  data: json("data"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type Notification = typeof notifications.$inferSelect;
+export type InsertNotification = typeof notifications.$inferInsert;
+
+export const notificationSettings = mysqlTable("notification_settings", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  memberId: varchar("memberId", { length: 64 }).notNull(),
+  groupId: varchar("groupId", { length: 64 }).notNull(),
+  pushEnabled: boolean("pushEnabled").default(true).notNull(),
+  emailEnabled: boolean("emailEnabled").default(false).notNull(),
+  reminderFrequency: varchar("reminderFrequency", { length: 16 }).default("24h"),
+  quietHoursStart: varchar("quietHoursStart", { length: 5 }),
+  quietHoursEnd: varchar("quietHoursEnd", { length: 5 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type NotificationSettings = typeof notificationSettings.$inferSelect;
+export type InsertNotificationSettings = typeof notificationSettings.$inferInsert;
+
+export const expenseCategories = mysqlTable("expense_categories", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  groupId: varchar("groupId", { length: 64 }).notNull(),
+  name: varchar("name", { length: 64 }).notNull(),
+  emoji: varchar("emoji", { length: 8 }).notNull(),
+  isDefault: boolean("isDefault").default(false).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type ExpenseCategory = typeof expenseCategories.$inferSelect;
+export type InsertExpenseCategory = typeof expenseCategories.$inferInsert;
+
+export const groupInvites = mysqlTable("group_invites", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  groupId: varchar("groupId", { length: 64 }).notNull(),
+  token: varchar("token", { length: 128 }).notNull().unique(),
+  expiresAt: timestamp("expiresAt"),
+  maxUses: int("maxUses"),
+  usedCount: int("usedCount").default(0).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type GroupInvite = typeof groupInvites.$inferSelect;
+export type InsertGroupInvite = typeof groupInvites.$inferInsert;

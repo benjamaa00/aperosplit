@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Filter, ChevronDown, Check, X, AlertTriangle, RefreshCw, Clock, Calendar, TrendingUp } from "lucide-react";
+import { Filter, X, Clock, Search, Receipt, ArrowUpRight, ArrowDownLeft, Trash2, Check, AlertTriangle } from "lucide-react";
+import { MemberSelect } from "./MemberSelect";
 
 interface PendingPayment {
   id: string;
@@ -9,7 +10,7 @@ interface PendingPayment {
   toId: string;
   toName: string;
   amount: number;
-  status: "pending" | "accepted" | "refused" | "resent" | "in_progress" | "completed" | "permanently_refused" | "disputed";
+  status: "pending" | "accepted" | "refused" | "resent" | "in_progress" | "completed" | "permanently_refused" | "disputed" | "paid";
   comment?: string;
   createdAt: number;
   completedAt?: number;
@@ -23,238 +24,306 @@ interface Member {
   avatar: string;
 }
 
+interface Expense {
+  id: string;
+  description: string;
+  amount: number;
+  payerId: string;
+  category: string;
+  categoryEmoji: string;
+  date: number;
+  participants: string[];
+}
+
+interface ActivityItem {
+  id: string;
+  type: "expense_added" | "expense_deleted" | "payment_request" | "payment_accepted" | "payment_refused" | "payment_completed" | "payment_disputed" | "member_joined" | "member_expelled";
+  timestamp: number;
+  description: string;
+  amount?: number;
+  fromId?: string;
+  fromName?: string;
+  fromAvatar?: string;
+  toId?: string;
+  toName?: string;
+  toAvatar?: string;
+  status?: string;
+  emoji: string;
+}
+
 interface PaymentHistoryProps {
   payments: PendingPayment[];
+  expenses: Expense[];
   members: Member[];
   currentMemberId: string;
 }
 
-type FilterType = "all" | "completed" | "pending" | "refused" | "disputed";
-type SortType = "date" | "amount" | "status";
+type FilterType = "all" | "expenses" | "payments" | "inflows";
 
-export function PaymentHistory({ payments, members, currentMemberId }: PaymentHistoryProps) {
+export function PaymentHistory({ payments, expenses, members, currentMemberId }: PaymentHistoryProps) {
   const [filter, setFilter] = useState<FilterType>("all");
-  const [sort, setSort] = useState<SortType>("date");
-  const [showFilters, setShowFilters] = useState(false);
+  const [search, setSearch] = useState("");
+  const [selectedMember, setSelectedMember] = useState<string | null>(null);
 
-  const formatCurrency = (amount: number): string => {
-    return new Intl.NumberFormat("fr-MA", {
-      style: "currency",
-      currency: "MAD",
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(amount);
-  };
+  const fmt = (amount: number) => new Intl.NumberFormat("fr-MA", { style: "currency", currency: "MAD", minimumFractionDigits: 2 }).format(amount);
 
-  const formatDate = (timestamp: number): string => {
-    return new Date(timestamp).toLocaleDateString("fr-FR", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
+  const getMember = (id: string) => members.find(m => m.id === id);
+
+  // Build unified activity feed
+  const activities = useMemo(() => {
+    const items: ActivityItem[] = [];
+
+    expenses.forEach(e => {
+      const payer = getMember(e.payerId);
+      items.push({
+        id: e.id,
+        type: "expense_added",
+        timestamp: new Date(e.date).getTime(),
+        description: e.description,
+        amount: e.amount,
+        fromId: e.payerId,
+        fromName: payer?.name,
+        fromAvatar: payer?.avatar,
+        emoji: e.categoryEmoji || "📦",
+      });
     });
-  };
 
-  const getStatusInfo = (status: string) => {
+    payments.forEach(p => {
+      const from = getMember(p.fromId);
+      const to = getMember(p.toId);
+      let type: ActivityItem["type"] = "payment_request";
+      let emoji = "💸";
+      if (p.status === "completed") { type = "payment_completed"; emoji = "✅"; }
+      else if (p.status === "accepted") { emoji = "👍"; }
+      else if (p.status === "refused" || p.status === "permanently_refused") { type = "payment_refused"; emoji = "❌"; }
+      else if (p.status === "disputed") { type = "payment_disputed"; emoji = "⚠️"; }
+
+      items.push({
+        id: p.id,
+        type,
+        timestamp: p.completedAt || p.respondedAt || p.createdAt,
+        description: `${from?.name || "?"} → ${to?.name || "?"}`,
+        amount: p.amount,
+        fromId: p.fromId,
+        fromName: from?.name,
+        fromAvatar: from?.avatar,
+        toId: p.toId,
+        toName: to?.name,
+        toAvatar: to?.avatar,
+        status: p.status,
+        emoji,
+      });
+    });
+
+    return items.sort((a, b) => b.timestamp - a.timestamp);
+  }, [expenses, payments, members]);
+
+  const filtered = useMemo(() => {
+    return activities.filter(a => {
+      let matchFilter = true;
+      if (filter === "expenses") matchFilter = a.type === "expense_added" || a.type === "expense_deleted";
+      else if (filter === "payments") matchFilter = a.type.startsWith("payment_");
+      else if (filter === "inflows") {
+        matchFilter = (a.fromId === currentMemberId || a.toId === currentMemberId) && a.type.startsWith("payment_");
+      }
+      if (!matchFilter) return false;
+      if (selectedMember) {
+        if (a.fromId !== selectedMember && a.toId !== selectedMember && a.fromId !== undefined) return false;
+        if (a.fromId === undefined && a.toId === undefined) return false;
+      }
+      if (search) {
+        const q = search.toLowerCase();
+        return a.description.toLowerCase().includes(q) || a.fromName?.toLowerCase().includes(q) || a.toName?.toLowerCase().includes(q);
+      }
+      return true;
+    });
+  }, [activities, filter, search, currentMemberId, selectedMember]);
+
+  // Group by date
+  const grouped = useMemo(() => {
+    const groups: Record<string, ActivityItem[]> = {};
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const weekAgo = today - 7 * 86400_000;
+    const monthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate()).getTime();
+
+    filtered.forEach(a => {
+      let key: string;
+      if (a.timestamp >= today) key = "Aujourd'hui";
+      else if (a.timestamp >= weekAgo) key = "Cette semaine";
+      else if (a.timestamp >= monthAgo) key = "Ce mois";
+      else key = "Plus ancien";
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(a);
+    });
+    return groups;
+  }, [filtered]);
+
+  const totalIn = useMemo(() => payments.filter(p => p.toId === currentMemberId && p.status === "completed").reduce((s, p) => s + p.amount, 0), [payments, currentMemberId]);
+  const totalOut = useMemo(() => payments.filter(p => p.fromId === currentMemberId && p.status === "completed").reduce((s, p) => s + p.amount, 0), [payments, currentMemberId]);
+  const totalSpent = useMemo(() => expenses.filter(e => e.payerId === currentMemberId).reduce((s, e) => s + e.amount, 0), [expenses, currentMemberId]);
+
+  const statusColor = (status?: string) => {
     switch (status) {
-      case "completed":
-        return { label: "Terminé", color: "bg-green-500/10 text-green-400 border-green-500/20", icon: Check };
-      case "pending":
-        return { label: "En attente", color: "bg-orange-500/10 text-orange-400 border-orange-500/20", icon: Clock };
-      case "accepted":
-        return { label: "Accepté", color: "bg-blue-500/10 text-blue-400 border-blue-500/20", icon: Check };
+      case "completed": return "text-green-400 bg-green-500/10 border-green-500/20";
+      case "pending": return "text-orange-400 bg-orange-500/10 border-orange-500/20";
+      case "accepted": return "text-blue-400 bg-blue-500/10 border-blue-500/20";
       case "refused":
-        return { label: "Refusé", color: "bg-red-500/10 text-red-400 border-red-500/20", icon: X };
-      case "resent":
-        return { label: "Renvoyé", color: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20", icon: RefreshCw };
-      case "disputed":
-        return { label: "Litige", color: "bg-purple-500/10 text-purple-400 border-purple-500/20", icon: AlertTriangle };
-      case "permanently_refused":
-        return { label: "Refus définitif", color: "bg-gray-500/10 text-gray-400 border-gray-500/20", icon: X };
-      default:
-        return { label: status, color: "bg-gray-500/10 text-gray-400 border-gray-500/20", icon: Clock };
+      case "permanently_refused": return "text-red-400 bg-red-500/10 border-red-500/20";
+      case "disputed": return "text-purple-400 bg-purple-500/10 border-purple-500/20";
+      case "paid": return "text-cyan-400 bg-cyan-500/10 border-cyan-500/20";
+      default: return "text-muted-foreground bg-muted border-border";
     }
   };
 
-  // Filter payments
-  const filteredPayments = payments.filter((payment) => {
-    if (payment.fromId !== currentMemberId && payment.toId !== currentMemberId) {
-      return false;
+  const statusLabel = (status?: string) => {
+    switch (status) {
+      case "completed": return "Terminé";
+      case "pending": return "En attente";
+      case "accepted": return "Accepté";
+      case "refused": return "Refusé";
+      case "permanently_refused": return "Refus définitif";
+      case "disputed": return "Litige";
+      case "paid": return "Payé";
+      default: return status;
     }
-    
-    if (filter === "all") return true;
-    if (filter === "completed") return payment.status === "completed";
-    if (filter === "pending") return payment.status === "pending";
-    if (filter === "refused") return payment.status === "refused" || payment.status === "permanently_refused";
-    if (filter === "disputed") return payment.status === "disputed";
-    return true;
-  });
+  };
 
-  // Sort payments
-  const sortedPayments = [...filteredPayments].sort((a, b) => {
-    if (sort === "date") {
-      return (b.completedAt || b.respondedAt || b.createdAt) - (a.completedAt || a.respondedAt || a.createdAt);
+  const iconForType = (type: ActivityItem["type"]) => {
+    switch (type) {
+      case "expense_added": return Receipt;
+      case "expense_deleted": return Trash2;
+      case "payment_request": return ArrowUpRight;
+      case "payment_completed": return Check;
+      case "payment_refused": return X;
+      case "payment_disputed": return AlertTriangle;
+      default: return Clock;
     }
-    if (sort === "amount") {
-      return b.amount - a.amount;
-    }
-    if (sort === "status") {
-      return a.status.localeCompare(b.status);
-    }
-    return 0;
-  });
+  };
 
   return (
-    <div className="space-y-6">
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="max-w-md mx-auto px-5 pt-12 space-y-5">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">Historique</h1>
-        <button
-          onClick={() => setShowFilters(!showFilters)}
-          className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 text-sm font-medium hover:bg-white/10 transition-all"
-        >
-          <Filter size={16} />
-          Filtres
-          <ChevronDown size={16} className={`transition-transform ${showFilters ? "rotate-180" : ""}`} />
-        </button>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 gap-3">
-        <div className="bg-gradient-to-br from-green-500/10 to-green-500/5 backdrop-blur-sm border border-green-500/20 rounded-3xl p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center">
-              <Check size={16} className="text-green-400" />
-            </div>
-            <span className="text-sm font-medium text-green-400">Terminés</span>
-          </div>
-          <p className="text-2xl font-bold">{payments.filter(p => p.status === "completed").length}</p>
-        </div>
-        <div className="bg-gradient-to-br from-orange-500/10 to-orange-500/5 backdrop-blur-sm border border-orange-500/20 rounded-3xl p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-8 h-8 rounded-full bg-orange-500/20 flex items-center justify-center">
-              <Clock size={16} className="text-orange-400" />
-            </div>
-            <span className="text-sm font-medium text-orange-400">En attente</span>
-          </div>
-          <p className="text-2xl font-bold">{payments.filter(p => p.status === "pending").length}</p>
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Historique</h1>
+          <p className="text-sm text-muted-foreground mt-1">{filtered.length} activités</p>
         </div>
       </div>
 
-      {/* Filter Options */}
-      <AnimatePresence>
-        {showFilters && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-3xl p-4 space-y-4"
-          >
-            <div>
-              <p className="text-xs text-muted-foreground mb-3 font-medium uppercase tracking-wider">Statut</p>
-              <div className="flex flex-wrap gap-2">
-                {(["all", "completed", "pending", "refused", "disputed"] as FilterType[]).map((filterType) => (
-                  <button
-                    key={filterType}
-                    onClick={() => setFilter(filterType)}
-                    className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                      filter === filterType
-                        ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25"
-                        : "bg-white/5 text-muted-foreground hover:bg-white/10"
-                    }`}
-                  >
-                    {filterType === "all" ? "Tous" :
-                     filterType === "completed" ? "Terminés" :
-                     filterType === "pending" ? "En attente" :
-                     filterType === "refused" ? "Refusés" :
-                     "Litiges"}
-                  </button>
-                ))}
-              </div>
+      {/* Summary Cards */}
+      <div className="grid grid-cols-3 gap-2">
+        <div className="glass-card-enhanced rounded-2xl p-3 text-center">
+          <div className="flex items-center justify-center mb-1">
+            <div className="w-7 h-7 rounded-full bg-green-500/10 flex items-center justify-center">
+              <ArrowDownLeft size={14} className="text-green-400" />
             </div>
-            <div>
-              <p className="text-xs text-muted-foreground mb-3 font-medium uppercase tracking-wider">Trier par</p>
-              <div className="flex gap-2">
-                {(["date", "amount", "status"] as SortType[]).map((sortType) => (
-                  <button
-                    key={sortType}
-                    onClick={() => setSort(sortType)}
-                    className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                      sort === sortType
-                        ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25"
-                        : "bg-white/5 text-muted-foreground hover:bg-white/10"
-                    }`}
-                  >
-                    {sortType === "date" ? "Date" : sortType === "amount" ? "Montant" : "Statut"}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Payment List */}
-      <div className="space-y-3">
-        {sortedPayments.length === 0 ? (
-          <div className="text-center py-16">
-            <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-white/5 flex items-center justify-center">
-              <Calendar size={40} className="text-muted-foreground/50" />
-            </div>
-            <p className="text-muted-foreground">Aucun remboursement trouvé</p>
           </div>
-        ) : (
-          sortedPayments.map((payment, index) => {
-            const from = members.find((m) => m.id === payment.fromId);
-            const to = members.find((m) => m.id === payment.toId);
-            const statusInfo = getStatusInfo(payment.status);
-            const StatusIcon = statusInfo.icon;
+          <p className="text-sm font-bold text-green-400">{fmt(totalIn)}</p>
+          <p className="text-[10px] text-muted-foreground">Reçu</p>
+        </div>
+        <div className="glass-card-enhanced rounded-2xl p-3 text-center">
+          <div className="flex items-center justify-center mb-1">
+            <div className="w-7 h-7 rounded-full bg-orange-500/10 flex items-center justify-center">
+              <ArrowUpRight size={14} className="text-orange-400" />
+            </div>
+          </div>
+          <p className="text-sm font-bold text-orange-400">{fmt(totalOut)}</p>
+          <p className="text-[10px] text-muted-foreground">Envoyé</p>
+        </div>
+        <div className="glass-card-enhanced rounded-2xl p-3 text-center">
+          <div className="flex items-center justify-center mb-1">
+            <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center">
+              <Receipt size={14} className="text-primary" />
+            </div>
+          </div>
+          <p className="text-sm font-bold">{fmt(totalSpent)}</p>
+          <p className="text-[10px] text-muted-foreground">Dépensé</p>
+        </div>
+      </div>
 
-            return (
-              <motion.div
-                key={payment.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05 }}
-                className={`bg-white/5 backdrop-blur-sm border rounded-3xl p-4 ${statusInfo.color}`}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center text-2xl">
-                      {from?.avatar}
+      {/* Search */}
+      <div className="relative">
+        <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
+        <input type="text" placeholder="Rechercher..." value={search} onChange={e => setSearch(e.target.value)}
+          className="w-full pl-10 pr-4 py-3 rounded-2xl bg-card/50 border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+      </div>
+
+      {/* Filter Chips */}
+      <div className="flex gap-2 flex-wrap">
+        {([
+          ["all", "Tout", "📋"],
+          ["expenses", "Dépenses", "🧾"],
+          ["payments", "Paiements", "💸"],
+          ["inflows", "Mes flux", "👤"],
+        ] as [FilterType, string, string][]).map(([key, label, emoji]) => (
+          <button key={key} onClick={() => setFilter(key)}
+            className={`px-4 py-2 rounded-full text-xs font-semibold transition-all border flex items-center gap-1.5 ${filter === key ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border text-muted-foreground"}`}>
+            {emoji} {label}
+          </button>
+        ))}
+      </div>
+
+      {/* Member Filter */}
+      <MemberSelect
+        members={members}
+        selected={selectedMember}
+        onChange={setSelectedMember}
+        allLabel="Tous les membres"
+      />
+
+      {/* Grouped Activity */}
+      {Object.keys(grouped).length === 0 ? (
+        <div className="text-center py-16">
+          <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-muted/30 flex items-center justify-center">
+            <Clock size={36} className="text-muted-foreground/50" />
+          </div>
+          <p className="text-muted-foreground text-sm">Aucune activité</p>
+        </div>
+      ) : (
+        Object.entries(grouped).map(([group, items]) => (
+          <div key={group}>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold mb-3 px-1">{group}</p>
+            <div className="space-y-2">
+              {items.map((item, idx) => {
+                const Icon = iconForType(item.type);
+                return (
+                  <motion.div key={item.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: idx * 0.03 }}
+                    className="glass-card-enhanced rounded-2xl p-4 flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-muted/30 flex items-center justify-center text-lg shrink-0">
+                      {item.fromAvatar ? item.emoji : <Icon size={18} className="text-muted-foreground" />}
                     </div>
-                    <div>
-                      <p className="text-sm font-medium">
-                        {payment.fromId === currentMemberId ? "Vous avez payé" : `${from?.name} a payé`}
-                        {payment.toId === currentMemberId ? " à vous" : ` à ${to?.name}`}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        {item.fromAvatar && <span className="text-sm">{item.fromAvatar}</span>}
+                        <p className="text-sm font-medium truncate">
+                          {item.type === "expense_added" ? item.description : item.description}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <p className="text-[11px] text-muted-foreground">
+                          {new Date(item.timestamp).toLocaleDateString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                        </p>
+                        {item.status && item.type.startsWith("payment_") && (
+                          <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full border ${statusColor(item.status)}`}>
+                            {statusLabel(item.status)}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    {item.amount !== undefined && (
+                      <p className={`text-sm font-bold shrink-0 ${item.type === "expense_added" ? "" : item.type === "expense_deleted" ? "text-red-400" : ""}`}>
+                        {item.type === "expense_added" ? `−${fmt(item.amount)}` : item.type === "expense_deleted" ? `+${fmt(item.amount)}` : fmt(item.amount)}
                       </p>
-                      <p className="text-xl font-bold">{formatCurrency(payment.amount)}</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-xs font-medium px-3 py-1.5 rounded-full flex items-center gap-1.5">
-                      <StatusIcon size={12} />
-                      {statusInfo.label}
-                    </span>
-                    <p className="text-[11px] text-muted-foreground mt-2">
-                      {formatDate(payment.completedAt || payment.respondedAt || payment.createdAt)}
-                    </p>
-                  </div>
-                </div>
-                
-                {(payment.status === "refused" || payment.status === "disputed") && payment.comment && (
-                  <div className="mt-4 pt-4 border-t border-white/10">
-                    <p className="text-sm text-muted-foreground italic bg-white/5 rounded-xl p-3">
-                      "{payment.comment}"
-                    </p>
-                  </div>
-                )}
-              </motion.div>
-            );
-          })
-        )}
-      </div>
-    </div>
+                    )}
+                  </motion.div>
+                );
+              })}
+            </div>
+          </div>
+        ))
+      )}
+    </motion.div>
   );
 }
