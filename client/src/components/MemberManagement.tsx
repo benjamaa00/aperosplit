@@ -1,10 +1,11 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft, UserPlus, UserMinus, Shield, ShieldOff, ChevronRight, Check,
   X, Clock, Eye, History, Search, MoreVertical, Crown, Users, UserCheck,
-  AlertTriangle, Copy, Share2, Link as LinkIcon,
+  AlertTriangle, Copy, Share2, Link as LinkIcon, RefreshCw,
 } from "lucide-react";
+import { trpc } from "@/lib/trpc";
 
 interface Member {
   id: string;
@@ -60,7 +61,27 @@ export function MemberManagement({
   const [showRoleMenu, setShowRoleMenu] = useState<string | null>(null);
   const [showInvite, setShowInvite] = useState(false);
 
-  const inviteUrl = `${window.location.origin}?invite=true`;
+  const generateInviteMutation = trpc.equilibra.generateInvite.useMutation();
+  const [inviteTokenValue, setInviteTokenValue] = useState<string | null>(null);
+
+  const handleGenerateInvite = async () => {
+    try {
+      const result = await generateInviteMutation.mutateAsync({});
+      if (result?.token) {
+        setInviteTokenValue(result.token);
+      }
+    } catch {
+      // silent
+    }
+  };
+
+  useEffect(() => {
+    if (showInvite && !inviteTokenValue) {
+      handleGenerateInvite();
+    }
+  }, [showInvite]);
+
+  const inviteUrl = inviteTokenValue ? `${window.location.origin}?invite=${inviteTokenValue}` : `${window.location.origin}?invite=true`;
   const handleCopyInvite = async () => {
     try { await navigator.clipboard.writeText(inviteUrl); } catch {}
   };
@@ -388,6 +409,10 @@ export function MemberManagement({
               <div className="mt-4 bg-background/50 rounded-xl p-3 flex items-center gap-2">
                 <LinkIcon size={14} className="text-muted-foreground shrink-0" />
                 <p className="text-xs text-muted-foreground truncate flex-1">{inviteUrl}</p>
+                <motion.button whileTap={{ scale: 0.9 }} onClick={() => { setInviteTokenValue(null); handleGenerateInvite(); }}
+                  className="w-7 h-7 rounded-lg bg-card/30 border border-border flex items-center justify-center shrink-0">
+                  <RefreshCw size={12} className="text-muted-foreground" />
+                </motion.button>
               </div>
               <div className="flex gap-2 mt-4">
                 <motion.button whileTap={{ scale: 0.97 }} onClick={handleCopyInvite}

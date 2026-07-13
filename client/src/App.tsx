@@ -9,6 +9,8 @@ import { SettingsScreen } from "./components/SettingsScreen";
 import { MemberManagement } from "./components/MemberManagement";
 import { ReportsScreen as ReportsScreenEnhanced } from "./components/ReportsScreen";
 import { MemberSelect } from "./components/MemberSelect";
+import { RegisterScreen } from "./components/RegisterScreen";
+import { InviteScreen } from "./components/InviteScreen";
 import { motion, AnimatePresence } from "framer-motion";
 import { QRCodeSVG } from "qrcode.react";
 import { trpc } from "@/lib/trpc";
@@ -112,7 +114,7 @@ interface GroupCategory {
   isDefault: boolean;
 }
 
-type Screen = "identity" | "lock" | "main" | "register" | "access" | "groups" | "groupSettings" | "members" | "notifications" | "notificationSettings" | "reports" | "settings";
+type Screen = "identity" | "lock" | "main" | "register" | "invite" | "access" | "groups" | "groupSettings" | "members" | "notifications" | "notificationSettings" | "reports" | "settings";
 type Tab = "home" | "expenses" | "balances" | "stats" | "history" | "profile";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -484,6 +486,7 @@ function App() {
   const [selectedGroupId, setSelectedGroupId] = useState<string>(GROUP_ID);
   const [groupPin, setGroupPin] = useState<string | null>(null);
   const [requireApproval, setRequireApproval] = useState(false);
+  const [inviteToken, setInviteToken] = useState<string | null>(null);
 
   const getNotificationsQuery = trpc.equilibra.getNotifications.useQuery(
     { memberId: currentMemberId },
@@ -558,15 +561,16 @@ function App() {
     const urlParams = new URLSearchParams(window.location.search);
     const inviteParam = urlParams.get('invite');
     
-    if (inviteParam === 'true') {
-      // User is joining via QR code - show registration screen
+    if (inviteParam && inviteParam !== 'true') {
+      setInviteToken(inviteParam);
+      setScreen('invite');
+    } else if (inviteParam === 'true') {
       setScreen('register');
-      // Store that this is an invited user
       localStorage.setItem('equilibra_invited', 'true');
     }
     
     // Check if access code is required
-    if (!accessCode) {
+    if (!accessCode && !inviteParam) {
       setScreen('access');
     }
   }, [accessCode]);
@@ -913,8 +917,9 @@ function App() {
 
   // Handle registration via QR code
   const handleRegister = useCallback(async (name: string, avatar: string) => {
+    const memberId = `member_${Date.now()}`;
     const newMember: Member = {
-      id: `member_${Date.now()}`,
+      id: memberId,
       name,
       avatar,
     };
@@ -928,13 +933,17 @@ function App() {
     // Update backend
     if (!isNetlify) {
       try {
-        await initGroup.mutateAsync({ members: [...members, newMember] });
+        if (inviteToken) {
+          await joinGroupByInviteMutation.mutateAsync({ token: inviteToken, memberId, memberName: name, memberAvatar: avatar });
+        } else {
+          await initGroup.mutateAsync({ members: [...members, newMember] });
+        }
         refetch();
       } catch (error) {
         devLog("Backend member add failed");
       }
     }
-  }, [members, initGroup, refetch, isNetlify]);
+  }, [members, initGroup, refetch, isNetlify, inviteToken, joinGroupByInviteMutation]);
 
   // Remove member
   const removeMember = useCallback(async (memberId: string) => {
@@ -947,20 +956,25 @@ function App() {
       toast.error("Impossible de supprimer un membre avec des dépenses");
       return;
     }
-    
-    setMembers((prev) => prev.filter((m) => m.id !== memberId));
-    toast.success(`${member.name} a quitté le groupe`);
-    
-    // Update backend
+
+    // Optimistically remove from local state
+    const updatedMembers = members.filter((m) => m.id !== memberId);
+    setMembers(updatedMembers);
+    toast.success(`${member.name} a été expulsé du groupe`);
+
+    // Delete on backend using expelMember
     if (!isNetlify) {
       try {
-        await initGroup.mutateAsync({ members: members.filter((m) => m.id !== memberId) });
+        await expelMemberMutation.mutateAsync({ memberId, expelledBy: currentMemberId });
+        // Update tRPC cache so refetchInterval doesn't bring the member back
         refetch();
       } catch (error) {
-        devLog("Backend member remove failed");
+        devLog("Backend member removal failed, reverting");
+        setMembers(members);
+        toast.error("Échec de la suppression côté serveur");
       }
     }
-  }, [members, expenses, initGroup, refetch, isNetlify]);
+  }, [members, expenses, expelMemberMutation, currentMemberId, refetch, isNetlify]);
 
   const addExpense = useCallback(async (expense: Omit<Expense, "id" | "date">) => {
     haptic("success");
@@ -1438,12 +1452,48 @@ function App() {
     );
   }
 
+  if (screen === "invite" && inviteToken) {
+    return (
+      <InviteScreen
+        inviteToken={inviteToken}
+        onJoinByPin={async (pinCode, name, avatar) => {
+          const memberId = `member_${Date.now()}`;
+          try {
+            await joinGroupByPinMutation.mutateAsync({ groupId: GROUP_ID, pinCode, memberId, memberName: name, memberAvatar: avatar });
+            setCurrentMemberId(memberId);
+            localStorage.setItem('equilibra_locked_member', memberId);
+            return { success: true };
+          } catch (error: any) {
+            return { success: false, error: error?.message || "Erreur lors de l'inscription" };
+          }
+        }}
+        onJoinByInvite={async (name, avatar) => {
+          const memberId = `member_${Date.now()}`;
+          try {
+            await joinGroupByInviteMutation.mutateAsync({ token: inviteToken, memberId, memberName: name, memberAvatar: avatar });
+            setCurrentMemberId(memberId);
+            localStorage.setItem('equilibra_locked_member', memberId);
+            return { success: true };
+          } catch (error: any) {
+            return { success: false, error: error?.message || "Erreur lors de l'inscription" };
+          }
+        }}
+        onBack={() => setScreen("access")}
+        groupName="Mon Groupe"
+      />
+    );
+  }
+
   if (screen === "lock") {
+    if (!currentMember) {
+      setScreen("identity");
+      return null;
+    }
     const isLocked = !!localStorage.getItem('equilibra_locked_member');
     return (
       <AppShell>
         <LockScreen
-          member={currentMember!}
+          member={currentMember}
           onUnlock={handleBiometricUnlock}
           onSkip={() => setScreen("main")}
           onSwitchIdentity={isLocked ? undefined : () => setScreen("identity")}
@@ -1579,6 +1629,16 @@ function App() {
     );
   }
 
+  if (!currentMember) {
+    return (
+      <AppShell>
+        <div className="min-h-screen flex items-center justify-center">
+          <p className="text-muted-foreground text-sm">Chargement du profil...</p>
+        </div>
+      </AppShell>
+    );
+  }
+
   return (
     <AppShell>
       <div className="min-h-screen pb-24">
@@ -1586,7 +1646,7 @@ function App() {
           {activeTab === "home" && (
             <HomeTab
               key="home"
-              currentMember={currentMember!}
+              currentMember={currentMember}
               balance={balances[currentMemberId] || 0}
               totalSpent={expenses.reduce((s, e) => s + e.amount, 0)}
               expenseCount={expenses.length}
@@ -1648,7 +1708,7 @@ function App() {
           {activeTab === "profile" && (
             <ProfileTab
               key="profile"
-              currentMember={currentMember!}
+              currentMember={currentMember}
               members={members}
               biometricEnabled={biometricEnabled[currentMemberId] || false}
               biometricAvailable={biometricAvailable}
@@ -2076,105 +2136,6 @@ function IdentityScreen({ members, onSelect }: { members: Member[]; onSelect: (i
             <span className="text-sm font-semibold">{member.name}</span>
           </motion.button>
         ))}
-      </div>
-    </div>
-  );
-}
-
-// ─── Register Screen ──────────────────────────────────────────────────────────
-function RegisterScreen({ onRegister }: { onRegister: (name: string, avatar: string) => void }) {
-  const [name, setName] = useState("");
-  const [avatar, setAvatar] = useState("👤");
-  const haptic = useHaptic();
-
-  const handleSubmit = () => {
-    if (name.trim()) {
-      haptic("success");
-      onRegister(name.trim(), avatar);
-    } else {
-      haptic("error");
-      toast.error("Veuillez entrer votre nom");
-    }
-  };
-
-  return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6 relative overflow-hidden">
-      {/* Background gradient effects */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <motion.div
-          animate={{
-            scale: [1, 1.2, 1],
-            opacity: [0.2, 0.4, 0.2],
-          }}
-          transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute top-1/3 left-1/3 w-96 h-96 bg-primary/10 rounded-full blur-3xl"
-        />
-        <motion.div
-          animate={{
-            scale: [1, 1.3, 1],
-            opacity: [0.15, 0.3, 0.15],
-          }}
-          transition={{ duration: 7, repeat: Infinity, ease: "easeInOut", delay: 2 }}
-          className="absolute bottom-1/3 right-1/3 w-80 h-80 bg-primary/5 rounded-full blur-3xl"
-        />
-      </div>
-
-      <motion.div {...fadeUp} className="text-center mb-12 relative z-10">
-        <motion.div
-          initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ delay: 0.1, ...spring }}
-          className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border border-primary/20 shadow-lg shadow-primary/10"
-        >
-          <Sparkles size={28} className="text-primary" />
-        </motion.div>
-        <h1 className="text-3xl font-bold tracking-tight mb-2">Rejoindre le groupe</h1>
-        <p className="text-muted-foreground text-sm">Créez votre profil</p>
-      </motion.div>
-
-      <div className="w-full max-w-sm space-y-6 relative z-10">
-        <div>
-          <label className="text-xs text-muted-foreground font-medium mb-2 block uppercase tracking-wide">Votre nom</label>
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Ex: Marie"
-            className="w-full bg-card/50 border border-border rounded-2xl px-4 py-4 text-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/20 transition-all"
-          />
-        </div>
-
-        <div>
-          <label className="text-xs text-muted-foreground font-medium mb-2 block uppercase tracking-wide">Choisissez votre avatar</label>
-          <div className="grid grid-cols-4 gap-3">
-            {["👤", "👩", "👨", "🧑", "👩‍🦰", "👨‍🦱", "👧", "👦"].map((emoji) => (
-              <motion.button
-                key={emoji}
-                whileTap={{ scale: 0.9 }}
-                onClick={() => {
-                  haptic("light");
-                  setAvatar(emoji);
-                }}
-                className={`p-4 rounded-2xl flex items-center justify-center transition-all ${
-                  avatar === emoji
-                    ? "bg-primary/20 border-2 border-primary shadow-lg shadow-primary/20"
-                    : "bg-card/50 border border-border hover:bg-card/80"
-                }`}
-              >
-                <span className="text-3xl">{emoji}</span>
-              </motion.button>
-            ))}
-          </div>
-        </div>
-
-        <motion.button
-          whileTap={{ scale: 0.97 }}
-          onClick={handleSubmit}
-          disabled={!name.trim()}
-          className="w-full bg-primary text-primary-foreground font-semibold py-4 rounded-2xl shadow-xl shadow-primary/25 text-base disabled:opacity-50"
-        >
-          Rejoindre
-        </motion.button>
       </div>
     </div>
   );
@@ -3520,13 +3481,35 @@ function ProfileTab({
   onOpenMembers?: () => void;
 }) {
   const { theme, toggleTheme } = useThemeContext();
-  const shareUrl = window.location.href;
+  const shareUrl = window.location.origin;
   const haptic = useHaptic();
+  const [inviteTokenValue, setInviteTokenValue] = useState<string | null>(null);
+  const generateInviteMutation = trpc.equilibra.generateInvite.useMutation();
+
+  const handleGenerateInvite = async () => {
+    try {
+      const result = await generateInviteMutation.mutateAsync({});
+      if (result?.token) {
+        setInviteTokenValue(result.token);
+      }
+    } catch {
+      toast.error("Erreur lors de la génération du lien d'invitation");
+    }
+  };
+
+  // Generate invite token on mount
+  useEffect(() => {
+    if (!inviteTokenValue) {
+      handleGenerateInvite();
+    }
+  }, []);
+
+  const inviteLink = inviteTokenValue ? `${shareUrl}?invite=${inviteTokenValue}` : "";
 
   const copyLink = async () => {
     haptic("light");
     try {
-      await navigator.clipboard.writeText(shareUrl);
+      await navigator.clipboard.writeText(inviteLink);
       toast.success("Lien copié !");
       haptic("success");
     } catch {
@@ -3539,7 +3522,7 @@ function ProfileTab({
     haptic("light");
     if (navigator.share) {
       try {
-        await navigator.share({ title: "Équilibra Groupe", text: "Rejoignez notre groupe !", url: shareUrl });
+        await navigator.share({ title: "Équilibra Groupe", text: "Rejoignez notre groupe !", url: inviteLink });
       } catch { /* cancelled */ }
     } else {
       copyLink();
@@ -3748,7 +3731,7 @@ function ProfileTab({
               className="bg-white rounded-3xl p-5 shadow-2xl mb-4"
             >
               <QRCodeSVG
-                value={`${shareUrl}?invite=true`}
+                value={inviteLink}
                 size={200}
                 level="H"
                 includeMargin={false}
