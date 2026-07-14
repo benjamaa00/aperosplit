@@ -230,9 +230,16 @@ export const equilibraRouter = router({
     }),
 
   refusePayment: groupProcedure
-    .input(z.object({ paymentId: z.string() }))
+    .input(z.object({ paymentId: z.string(), fromId: z.string(), comment: z.string().optional() }))
     .mutation(async ({ input }) => {
-      const success = await refusePayment(input.paymentId);
+      const success = await refusePayment(input.paymentId, input.comment);
+      if (success) {
+        await addNotification(input.fromId, GROUP_ID, "payment_refused",
+          "Demande refusée",
+          `Votre demande de paiement a été refusée${input.comment ? ` : ${input.comment}` : ""}`,
+          { paymentId: input.paymentId }
+        );
+      }
       return { success };
     }),
 
@@ -258,16 +265,30 @@ export const equilibraRouter = router({
     }),
 
   confirmReceipt: groupProcedure
-    .input(z.object({ paymentId: z.string() }))
+    .input(z.object({ paymentId: z.string(), toId: z.string() }))
     .mutation(async ({ input }) => {
       const success = await confirmReceipt(input.paymentId);
+      if (success) {
+        await addNotification(input.toId, GROUP_ID, "receipt_confirmed",
+          "Paiement confirmé",
+          "Le destinataire a confirmé avoir reçu le paiement",
+          { paymentId: input.paymentId }
+        );
+      }
       return { success };
     }),
 
   reportNotReceived: groupProcedure
-    .input(z.object({ paymentId: z.string(), note: z.string().min(1).max(500) }))
+    .input(z.object({ paymentId: z.string(), note: z.string().min(1).max(500), toId: z.string() }))
     .mutation(async ({ input }) => {
       const success = await reportNotReceived(input.paymentId, input.note);
+      if (success) {
+        await addNotification(input.toId, GROUP_ID, "payment_disputed",
+          "Litige ouvert",
+          `Un litige a été ouvert pour un paiement : ${input.note}`,
+          { paymentId: input.paymentId }
+        );
+      }
       return { success };
     }),
 

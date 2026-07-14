@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import type { Member } from "../types";
 import { fadeUp, spring } from "../constants";
 import { useHaptic } from "../hooks/useHaptic";
+import { ConfirmDialog } from "../components/ConfirmDialog";
 import { AvatarImg } from "../components/AvatarImg";
 
 export function ProfileTab({
@@ -49,6 +50,8 @@ export function ProfileTab({
   const shareUrl = window.location.origin;
   const haptic = useHaptic();
   const [inviteTokenValue, setInviteTokenValue] = useState<string | null>(null);
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
   const generateInviteMutation = trpc.equilibra.generateInvite.useMutation();
 
   const handleGenerateInvite = async () => {
@@ -422,15 +425,24 @@ export function ProfileTab({
           whileHover={{ scale: 1.02 }}
           onClick={() => {
             haptic("heavy");
-            if (window.confirm("Quitter le groupe ?\n\nVos dépenses et profil seront supprimés. Cette action est irréversible.")) {
-              onLeaveGroup();
-            }
+            setShowLeaveConfirm(true);
           }}
           className="w-full bg-red-500/10 text-red-400 font-semibold py-3.5 rounded-2xl border border-red-500/10 press-scale shadow-lg shadow-red-500/5"
         >
           Quitter le groupe
         </motion.button>
       )}
+
+      <ConfirmDialog
+        open={showLeaveConfirm}
+        onClose={() => setShowLeaveConfirm(false)}
+        onConfirm={() => onLeaveGroup?.()}
+        title="Quitter le groupe ?"
+        description="Vos dépenses et profil seront supprimés. Cette action est irréversible."
+        confirmLabel="Quitter"
+        variant="danger"
+        icon="logout"
+      />
 
       {/* Logout - Admin Only and Not Locked */}
       {!isLocked && currentMember.role === "admin" && (
@@ -462,9 +474,7 @@ export function ProfileTab({
             whileHover={{ scale: 1.02 }}
             onClick={() => {
               haptic("heavy");
-              if (window.confirm("Réinitialiser toutes les données du groupe ?\n\nCette action supprimera :\n- Toutes les dépenses\n- Tous les paiements\n- Tout l'historique\n- Les notifications\n- Les membres invités\n\nSeul le groupe sera conservé. Cette action est irréversible.")) {
-                onResetAllData();
-              }
+              setShowResetConfirm(true);
             }}
             className="w-full bg-red-500/20 text-red-400 font-semibold py-3.5 rounded-2xl border border-red-500/20 press-scale shadow-lg shadow-red-500/10 flex items-center justify-center gap-2"
           >
@@ -472,6 +482,17 @@ export function ProfileTab({
           </motion.button>
         </motion.div>
       )}
+
+      <ConfirmDialog
+        open={showResetConfirm}
+        onClose={() => setShowResetConfirm(false)}
+        onConfirm={() => onResetAllData?.()}
+        title="Réinitialiser toutes les données ?"
+        description="Toutes les dépenses, paiements, historique, notifications et membres invités seront supprimés. Seul le groupe sera conservé."
+        confirmLabel="Tout supprimer"
+        variant="danger"
+        icon="trash"
+      />
 
       <div className="h-4" />
     </motion.div>

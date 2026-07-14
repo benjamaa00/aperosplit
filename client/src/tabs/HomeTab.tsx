@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { TrendingUp, TrendingDown } from "lucide-react";
 import { PaymentRequestCard } from "../components/PaymentRequestCard";
@@ -7,6 +7,7 @@ import { formatCurrency, formatDate } from "../utils/currency";
 import { calculateMemberBreakdown } from "../utils/debts";
 import { fadeUp, spring } from "../constants";
 import { AvatarImg } from "../components/AvatarImg";
+import { InputPrompt } from "../components/InputPrompt";
 
 export function HomeTab({
   currentMember,

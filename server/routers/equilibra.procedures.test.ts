@@ -112,7 +112,7 @@ describe("access control", () => {
       caller.confirmPayment({ paymentId: "pay_x", fromId: "u1", toId: "u2", amount: 5 })
     ).rejects.toMatchObject({ code: "UNAUTHORIZED" });
     await expect(
-      caller.refusePayment({ paymentId: "pay_x" })
+      caller.refusePayment({ paymentId: "pay_x", fromId: "u1" })
     ).rejects.toMatchObject({ code: "UNAUTHORIZED" });
     await expect(
       caller.deleteExpense({
@@ -443,17 +443,17 @@ describe("confirmPayment", () => {
 describe("refusePayment", () => {
   it("refuses payment and returns success", async () => {
     const caller = authed();
-    const result = await caller.refusePayment({ paymentId: "pay_ref" });
+    const result = await caller.refusePayment({ paymentId: "pay_ref", fromId: "u1", comment: "Too expensive" });
 
     expect(result.success).toBe(true);
-    expect(dbRefusePayment).toHaveBeenCalledWith("pay_ref");
+    expect(dbRefusePayment).toHaveBeenCalledWith("pay_ref", "Too expensive");
   });
 
   it("returns false when DB refusePayment fails", async () => {
     (dbRefusePayment as any).mockResolvedValueOnce(false);
     const caller = authed();
 
-    const result = await caller.refusePayment({ paymentId: "pay_bad" });
+    const result = await caller.refusePayment({ paymentId: "pay_bad", fromId: "u1" });
     expect(result.success).toBe(false);
   });
 
@@ -461,7 +461,7 @@ describe("refusePayment", () => {
     const caller = authed();
     await expect(
       // @ts-expect-error testing invalid input
-      caller.refusePayment({ paymentId: 123 })
+      caller.refusePayment({ paymentId: 123, fromId: "u1" })
     ).rejects.toThrow();
   });
 });
@@ -512,7 +512,7 @@ describe("markAsPaid", () => {
 describe("confirmReceipt", () => {
   it("confirms receipt", async () => {
     const caller = authed();
-    const result = await caller.confirmReceipt({ paymentId: "pay_rcpt" });
+    const result = await caller.confirmReceipt({ paymentId: "pay_rcpt", toId: "u2" });
     expect(result.success).toBe(true);
   });
 });
@@ -537,7 +537,7 @@ describe("disputePayment", () => {
 describe("reportNotReceived", () => {
   it("reports with note", async () => {
     const caller = authed();
-    const result = await caller.reportNotReceived({ paymentId: "pay_r", note: "Never got it" });
+    const result = await caller.reportNotReceived({ paymentId: "pay_r", note: "Never got it", toId: "u2" });
     expect(result.success).toBe(true);
   });
 });

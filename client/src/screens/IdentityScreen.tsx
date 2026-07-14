@@ -1,12 +1,15 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { Sparkles, RotateCcw } from "lucide-react";
 import { Member } from "../types";
 import { fadeUp, spring } from "../constants";
 import { useHaptic } from "../hooks/useHaptic";
 import { AvatarImg } from "../components/AvatarImg";
+import { ConfirmDialog } from "../components/ConfirmDialog";
 
 export function IdentityScreen({ members, onSelect, onReset }: { members: Member[]; onSelect: (id: string) => void; onReset?: () => void }) {
   const haptic = useHaptic();
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   const handleSelect = (id: string) => {
     haptic("medium");
@@ -79,9 +82,7 @@ export function IdentityScreen({ members, onSelect, onReset }: { members: Member
           transition={{ delay: 0.8 }}
           onClick={() => {
             haptic("heavy");
-            if (window.confirm("Réinitialiser toutes les données du groupe ?\n\nTous les membres, dépenses et paiements seront supprimés. Cette action est irréversible.")) {
-              onReset();
-            }
+            setShowResetConfirm(true);
           }}
           className="mt-8 flex items-center gap-2 text-xs text-muted-foreground hover:text-red-400 transition-colors relative z-10"
         >
@@ -89,6 +90,17 @@ export function IdentityScreen({ members, onSelect, onReset }: { members: Member
           Réinitialiser le groupe
         </motion.button>
       )}
+
+      <ConfirmDialog
+        open={showResetConfirm}
+        onClose={() => setShowResetConfirm(false)}
+        onConfirm={() => onReset?.()}
+        title="Réinitialiser le groupe ?"
+        description="Tous les membres, dépenses et paiements seront supprimés. Cette action est irréversible."
+        confirmLabel="Réinitialiser"
+        variant="danger"
+        icon="reset"
+      />
     </div>
   );
 }

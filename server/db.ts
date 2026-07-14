@@ -462,7 +462,7 @@ export async function confirmPayment(paymentId: string, fromId: string, toId: st
   return result.rowCount === 1;
 }
 
-export async function refusePayment(paymentId: string) {
+export async function refusePayment(paymentId: string, comment?: string) {
   const db = await ready();
   if (!db) {
     const pendingPayments = getStorage("pendingPayments");
@@ -470,10 +470,11 @@ export async function refusePayment(paymentId: string) {
     if (paymentIndex === -1) return false;
     pendingPayments[paymentIndex].status = "refused";
     pendingPayments[paymentIndex].respondedAt = new Date().toISOString();
+    pendingPayments[paymentIndex].comment = comment || null;
     updateStorage("pendingPayments", pendingPayments);
     return true;
   }
-  return (await db.query(`UPDATE payments SET status = 'refused', responded_at = NOW() WHERE id = $1 AND status = 'pending'`, [paymentId])).rowCount === 1;
+  return (await db.query(`UPDATE payments SET status = 'refused', responded_at = NOW(), comment = $2 WHERE id = $1 AND status = 'pending'`, [paymentId, comment || null])).rowCount === 1;
 }
 
 export async function addHistoryEntry(entry: any) {
@@ -829,7 +830,7 @@ export async function reportNotReceived(paymentId: string, note: string) {
   const db = await ready();
   if (!db) return false;
   return (await db.query(
-    `UPDATE payments SET status = 'disputed', dispute_note = $2, responded_at = NOW() WHERE id = $1 AND status = 'completed'`,
+    `UPDATE payments SET status = 'disputed', dispute_note = $2, responded_at = NOW() WHERE id = $1 AND status IN ('accepted', 'paid')`,
     [paymentId, note]
   )).rowCount === 1;
 }

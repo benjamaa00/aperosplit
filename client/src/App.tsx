@@ -97,6 +97,8 @@ export default function App() {
   const approveMemberMutation = trpc.equilibra.approveMember.useMutation();
   const refuseMemberMutation = trpc.equilibra.refuseMember.useMutation();
   const leaveMemberMutation = trpc.equilibra.leaveMember.useMutation();
+  const reportNotReceivedMutation = trpc.equilibra.reportNotReceived.useMutation();
+  const resendPaymentRequestMutation = trpc.equilibra.resendPaymentRequest.useMutation();
 
   const { data: groupData, refetch } = trpc.equilibra.getGroupData.useQuery(undefined, { enabled: !isNetlify, refetchInterval: 10000, retry: 2, refetchOnWindowFocus: true });
   const getNotificationsQuery = trpc.equilibra.getNotifications.useQuery({ memberId: currentMemberId }, { enabled: !!currentMemberId && !isNetlify, refetchInterval: 5000 });
@@ -304,13 +306,29 @@ export default function App() {
   const confirmPayment = useCallback((id: string) => {
     haptic("success");
     setPendingPayments((prev) => prev.map((p) => p.id === id ? { ...p, status: "accepted" as const, respondedAt: Date.now() } : p));
-  }, [haptic]);
+    if (!isNetlify) {
+      const payment = pendingPayments.find((p) => p.id === id);
+      if (payment) {
+        confirmPaymentMutation.mutateAsync({ paymentId: id, fromId: payment.fromId, toId: payment.toId, amount: payment.amount })
+          .then(() => refetch())
+          .catch(() => {});
+      }
+    }
+  }, [haptic, isNetlify, pendingPayments, confirmPaymentMutation, refetch]);
 
   const refusePayment = useCallback((id: string, comment?: string) => {
     haptic("medium");
     setPendingPayments((prev) => prev.map((p) => p.id === id ? { ...p, status: "refused" as const, respondedAt: Date.now(), comment } : p));
     showNotification("Paiement refusé", "La demande a été refusée");
-  }, [haptic, showNotification]);
+    if (!isNetlify) {
+      const payment = pendingPayments.find((p) => p.id === id);
+      if (payment) {
+        refusePaymentMutation.mutateAsync({ paymentId: id, fromId: payment.fromId, comment })
+          .then(() => refetch())
+          .catch(() => {});
+      }
+    }
+  }, [haptic, showNotification, isNetlify, pendingPayments, refusePaymentMutation, refetch]);
 
   const resentPayment = useCallback((id: string) => {
     haptic("light");
@@ -320,7 +338,12 @@ export default function App() {
       if (attempts >= 3) return { ...p, status: "late" as const, attemptCount: attempts, notificationCount: p.notificationCount + 1 };
       return { ...p, notificationCount: p.notificationCount + 1, attemptCount: attempts, status: p.status === "pending" ? "late" as const : p.status };
     }));
-  }, [haptic]);
+    if (!isNetlify) {
+      resendPaymentRequestMutation.mutateAsync({ paymentId: id })
+        .then(() => refetch())
+        .catch(() => {});
+    }
+  }, [haptic, isNetlify, resendPaymentRequestMutation, refetch]);
 
   const confirmReceipt = useCallback((id: string) => {
     haptic("success");
@@ -329,14 +352,29 @@ export default function App() {
       setCompletedPayments((prev) => [...prev, { ...payment, status: "completed" as const, completedAt: Date.now() }]);
       setPendingPayments((prev) => prev.filter((p) => p.id !== id));
     }
-    if (!isNetlify) { confirmReceiptMutation.mutateAsync({ paymentId: id }).then(() => refetch()).catch(() => {}); }
+    if (!isNetlify) {
+      const payment = pendingPayments.find((p) => p.id === id);
+      if (payment) {
+        confirmReceiptMutation.mutateAsync({ paymentId: id, toId: payment.toId })
+          .then(() => refetch())
+          .catch(() => {});
+      }
+    }
   }, [haptic, pendingPayments, confirmReceiptMutation, refetch, isNetlify]);
 
   const reportNotReceived = useCallback((id: string, comment?: string) => {
     haptic("medium");
     setPendingPayments((prev) => prev.map((p) => p.id === id ? { ...p, status: "disputed" as const, disputeNote: comment } : p));
     showNotification("Litige ouvert", "Le paiement est en litige");
-  }, [haptic, showNotification]);
+    if (!isNetlify) {
+      const payment = pendingPayments.find((p) => p.id === id);
+      if (payment && comment) {
+        reportNotReceivedMutation.mutateAsync({ paymentId: id, note: comment, toId: payment.toId })
+          .then(() => refetch())
+          .catch(() => {});
+      }
+    }
+  }, [haptic, showNotification, isNetlify, pendingPayments, reportNotReceivedMutation, refetch]);
 
   const handleRegister = useCallback(async (name: string, rawAvatar: string) => {
     const memberId = Date.now().toString();
