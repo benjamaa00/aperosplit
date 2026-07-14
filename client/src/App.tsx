@@ -393,7 +393,7 @@ export default function App() {
         initGroup.mutateAsync({ members: [{ id: memberId, name, avatar, role: "admin", status: "active" }] }).catch(() => {});
       }
     }} onBack={() => setScreen("access")} groupName="Équilibra" /></AppShell>;
-    return <AppShell><IdentityScreen members={members} onSelect={selectIdentity} /></AppShell>;
+    return <AppShell><IdentityScreen members={members} onSelect={selectIdentity} onReset={async () => { try { await resetAllDataMutation.mutateAsync(); setMembers([]); setExpenses([]); setPendingPayments([]); setCompletedPayments([]); toast.success("Groupe réinitialisé"); } catch { toast.error("Erreur lors de la réinitialisation"); } }} /></AppShell>;
   }
   if (screen === "register") return <AppShell><RegisterScreen onRegister={handleRegister} onBack={() => setScreen("access")} /></AppShell>;
   if (screen === "invite") return <AppShell><InviteScreen inviteToken={inviteToken!} onJoinByPin={async (pin, name, rawAvatar) => {

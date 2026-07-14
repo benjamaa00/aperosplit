@@ -1,11 +1,11 @@
 import { motion } from "framer-motion";
-import { Sparkles } from "lucide-react";
+import { Sparkles, RotateCcw } from "lucide-react";
 import { Member } from "../types";
 import { fadeUp, spring } from "../constants";
 import { useHaptic } from "../hooks/useHaptic";
 import { AvatarImg } from "../components/AvatarImg";
 
-export function IdentityScreen({ members, onSelect }: { members: Member[]; onSelect: (id: string) => void }) {
+export function IdentityScreen({ members, onSelect, onReset }: { members: Member[]; onSelect: (id: string) => void; onReset?: () => void }) {
   const haptic = useHaptic();
 
   const handleSelect = (id: string) => {
@@ -71,6 +71,24 @@ export function IdentityScreen({ members, onSelect }: { members: Member[]; onSel
           </motion.button>
         ))}
       </div>
+
+      {onReset && (
+        <motion.button
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.8 }}
+          onClick={() => {
+            haptic("heavy");
+            if (window.confirm("Réinitialiser toutes les données du groupe ?\n\nTous les membres, dépenses et paiements seront supprimés. Cette action est irréversible.")) {
+              onReset();
+            }
+          }}
+          className="mt-8 flex items-center gap-2 text-xs text-muted-foreground hover:text-red-400 transition-colors relative z-10"
+        >
+          <RotateCcw size={14} />
+          Réinitialiser le groupe
+        </motion.button>
+      )}
     </div>
   );
 }
