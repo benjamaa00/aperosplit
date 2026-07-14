@@ -251,16 +251,30 @@ export const equilibraRouter = router({
     }),
 
   resendPaymentRequest: groupProcedure
-    .input(z.object({ paymentId: z.string() }))
+    .input(z.object({ paymentId: z.string(), toId: z.string(), amount: z.number() }))
     .mutation(async ({ input }) => {
       const success = await resendPaymentRequest(input.paymentId);
+      if (success) {
+        await addNotification(input.toId, GROUP_ID, "payment_reminder",
+          "Rappel de paiement",
+          `Nouveau rappel : vous devez ${input.amount.toFixed(2)} €`,
+          { paymentId: input.paymentId }
+        );
+      }
       return { success };
     }),
 
   markAsPaid: groupProcedure
-    .input(z.object({ paymentId: z.string() }))
+    .input(z.object({ paymentId: z.string(), fromId: z.string() }))
     .mutation(async ({ input }) => {
       const success = await markAsPaid(input.paymentId);
+      if (success) {
+        await addNotification(input.fromId, GROUP_ID, "payment_marked_paid",
+          "Paiement effectué",
+          "Le débiteur a marqué le paiement comme effectué",
+          { paymentId: input.paymentId }
+        );
+      }
       return { success };
     }),
 

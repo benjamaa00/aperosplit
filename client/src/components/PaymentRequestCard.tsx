@@ -2,6 +2,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, X, RefreshCw, AlertTriangle, Clock, Send } from "lucide-react";
 import { AvatarImg } from "./AvatarImg";
+import { TextAreaPrompt } from "./TextAreaPrompt";
 
 interface PendingPayment {
   id: string;
@@ -32,6 +33,7 @@ interface PaymentRequestCardProps {
   onResentPayment: (id: string) => void;
   onConfirmReceipt: (id: string) => void;
   onReportNotReceived: (id: string, comment?: string) => void;
+  onMarkAsPaid: (id: string) => void;
 }
 
 export function PaymentRequestCard({
@@ -43,9 +45,11 @@ export function PaymentRequestCard({
   onResentPayment,
   onConfirmReceipt,
   onReportNotReceived,
+  onMarkAsPaid,
 }: PaymentRequestCardProps) {
   const [showRefuseModal, setShowRefuseModal] = useState(false);
   const [refuseComment, setRefuseComment] = useState("");
+  const [showNotReceivedModal, setShowNotReceivedModal] = useState(false);
   const from = members.find((m) => m.id === payment.fromId);
   const to = members.find((m) => m.id === payment.toId);
   const isFromCurrentUser = payment.fromId === currentMemberId;
@@ -218,10 +222,7 @@ export function PaymentRequestCard({
                 J'ai reçu l'argent
               </button>
               <button
-                onClick={() => {
-                  const comment = prompt("Pourquoi n'avez-vous pas reçu l'argent ?");
-                  if (comment) onReportNotReceived(payment.id, comment);
-                }}
+                onClick={() => setShowNotReceivedModal(true)}
                 className="flex-1 bg-red-500/10 text-red-400 px-3 py-2 rounded-lg text-xs font-medium hover:bg-red-500/20 transition-colors flex items-center justify-center gap-1"
               >
                 <AlertTriangle size={12} />
@@ -233,7 +234,7 @@ export function PaymentRequestCard({
           {/* Disputed status - Debiteur can mark as paid */}
           {payment.status === "disputed" && isToCurrentUser && (
             <button
-              onClick={() => onConfirmPayment(payment.id)}
+              onClick={() => onMarkAsPaid(payment.id)}
               className="flex-1 bg-blue-500/10 text-blue-400 px-3 py-2 rounded-lg text-xs font-medium hover:bg-blue-500/20 transition-colors flex items-center justify-center gap-1"
             >
               <Check size={12} />
@@ -293,6 +294,16 @@ export function PaymentRequestCard({
           </motion.div>
         )}
       </AnimatePresence>
+
+      <TextAreaPrompt
+        open={showNotReceivedModal}
+        onClose={() => setShowNotReceivedModal(false)}
+        onConfirm={(comment) => onReportNotReceived(payment.id, comment)}
+        title="Pas reçu l'argent ?"
+        description="Expliquez pourquoi vous n'avez pas reçu ce paiement"
+        placeholder="Raison du litige..."
+        confirmLabel="Signaler"
+      />
     </>
   );
 }

@@ -64,6 +64,8 @@ import {
   refusePayment as dbRefusePayment,
   addHistoryEntry,
   addNotification,
+  resendPaymentRequest as dbResendPaymentRequest,
+  markAsPaid as dbMarkAsPaid,
 } from "../db";
 
 const VALID_KEY = "test-pin-1234";
@@ -500,10 +502,37 @@ describe("cancelPaymentRequest", () => {
 // ─── markAsPaid ──────────────────────────────────────────────────────
 
 describe("markAsPaid", () => {
-  it("marks payment as paid", async () => {
+  it("marks payment as paid and notifies creditor", async () => {
     const caller = authed();
-    const result = await caller.markAsPaid({ paymentId: "pay_paid" });
+    const result = await caller.markAsPaid({ paymentId: "pay_paid", fromId: "u1" });
     expect(result.success).toBe(true);
+    expect(addNotification).toHaveBeenCalledWith(
+      "u1",
+      "equilibra-fixed-group",
+      "payment_marked_paid",
+      expect.any(String),
+      expect.any(String),
+      { paymentId: "pay_paid" }
+    );
+  });
+});
+
+// ─── resendPaymentRequest ────────────────────────────────────────────
+
+describe("resendPaymentRequest", () => {
+  it("resends and notifies debtor", async () => {
+    const caller = authed();
+    const result = await caller.resendPaymentRequest({ paymentId: "pay_resend", toId: "u2", amount: 25 });
+    expect(result.success).toBe(true);
+    expect(dbResendPaymentRequest).toHaveBeenCalledWith("pay_resend");
+    expect(addNotification).toHaveBeenCalledWith(
+      "u2",
+      "equilibra-fixed-group",
+      "payment_reminder",
+      expect.any(String),
+      expect.stringContaining("25.00"),
+      { paymentId: "pay_resend" }
+    );
   });
 });
 

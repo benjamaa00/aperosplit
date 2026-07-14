@@ -23,6 +23,7 @@ export function HomeTab({
   onResentPayment,
   onConfirmReceipt,
   onReportNotReceived,
+  onMarkAsPaid,
   expenses,
   monthlyBudget,
   onUpdateBudget,
@@ -40,6 +41,7 @@ export function HomeTab({
   onResentPayment: (id: string) => void;
   onConfirmReceipt: (id: string) => void;
   onReportNotReceived: (id: string, comment?: string) => void;
+  onMarkAsPaid: (id: string) => void;
   expenses: Expense[];
   monthlyBudget: number;
   onUpdateBudget: (budget: number) => void;
@@ -83,7 +85,13 @@ export function HomeTab({
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ delay: 0.1, ...spring }}
-        className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary via-primary/90 to-primary/70 p-6 text-primary-foreground shadow-2xl shadow-primary/30"
+        className={`relative overflow-hidden rounded-3xl p-6 text-white shadow-2xl ${
+          balance > 0
+            ? "bg-gradient-to-br from-emerald-500 via-emerald-600 to-emerald-700 shadow-emerald-500/30"
+            : balance < 0
+            ? "bg-gradient-to-br from-red-500 via-red-600 to-red-700 shadow-red-500/30"
+            : "bg-gradient-to-br from-primary via-primary/90 to-primary/70 shadow-primary/30"
+        }`}
       >
         <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full -translate-y-12 translate-x-12 blur-xl" />
         <div className="absolute bottom-0 left-0 w-32 h-32 bg-muted/30 rounded-full translate-y-10 -translate-x-10 blur-lg" />
@@ -272,6 +280,7 @@ export function HomeTab({
                 onResentPayment={onResentPayment}
                 onConfirmReceipt={onConfirmReceipt}
                 onReportNotReceived={onReportNotReceived}
+                onMarkAsPaid={onMarkAsPaid}
               />
             ))}
           </div>

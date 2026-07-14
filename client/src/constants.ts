@@ -94,14 +94,6 @@ export const CATEGORY_SECTIONS = [
 
 export const CATEGORIES = CATEGORY_SECTIONS.flatMap((s) => s.items);
 
-export const DEFAULT_MEMBERS: Member[] = [
-  { id: "admin", name: "Mohamed", avatar: "👨‍💼" },
-  { id: "2", name: "Amine", avatar: "👨" },
-  { id: "3", name: "Isma", avatar: "👨‍🦱" },
-  { id: "4", name: "Rachid", avatar: "👨‍🦲" },
-  { id: "5", name: "Yasmina", avatar: "👩" },
-];
-
 export const STORAGE_KEY = "equilibra_data";
 export const GROUP_ID = "equilibra-fixed-group";
 

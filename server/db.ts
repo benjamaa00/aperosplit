@@ -785,7 +785,7 @@ export async function resendPaymentRequest(paymentId: string) {
   const db = await ready();
   if (!db) return false;
   return (await db.query(
-    `UPDATE payments SET status = 'pending', attempt_count = attempt_count + 1, responded_at = NULL WHERE id = $1 AND status IN ('refused', 'late')`,
+    `UPDATE payments SET status = 'pending', attempt_count = attempt_count + 1, responded_at = NULL WHERE id = $1 AND status IN ('pending', 'refused', 'late')`,
     [paymentId]
   )).rowCount === 1;
 }
@@ -812,7 +812,7 @@ export async function markAsPaid(paymentId: string) {
   const db = await ready();
   if (!db) return false;
   return (await db.query(
-    `UPDATE payments SET status = 'paid', paid_at = NOW() WHERE id = $1 AND status = 'accepted'`,
+    `UPDATE payments SET status = 'paid', paid_at = NOW() WHERE id = $1 AND status IN ('accepted', 'disputed')`,
     [paymentId]
   )).rowCount === 1;
 }

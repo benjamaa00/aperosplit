@@ -99,6 +99,7 @@ export default function App() {
   const leaveMemberMutation = trpc.equilibra.leaveMember.useMutation();
   const reportNotReceivedMutation = trpc.equilibra.reportNotReceived.useMutation();
   const resendPaymentRequestMutation = trpc.equilibra.resendPaymentRequest.useMutation();
+  const markAsPaidMutation = trpc.equilibra.markAsPaid.useMutation();
 
   const { data: groupData, refetch } = trpc.equilibra.getGroupData.useQuery(undefined, { enabled: !isNetlify, refetchInterval: 10000, retry: 2, refetchOnWindowFocus: true });
   const getNotificationsQuery = trpc.equilibra.getNotifications.useQuery({ memberId: currentMemberId }, { enabled: !!currentMemberId && !isNetlify, refetchInterval: 5000 });
@@ -210,18 +211,12 @@ export default function App() {
     });
     completedPayments.forEach((p) => {
       if (p.status === "completed" || p.status === "paid") {
-        if (b[p.fromId] !== undefined) b[p.fromId] += p.amount;
-        if (b[p.toId] !== undefined) b[p.toId] -= p.amount;
-      }
-    });
-    pendingPayments.forEach((p) => {
-      if (p.status === "accepted" || p.status === "in_progress" || p.status === "paid") {
-        if (b[p.fromId] !== undefined) b[p.fromId] += p.amount;
-        if (b[p.toId] !== undefined) b[p.toId] -= p.amount;
+        if (b[p.fromId] !== undefined) b[p.fromId] -= p.amount;
+        if (b[p.toId] !== undefined) b[p.toId] += p.amount;
       }
     });
     return b;
-  }, [members, expenses, completedPayments, pendingPayments]);
+  }, [members, expenses, completedPayments]);
 
   const suggestedTransactions = useMemo(() => simplifyDebts(balances), [balances]);
 
@@ -339,11 +334,14 @@ export default function App() {
       return { ...p, notificationCount: p.notificationCount + 1, attemptCount: attempts, status: p.status === "pending" ? "late" as const : p.status };
     }));
     if (!isNetlify) {
-      resendPaymentRequestMutation.mutateAsync({ paymentId: id })
-        .then(() => refetch())
-        .catch(() => {});
+      const payment = pendingPayments.find((p) => p.id === id);
+      if (payment) {
+        resendPaymentRequestMutation.mutateAsync({ paymentId: id, toId: payment.toId, amount: payment.amount })
+          .then(() => refetch())
+          .catch(() => {});
+      }
     }
-  }, [haptic, isNetlify, resendPaymentRequestMutation, refetch]);
+  }, [haptic, isNetlify, pendingPayments, resendPaymentRequestMutation, refetch]);
 
   const confirmReceipt = useCallback((id: string) => {
     haptic("success");
@@ -375,6 +373,20 @@ export default function App() {
       }
     }
   }, [haptic, showNotification, isNetlify, pendingPayments, reportNotReceivedMutation, refetch]);
+
+  const markAsPaid = useCallback((id: string) => {
+    haptic("success");
+    setPendingPayments((prev) => prev.map((p) => p.id === id ? { ...p, status: "paid" as const } : p));
+    showNotification("Paiement marqué", "Vous avez marqué le paiement comme effectué");
+    if (!isNetlify) {
+      const payment = pendingPayments.find((p) => p.id === id);
+      if (payment) {
+        markAsPaidMutation.mutateAsync({ paymentId: id, fromId: payment.fromId })
+          .then(() => refetch())
+          .catch(() => {});
+      }
+    }
+  }, [haptic, showNotification, isNetlify, pendingPayments, markAsPaidMutation, refetch]);
 
   const handleRegister = useCallback(async (name: string, rawAvatar: string) => {
     const memberId = Date.now().toString();
@@ -491,7 +503,7 @@ export default function App() {
     <AppShell>
       <div className="min-h-screen pb-24">
         <AnimatePresence mode="wait">
-          {activeTab === "home" && <HomeTab key="home" currentMember={currentMember} balance={myBalance} totalSpent={totalSpent} expenseCount={expenses.length} recentExpenses={recentExpenses} members={members} pendingPayments={myPendingPayments} completedPayments={myCompletedPayments} onConfirmPayment={confirmPayment} onRefusePayment={refusePayment} onResentPayment={resentPayment} onConfirmReceipt={confirmReceipt} onReportNotReceived={reportNotReceived} expenses={expenses} monthlyBudget={monthlyBudget} onUpdateBudget={updateBudget} />}
+          {activeTab === "home" && <HomeTab key="home" currentMember={currentMember} balance={myBalance} totalSpent={totalSpent} expenseCount={expenses.length} recentExpenses={recentExpenses} members={members} pendingPayments={myPendingPayments} completedPayments={myCompletedPayments} onConfirmPayment={confirmPayment} onRefusePayment={refusePayment} onResentPayment={resentPayment} onConfirmReceipt={confirmReceipt} onReportNotReceived={reportNotReceived} onMarkAsPaid={markAsPaid} expenses={expenses} monthlyBudget={monthlyBudget} onUpdateBudget={updateBudget} />}
           {activeTab === "expenses" && <ExpensesTab key="expenses" expenses={expenses} members={members} currentMemberId={currentMemberId} onDelete={deleteExpense} onAdd={() => setShowAddExpense(true)} onRequestPayment={requestPayment} onRequestGroupPayment={requestGroupPayment} />}
           {activeTab === "balances" && <BalancesTab key="balances" members={members} balances={balances} suggestedTransactions={suggestedTransactions} currentMemberId={currentMemberId} onRequestPayment={(toId, amount) => requestPayment(toId, amount)} expenses={expenses} />}
           {activeTab === "history" && <PaymentHistory key="history" payments={[...completedPayments, ...pendingPayments].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))} expenses={expenses} members={members} currentMemberId={currentMemberId} />}
