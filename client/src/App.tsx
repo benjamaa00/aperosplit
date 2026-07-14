@@ -75,6 +75,7 @@ export default function App() {
   const haptic = useHaptic();
 
   const currentMember = useMemo(() => members.find((m) => m.id === currentMemberId), [members, currentMemberId]);
+  const pendingMembers = useMemo(() => members.filter(m => m.status === "pending"), [members]);
 
   // tRPC
   const initGroup = trpc.equilibra.initGroup.useMutation();
@@ -93,6 +94,9 @@ export default function App() {
   const confirmReceiptMutation = trpc.equilibra.confirmReceipt.useMutation();
   const resetAllDataMutation = trpc.equilibra.resetAllData.useMutation();
   const updateGroupSettingsMutation = trpc.equilibra.updateGroupSettings.useMutation();
+  const approveMemberMutation = trpc.equilibra.approveMember.useMutation();
+  const refuseMemberMutation = trpc.equilibra.refuseMember.useMutation();
+  const leaveMemberMutation = trpc.equilibra.leaveMember.useMutation();
 
   const { data: groupData, refetch } = trpc.equilibra.getGroupData.useQuery(undefined, { enabled: !isNetlify, refetchInterval: 10000, retry: 2, refetchOnWindowFocus: true });
   const getNotificationsQuery = trpc.equilibra.getNotifications.useQuery({ memberId: currentMemberId }, { enabled: !!currentMemberId && !isNetlify, refetchInterval: 5000 });
@@ -124,7 +128,7 @@ export default function App() {
   useEffect(() => {
     if (syncingFromServer.current) { syncingFromServer.current = false; return; }
     if (!isNetlify && members.length > 0) {
-      initGroup.mutateAsync({ members: members.map(m => ({ id: m.id, name: m.name, avatar: m.avatar })) }).catch(() => {});
+      initGroup.mutateAsync({ members: members.map(m => ({ id: m.id, name: m.name, avatar: m.avatar, role: m.role as "admin" | "member" | undefined, status: m.status as "active" | "pending" | undefined })) }).catch(() => {});
     }
   }, [isNetlify, members.length]);
 
@@ -162,6 +166,8 @@ export default function App() {
     }
     if (groupData.expenses) setExpenses(groupData.expenses);
     if (groupData.pending) setPendingPayments(groupData.pending);
+    if (groupData.requireApproval !== undefined) setRequireApproval(groupData.requireApproval);
+    if (groupData.pinCode) setGroupPin(groupData.pinCode);
   }, [groupData]);
 
   useEffect(() => {
@@ -331,23 +337,46 @@ export default function App() {
     const newMember: Member = { id: memberId, name, avatar, role: "member", status: "pending" };
     setMembers((prev) => [...prev, newMember]);
     setCurrentMemberId(newMember.id);
+    if (!isNetlify && inviteToken) {
+      try {
+        const r = await joinGroupByInviteMutation.mutateAsync({ token: inviteToken, memberId: newMember.id, memberName: name, memberAvatar: avatar });
+        if (r?.requiresApproval) { setScreen("identity"); toast.info("Votre demande est en attente d'approbation par l'admin."); return; }
+      } catch {}
+    }
     setScreen("main");
-    if (!isNetlify && inviteToken) { try { await joinGroupByInviteMutation.mutateAsync({ token: inviteToken, memberId: newMember.id, memberName: name, memberAvatar: avatar }); await refetch(); } catch {} }
-  }, [inviteToken, joinGroupByInviteMutation, refetch, isNetlify]);
+  }, [inviteToken, joinGroupByInviteMutation, isNetlify]);
 
   const addMember = useCallback(async (name: string, rawAvatar: string) => {
     const memberId = Date.now().toString();
     const avatar = prepareAvatar(memberId, rawAvatar);
     const newMember: Member = { id: memberId, name, avatar };
     setMembers((prev) => [...prev, newMember]);
-    if (!isNetlify) { try { await initGroup.mutateAsync({ members: [...members, newMember] }); await refetch(); } catch {} }
+    if (!isNetlify) { try { await initGroup.mutateAsync({ members: [...members, newMember].map(m => ({ id: m.id, name: m.name, avatar: m.avatar, role: m.role as "admin" | "member" | undefined })) }); await refetch(); } catch {} }
   }, [members, initGroup, refetch, isNetlify]);
 
   const removeMember = useCallback((id: string) => {
-    if (expenses.some((e) => e.payerId === id)) { showNotification("Erreur", "Impossible de supprimer un membre avec des dépenses"); return; }
     setMembers((prev) => prev.filter((m) => m.id !== id));
     if (!isNetlify) { expelMemberMutation.mutateAsync({ memberId: id, expelledBy: currentMemberId }).then(() => refetch()).catch(() => {}); }
-  }, [expenses, currentMemberId, expelMemberMutation, refetch, showNotification, isNetlify]);
+  }, [currentMemberId, expelMemberMutation, refetch, isNetlify]);
+
+  const approveMember = useCallback((id: string) => {
+    setMembers((prev) => prev.map(m => m.id === id ? { ...m, status: "active" } : m));
+    if (!isNetlify) { approveMemberMutation.mutateAsync({ memberId: id, approvedBy: currentMemberId }).then(() => refetch()).catch(() => {}); }
+  }, [currentMemberId, approveMemberMutation, refetch, isNetlify]);
+
+  const refuseMemberCb = useCallback((id: string) => {
+    setMembers((prev) => prev.filter(m => m.id !== id));
+    if (!isNetlify) { refuseMemberMutation.mutateAsync({ memberId: id, refusedBy: currentMemberId }).then(() => refetch()).catch(() => {}); }
+  }, [currentMemberId, refuseMemberMutation, refetch, isNetlify]);
+
+  const leaveGroup = useCallback(async () => {
+    if (currentMember?.role === "admin") { toast.error("L'admin ne peut pas quitter. Transférez d'abord le rôle admin."); return; }
+    setMembers(prev => prev.filter(m => m.id !== currentMemberId));
+    setExpenses(prev => prev.filter(e => e.payerId !== currentMemberId));
+    setCurrentMemberId("");
+    setScreen("identity");
+    if (!isNetlify) { await leaveMemberMutation.mutateAsync({ memberId: currentMemberId }); await refetch(); }
+  }, [currentMember, currentMemberId, leaveMemberMutation, refetch, isNetlify]);
 
   // ─── Screen Routing ────────────────────────────────────────
   if (screen === "access") return <AppShell><AccessScreen onSubmit={handleAccessCode} /></AppShell>;
@@ -355,10 +384,14 @@ export default function App() {
     if (members.length === 0) return <AppShell><RegisterScreen onRegister={(name, rawAvatar) => {
       const memberId = Date.now().toString();
       const avatar = prepareAvatar(memberId, rawAvatar);
-      const newMember: Member = { id: memberId, name, avatar, role: "admin" };
+      const newMember: Member = { id: memberId, name, avatar, role: "admin", status: "active" };
       setMembers([newMember]);
       setCurrentMemberId(newMember.id);
       setScreen("main");
+      if (!isNetlify) {
+        syncingFromServer.current = true;
+        initGroup.mutateAsync({ members: [{ id: memberId, name, avatar, role: "admin", status: "active" }] }).catch(() => {});
+      }
     }} onBack={() => setScreen("access")} groupName="Équilibra" /></AppShell>;
     return <AppShell><IdentityScreen members={members} onSelect={selectIdentity} /></AppShell>;
   }
@@ -369,10 +402,12 @@ export default function App() {
     try {
       const r = await joinGroupByPinMutation.mutateAsync({ pinCode: pin, groupId: selectedGroupId, memberId, memberName: name, memberAvatar: avatar });
       if (r?.success) {
-        const newMember: Member = { id: memberId, name, avatar, role: "member", status: "approved" };
+        const status = r.requiresApproval ? "pending" : "active";
+        const newMember: Member = { id: memberId, name, avatar, role: "member", status };
         setMembers((prev) => [...prev, newMember]);
         setCurrentMemberId(memberId);
-        setScreen("main");
+        if (r.requiresApproval) { setScreen("identity"); toast.info("Votre demande est en attente d'approbation par l'admin."); }
+        else { setScreen("main"); }
       }
       return r ?? { success: false };
     } catch { return { success: false, error: "Erreur de connexion" }; }
@@ -382,10 +417,12 @@ export default function App() {
     try {
       const r = await joinGroupByInviteMutation.mutateAsync({ token: inviteToken!, memberId, memberName: name, memberAvatar: avatar });
       if (r?.success) {
-        const newMember: Member = { id: memberId, name, avatar, role: "member", status: "approved" };
+        const status = r.requiresApproval ? "pending" : "active";
+        const newMember: Member = { id: memberId, name, avatar, role: "member", status };
         setMembers((prev) => [...prev, newMember]);
         setCurrentMemberId(memberId);
-        setScreen("main");
+        if (r.requiresApproval) { setScreen("identity"); toast.info("Votre demande est en attente d'approbation par l'admin."); }
+        else { setScreen("main"); }
       }
       return r ?? { success: false };
     } catch { return { success: false, error: "Erreur de connexion" }; }
@@ -394,7 +431,7 @@ export default function App() {
   if (screen === "notifications") return <AppShell><NotificationsScreen notifications={notifications} currentMemberId={currentMemberId} onBack={() => setScreen("main")} onMarkRead={(id) => markNotificationReadMutation.mutate({ notificationId: id })} onMarkAllRead={() => markAllNotificationsReadMutation.mutate({ memberId: currentMemberId })} /></AppShell>;
   if (screen === "notificationSettings") return <AppShell><NotificationSettingsScreen settings={{ pushEnabled: pushNotifications, emailEnabled: false, reminderFrequency: reminderDelay.toString() + "h" }} onBack={() => setScreen("main")} onSave={(s) => { if (s.pushEnabled !== undefined) setPushNotifications(s.pushEnabled); }} /></AppShell>;
   if (screen === "groupSettings" || screen === "settings") return <AppShell><SettingsScreen monthlyBudget={monthlyBudget} onSetBudget={updateBudget} currency={currency} onSetCurrency={updateCurrency} autoReminders={autoReminders} onToggleReminders={() => setAutoReminders(!autoReminders)} privacyMode={privacyMode} onTogglePrivacy={() => setPrivacyMode(!privacyMode)} offlineMode={offlineMode} onToggleOffline={() => setOfflineMode(!offlineMode)} pushNotifications={pushNotifications} onTogglePushNotifications={() => setPushNotifications(!pushNotifications)} reminderDelay={reminderDelay} onSetReminderDelay={(d: number) => setReminderDelay(d)} onClearData={() => { localStorage.clear(); window.location.reload(); }} biometricEnabled={!!biometricEnabled[currentMemberId]} onToggleBiometric={toggleBiometric} onBack={() => setScreen("main")} /></AppShell>;
-  if (screen === "members") return <AppShell><MemberManagement members={members} currentMemberId={currentMemberId} expenses={expenses} onChangeRole={(id, role) => { setMembers((prev) => prev.map((m) => m.id === id ? { ...m, role } : m)); changeMemberRoleMutation.mutate({ memberId: id, role: role as "admin" | "member" }); }} onRemoveMember={removeMember} onAddMember={() => addMember("Nouveau", "👤")} onBack={() => setScreen("main")} onUpdateGroupSettings={(settings) => { updateGroupSettingsMutation.mutate(settings); toast.success("Paramètres mis à jour"); }} onResetAllData={async () => { try { await resetAllDataMutation.mutateAsync(); setMembers([]); setExpenses([]); setPendingPayments([]); setCompletedPayments([]); setScreen("identity"); toast.success("Toutes les données ont été réinitialisées"); } catch { toast.error("Erreur lors de la réinitialisation"); } }} groupName="Équilibra Groupe" /></AppShell>;
+  if (screen === "members") return <AppShell><MemberManagement members={members} currentMemberId={currentMemberId} expenses={expenses} pendingRequests={pendingMembers.map(m => ({ id: `pending_${m.id}`, memberId: m.id, memberName: m.name, memberAvatar: m.avatar, requestedAt: 0 }))} onChangeRole={(id, role) => { setMembers((prev) => prev.map((m) => m.id === id ? { ...m, role } : m)); changeMemberRoleMutation.mutate({ memberId: id, role: role as "admin" | "member" }); }} onRemoveMember={removeMember} onAddMember={() => addMember("Nouveau", "👤")} onApproveMember={approveMember} onRefuseMember={refuseMemberCb} onBack={() => setScreen("main")} onUpdateGroupSettings={(settings) => { updateGroupSettingsMutation.mutate(settings); toast.success("Paramètres mis à jour"); }} onResetAllData={async () => { try { await resetAllDataMutation.mutateAsync(); setMembers([]); setExpenses([]); setPendingPayments([]); setCompletedPayments([]); setScreen("identity"); toast.success("Toutes les données ont été réinitialisées"); } catch { toast.error("Erreur lors de la réinitialisation"); } }} groupName="Équilibra Groupe" groupRequireApproval={requireApproval} /></AppShell>;
   if (screen === "reports") return <AppShell><ReportsScreen expenses={expenses} members={members} pendingPayments={pendingPayments} completedPayments={completedPayments} monthlyBudget={monthlyBudget} onBack={() => setScreen("main")} /></AppShell>;
   if (!currentMember) return <AppShell><div className="flex items-center justify-center h-screen"><p className="text-muted-foreground">Chargement...</p></div></AppShell>;
 
@@ -414,7 +451,7 @@ export default function App() {
           {activeTab === "balances" && <BalancesTab key="balances" members={members} balances={balances} suggestedTransactions={suggestedTransactions} currentMemberId={currentMemberId} onRequestPayment={(toId, amount) => requestPayment(toId, amount)} expenses={expenses} />}
           {activeTab === "history" && <PaymentHistory key="history" payments={[...completedPayments, ...pendingPayments].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))} expenses={expenses} members={members} currentMemberId={currentMemberId} />}
           {activeTab === "stats" && <StatsTab key="stats" expenses={expenses} members={members} currentMemberId={currentMemberId} pendingPayments={pendingPayments} completedPayments={completedPayments} monthlyBudget={monthlyBudget} />}
-          {activeTab === "profile" && <ProfileTab key="profile" currentMember={currentMember} members={members} biometricEnabled={!!biometricEnabled[currentMemberId]} biometricAvailable={biometricAvailable} onToggleBiometric={toggleBiometric} onLogout={() => { setCurrentMemberId(""); setScreen("identity"); }} onRemoveMember={removeMember} isLocked={!!localStorage.getItem("equilibra_locked_member")} unreadCount={unreadCount} onOpenNotifications={() => setScreen("notifications")} onOpenReports={() => setScreen("reports")} onOpenGroupSettings={() => setScreen("groupSettings")} onOpenMembers={() => setScreen("members")} onResetAllData={async () => { try { await resetAllDataMutation.mutateAsync(); setMembers([]); setExpenses([]); setPendingPayments([]); setCompletedPayments([]); setScreen("identity"); toast.success("Toutes les données ont été réinitialisées"); } catch { toast.error("Erreur lors de la réinitialisation"); } }} />}
+          {activeTab === "profile" && <ProfileTab key="profile" currentMember={currentMember} members={members} biometricEnabled={!!biometricEnabled[currentMemberId]} biometricAvailable={biometricAvailable} onToggleBiometric={toggleBiometric} onLogout={() => { setCurrentMemberId(""); setScreen("identity"); }} onRemoveMember={removeMember} isLocked={!!localStorage.getItem("equilibra_locked_member")} unreadCount={unreadCount} onOpenNotifications={() => setScreen("notifications")} onOpenReports={() => setScreen("reports")} onOpenGroupSettings={() => setScreen("groupSettings")} onOpenMembers={() => setScreen("members")} onResetAllData={async () => { try { await resetAllDataMutation.mutateAsync(); setMembers([]); setExpenses([]); setPendingPayments([]); setCompletedPayments([]); setScreen("identity"); toast.success("Toutes les données ont été réinitialisées"); } catch { toast.error("Erreur lors de la réinitialisation"); } }} onLeaveGroup={leaveGroup} />}
         </AnimatePresence>
 
         {/* Bottom Navigation */}

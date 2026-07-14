@@ -353,7 +353,7 @@ export async function getGroupData(groupId: string) {
   };
 }
 
-export async function addMembers(groupId: string, members: Array<{ id: string; name: string; avatar: string }>) {
+export async function addMembers(groupId: string, members: Array<{ id: string; name: string; avatar: string; role?: string; status?: string }>) {
   const db = await ready();
   if (!db) {
     updateStorage("members", members);
@@ -365,9 +365,9 @@ export async function addMembers(groupId: string, members: Array<{ id: string; n
     await client.query(`INSERT INTO groups (id) VALUES ($1) ON CONFLICT (id) DO NOTHING`, [groupId]);
     for (const member of members) {
       await client.query(
-        `INSERT INTO group_members (id, group_id, name, avatar) VALUES ($1, $2, $3, $4)
+        `INSERT INTO group_members (id, group_id, name, avatar, role, status) VALUES ($1, $2, $3, $4, $5, $6)
          ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, avatar = EXCLUDED.avatar`,
-        [member.id, groupId, member.name, member.avatar],
+        [member.id, groupId, member.name, member.avatar, member.role || "member", member.status || "active"],
       );
     }
     await client.query("COMMIT");
@@ -629,13 +629,37 @@ export async function expelMember(memberId: string, expelledBy: string) {
   if (!db) return false;
   const memberInfo = await db.query(`SELECT group_id AS "groupId", name FROM group_members WHERE id = $1 AND status = 'active'`, [memberId]);
   if (memberInfo.rows[0]) {
+    const groupId = memberInfo.rows[0].groupId;
+    await db.query(`DELETE FROM expenses WHERE payer_id = $1 AND group_id = $2`, [memberId, groupId]);
     await db.query(`DELETE FROM group_members WHERE id = $1`, [memberId]);
     await addHistoryEntry({
       id: `h_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-      groupId: memberInfo.rows[0].groupId,
+      groupId,
       type: "member_expelled",
       authorId: expelledBy,
       description: `${memberInfo.rows[0].name} a été expulsé du groupe`,
+      date: new Date(),
+    });
+    return true;
+  }
+  return false;
+}
+
+export async function leaveGroup(memberId: string) {
+  const db = await ready();
+  if (!db) return false;
+  const memberInfo = await db.query(`SELECT group_id AS "groupId", name, role FROM group_members WHERE id = $1 AND status = 'active'`, [memberId]);
+  if (memberInfo.rows[0]) {
+    if (memberInfo.rows[0].role === "admin") return { error: "L'admin ne peut pas quitter le groupe. Transférez d'abord le rôle admin." };
+    const groupId = memberInfo.rows[0].groupId;
+    await db.query(`DELETE FROM expenses WHERE payer_id = $1 AND group_id = $2`, [memberId, groupId]);
+    await db.query(`DELETE FROM group_members WHERE id = $1`, [memberId]);
+    await addHistoryEntry({
+      id: `h_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      groupId,
+      type: "member_left",
+      authorId: memberId,
+      description: `${memberInfo.rows[0].name} a quitté le groupe`,
       date: new Date(),
     });
     return true;

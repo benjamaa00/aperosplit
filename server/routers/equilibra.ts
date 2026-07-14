@@ -40,6 +40,7 @@ import {
   reportNotReceived,
   getGroupStats,
   exportExpensesCSV,
+  leaveGroup,
 } from "../db";
 
 const GROUP_ID = "equilibra-fixed-group";
@@ -53,6 +54,8 @@ export const equilibraRouter = router({
             id: z.string().min(1).max(128),
             name: z.string().trim().min(1).max(80),
             avatar: z.string().min(1).max(50000),
+            role: z.enum(["admin", "member"]).optional(),
+            status: z.enum(["active", "pending"]).optional(),
           })
         ),
       })
@@ -445,6 +448,13 @@ export const equilibraRouter = router({
     .mutation(async ({ input }) => {
       const success = await changeMemberRole(input.memberId, input.role);
       return { success };
+    }),
+
+  leaveMember: groupProcedure
+    .input(z.object({ memberId: z.string() }))
+    .mutation(async ({ input }) => {
+      const result = await leaveGroup(input.memberId);
+      return result;
     }),
 
   updateGroupSettings: groupProcedure

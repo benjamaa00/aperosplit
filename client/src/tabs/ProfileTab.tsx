@@ -26,6 +26,7 @@ export function ProfileTab({
   onOpenGroupSettings,
   onOpenMembers,
   onResetAllData,
+  onLeaveGroup,
 }: {
   currentMember: Member;
   members: Member[];
@@ -42,6 +43,7 @@ export function ProfileTab({
   onOpenGroupSettings?: () => void;
   onOpenMembers?: () => void;
   onResetAllData?: () => void;
+  onLeaveGroup?: () => void;
 }) {
   const { theme, toggleTheme } = useThemeContext();
   const shareUrl = window.location.origin;
@@ -407,6 +409,26 @@ export function ProfileTab({
           className="w-full bg-primary/10 text-primary font-semibold py-3.5 rounded-2xl border border-primary/20 press-scale shadow-lg shadow-primary/5"
         >
           Changer de compte
+        </motion.button>
+      )}
+
+      {/* Leave Group - Non-admin members only */}
+      {!isLocked && currentMember.role !== "admin" && onLeaveGroup && (
+        <motion.button
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.32 }}
+          whileTap={{ scale: 0.97 }}
+          whileHover={{ scale: 1.02 }}
+          onClick={() => {
+            haptic("heavy");
+            if (window.confirm("Quitter le groupe ?\n\nVos dépenses et profil seront supprimés. Cette action est irréversible.")) {
+              onLeaveGroup();
+            }
+          }}
+          className="w-full bg-red-500/10 text-red-400 font-semibold py-3.5 rounded-2xl border border-red-500/10 press-scale shadow-lg shadow-red-500/5"
+        >
+          Quitter le groupe
         </motion.button>
       )}
 
