@@ -1,18 +1,98 @@
 import type { Member } from "./types";
 
-export const CATEGORIES = [
-  { name: "Nourriture", emoji: "🍕" },
-  { name: "Transport", emoji: "🚗" },
-  { name: "Loisirs", emoji: "🎬" },
-  { name: "Logement", emoji: "🏠" },
-  { name: "Courses", emoji: "🛒" },
-  { name: "Santé", emoji: "💊" },
-  { name: "Shopping", emoji: "🛍️" },
-  { name: "Apéro", emoji: "🥂" },
-  { name: "Cigarettes", emoji: "🚬" },
-  { name: "420", emoji: "🌿" },
-  { name: "Autre", emoji: "📦" },
+export const CATEGORY_SECTIONS = [
+  {
+    title: "Nourriture et boissons",
+    emoji: "🍽️",
+    items: [
+      { name: "Courses", emoji: "🛒" },
+      { name: "Restaurants", emoji: "🍽️" },
+      { name: "Café", emoji: "☕" },
+      { name: "Livraison", emoji: "🛵" },
+    ],
+  },
+  {
+    title: "Transport",
+    emoji: "🚗",
+    items: [
+      { name: "Voiture", emoji: "🚗" },
+      { name: "Transports en commun", emoji: "🚆" },
+      { name: "Taxi", emoji: "🚕" },
+      { name: "Carburant", emoji: "⛽" },
+    ],
+  },
+  {
+    title: "Logement",
+    emoji: "🏠",
+    items: [
+      { name: "Loyer", emoji: "🏠" },
+      { name: "Crédit immobilier", emoji: "🏡" },
+      { name: "Charges", emoji: "💡" },
+      { name: "Internet", emoji: "📡" },
+      { name: "Réparations", emoji: "🔧" },
+      { name: "Meubles", emoji: "🛋️" },
+    ],
+  },
+  {
+    title: "Shopping",
+    emoji: "🛍️",
+    items: [
+      { name: "Vêtements", emoji: "👕" },
+      { name: "Électronique", emoji: "💻" },
+      { name: "Soins personnels", emoji: "🧴" },
+    ],
+  },
+  {
+    title: "Loisirs",
+    emoji: "🎮",
+    items: [
+      { name: "Abonnements", emoji: "📺" },
+      { name: "Cinéma", emoji: "🎬" },
+      { name: "Jeux vidéo", emoji: "🎮" },
+      { name: "Loisirs", emoji: "🎨" },
+    ],
+  },
+  {
+    title: "Santé",
+    emoji: "🏥",
+    items: [
+      { name: "Médecin", emoji: "🩺" },
+      { name: "Médicaments", emoji: "💊" },
+      { name: "Salle de sport", emoji: "🏋️" },
+      { name: "Assurance", emoji: "🛡️" },
+    ],
+  },
+  {
+    title: "Éducation",
+    emoji: "🎓",
+    items: [
+      { name: "Cours", emoji: "📚" },
+      { name: "Livres", emoji: "📖" },
+      { name: "Frais de scolarité", emoji: "🎓" },
+    ],
+  },
+  {
+    title: "Voyages",
+    emoji: "✈️",
+    items: [
+      { name: "Hôtels", emoji: "🏨" },
+      { name: "Vols", emoji: "✈️" },
+      { name: "Location de voiture", emoji: "🚙" },
+    ],
+  },
+  {
+    title: "Autres",
+    emoji: "📦",
+    items: [
+      { name: "Dons caritatifs", emoji: "💖" },
+      { name: "Cadeaux", emoji: "🎁" },
+      { name: "Animaux", emoji: "🐾" },
+      { name: "Autres", emoji: "📦" },
+    ],
+  },
 ];
+
+export const CATEGORIES = CATEGORY_SECTIONS.flatMap((s) => s.items);
 
 export const DEFAULT_MEMBERS: Member[] = [
   { id: "admin", name: "Mohamed", avatar: "👨‍💼" },

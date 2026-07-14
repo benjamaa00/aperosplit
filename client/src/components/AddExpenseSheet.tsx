@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Check } from "lucide-react";
+import { X, Check, ChevronLeft } from "lucide-react";
 import { toast } from "sonner";
 import type { Member, Expense, GroupCategory } from "../types";
-import { CATEGORIES } from "../constants";
+import { CATEGORY_SECTIONS, CATEGORIES } from "../constants";
 import { AvatarImg } from "./AvatarImg";
 
 function AddExpenseSheet({
@@ -21,13 +21,11 @@ function AddExpenseSheet({
 }) {
   const [step, setStep] = useState(0);
   const [amount, setAmount] = useState("");
-  const [category, setCategory] = useState(CATEGORIES[0]);
+  const [category, setCategory] = useState<{ name: string; emoji: string }>(CATEGORIES[0]);
   const [payerId, setPayerId] = useState(currentMemberId);
   const [participants, setParticipants] = useState(members.map((m) => m.id));
   const [isRecurring, setIsRecurring] = useState(false);
   const [recurrenceInterval, setRecurrenceInterval] = useState<"weekly" | "monthly" | "yearly">("monthly");
-
-  const allCategories = [...CATEGORIES, ...(customCategories || []).map(c => ({ name: c.name, emoji: c.emoji }))];
 
   const toggleParticipant = (id: string) => {
     setParticipants((prev) =>
@@ -55,6 +53,11 @@ function AddExpenseSheet({
       recurrenceInterval: isRecurring ? recurrenceInterval : undefined,
     });
     onClose();
+  };
+
+  const handleCategorySelect = (name: string, emoji: string) => {
+    setCategory({ name, emoji });
+    setStep(2);
   };
 
   const steps = [
@@ -91,21 +94,45 @@ function AddExpenseSheet({
     {
       title: "C'est pour quoi ?",
       content: (
-        <div className="grid grid-cols-2 gap-3">
-          {allCategories.map((cat) => (
-            <motion.button
-              key={cat.name}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setCategory(cat)}
-              className={`p-4 rounded-2xl flex flex-col items-center gap-2 transition-all ${
-                category.name === cat.name
-                  ? "bg-primary text-primary-foreground shadow-lg shadow-primary/30"
-                  : "bg-card/50 border border-border hover:bg-card/80"
-              }`}
-            >
-              <span className="text-3xl">{cat.emoji}</span>
-              <span className="text-xs font-semibold">{cat.name}</span>
-            </motion.button>
+        <div className="space-y-5 max-h-[55vh] overflow-y-auto -mx-1 px-1 scrollbar-thin">
+          {CATEGORY_SECTIONS.map((section) => (
+            <div key={section.title}>
+              <div className="flex items-center gap-2 mb-3 px-1">
+                <span className="text-lg">{section.emoji}</span>
+                <h3 className="text-sm font-bold text-foreground tracking-wide">{section.title}</h3>
+              </div>
+              <div className="grid grid-cols-2 gap-2.5">
+                {section.items.map((item) => {
+                  const isSelected = category.name === item.name && category.emoji === item.emoji;
+                  return (
+                    <motion.button
+                      key={item.name}
+                      whileTap={{ scale: 0.96 }}
+                      onClick={() => handleCategorySelect(item.name, item.emoji)}
+                      className={`relative flex items-center gap-3 p-3.5 rounded-2xl transition-all duration-200 ${
+                        isSelected
+                          ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25 ring-2 ring-primary/40"
+                          : "bg-card/60 border border-border/50 hover:bg-card hover:border-border active:bg-card/80"
+                      }`}
+                    >
+                      <span className="text-2xl shrink-0">{item.emoji}</span>
+                      <span className={`text-[13px] font-semibold leading-tight text-left ${isSelected ? "text-primary-foreground" : "text-foreground"}`}>
+                        {item.name}
+                      </span>
+                      {isSelected && (
+                        <motion.div
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary-foreground/20 flex items-center justify-center"
+                        >
+                          <Check size={10} className="text-primary-foreground" />
+                        </motion.div>
+                      )}
+                    </motion.button>
+                  );
+                })}
+              </div>
+            </div>
           ))}
         </div>
       ),
@@ -207,6 +234,8 @@ function AddExpenseSheet({
     },
   ];
 
+  const currentStepIndex = step === 1 ? 1 : step;
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -221,16 +250,16 @@ function AddExpenseSheet({
         exit={{ y: "100%" }}
         transition={{ type: "spring", damping: 30, stiffness: 300 }}
         onClick={(e) => e.stopPropagation()}
-        className="absolute bottom-0 left-0 right-0 bg-background rounded-t-[2.5rem] max-h-[92vh] overflow-y-auto"
+        className="absolute bottom-0 left-0 right-0 bg-background rounded-t-[2.5rem] max-h-[92vh] overflow-hidden flex flex-col"
       >
         {/* Handle */}
-        <div className="flex justify-center pt-3 pb-2 sticky top-0 bg-background z-10">
+        <div className="flex justify-center pt-3 pb-2 shrink-0">
           <div className="w-10 h-1.5 rounded-full bg-muted-foreground/20" />
         </div>
 
-        <div className="px-6 pb-10 space-y-6">
+        <div className="px-6 pb-10 flex-1 overflow-hidden flex flex-col min-h-0">
           {/* Progress */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             {steps.map((_, i) => (
               <div
                 key={i}
@@ -242,8 +271,19 @@ function AddExpenseSheet({
           </div>
 
           {/* Header */}
-          <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold">{steps[step].title}</h2>
+          <div className="flex items-center justify-between mt-4 mb-4 shrink-0">
+            <div className="flex items-center gap-3">
+              {step > 0 && (
+                <motion.button
+                  whileTap={{ scale: 0.85 }}
+                  onClick={() => setStep(step > 1 ? step - 1 : 0)}
+                  className="w-8 h-8 rounded-full bg-secondary/50 flex items-center justify-center"
+                >
+                  <ChevronLeft size={16} />
+                </motion.button>
+              )}
+              <h2 className="text-xl font-bold">{steps[step].title}</h2>
+            </div>
             <motion.button
               whileTap={{ scale: 0.85 }}
               onClick={onClose}
@@ -253,48 +293,64 @@ function AddExpenseSheet({
             </motion.button>
           </div>
 
-          {/* Content */}
-          <AnimatePresence mode="wait">
+          {/* Selected category chip */}
+          {step > 1 && (
             <motion.div
-              key={step}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.2 }}
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex items-center gap-2 bg-primary/10 border border-primary/20 rounded-2xl px-4 py-3 mb-4 shrink-0"
             >
-              {steps[step].content}
+              <span className="text-2xl">{category.emoji}</span>
+              <div>
+                <p className="text-xs text-primary/60 font-medium">Catégorie</p>
+                <p className="text-sm font-bold text-primary">{category.name}</p>
+              </div>
             </motion.div>
-          </AnimatePresence>
+          )}
+
+          {/* Content */}
+          <div className="flex-1 min-h-0 overflow-hidden">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={step}
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.2 }}
+                className="h-full"
+              >
+                {steps[step].content}
+              </motion.div>
+            </AnimatePresence>
+          </div>
 
           {/* Navigation */}
-          <div className="flex gap-3 pt-4">
-            {step > 0 && (
-              <motion.button
-                whileTap={{ scale: 0.97 }}
-                onClick={() => setStep(step - 1)}
-                className="flex-1 bg-secondary text-secondary-foreground font-semibold py-4 rounded-2xl"
-              >
-                Retour
-              </motion.button>
+          <div className="flex gap-3 pt-4 shrink-0">
+            {step !== 1 && (
+              step < steps.length - 1 ? (
+                <motion.button
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => setStep(step + 1)}
+                  disabled={step === 0 && !amount}
+                  className="flex-1 bg-primary text-primary-foreground font-semibold py-4 rounded-2xl disabled:opacity-50"
+                >
+                  Suivant
+                </motion.button>
+              ) : (
+                <motion.button
+                  whileTap={{ scale: 0.97 }}
+                  onClick={handleSubmit}
+                  disabled={participants.length === 0}
+                  className="flex-1 bg-primary text-primary-foreground font-semibold py-4 rounded-2xl disabled:opacity-50"
+                >
+                  Confirmer
+                </motion.button>
+              )
             )}
-            {step < steps.length - 1 ? (
-              <motion.button
-                whileTap={{ scale: 0.97 }}
-                onClick={() => setStep(step + 1)}
-                disabled={step === 0 && !amount}
-                className="flex-1 bg-primary text-primary-foreground font-semibold py-4 rounded-2xl disabled:opacity-50"
-              >
-                Suivant
-              </motion.button>
-            ) : (
-              <motion.button
-                whileTap={{ scale: 0.97 }}
-                onClick={handleSubmit}
-                disabled={participants.length === 0}
-                className="flex-1 bg-primary text-primary-foreground font-semibold py-4 rounded-2xl disabled:opacity-50"
-              >
-                Confirmer
-              </motion.button>
+            {step === 1 && (
+              <p className="flex-1 text-center text-sm text-muted-foreground py-4">
+                Sélectionnez une catégorie ci-dessus
+              </p>
             )}
           </div>
         </div>
