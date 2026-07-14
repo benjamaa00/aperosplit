@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { Check, X, RefreshCw, AlertTriangle } from "lucide-react";
+import { AvatarImg } from "./AvatarImg";
 
 interface PendingPayment {
   id: string;
@@ -88,7 +89,7 @@ export function PaymentRequestCard({
     >
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-3">
-          <span className="text-2xl">{from?.avatar}</span>
+          <AvatarImg avatar={from?.avatar ?? ""} size="text-2xl" />
           <div>
             <p className="text-sm font-medium">
               {isFromCurrentUser ? "Vous demandez" : `${from?.name} demande`}

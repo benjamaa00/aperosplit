@@ -4,6 +4,7 @@ import { Fingerprint, Check } from "lucide-react";
 import { Member } from "../types";
 import { fadeUp, spring } from "../constants";
 import { useHaptic } from "../hooks/useHaptic";
+import { AvatarImg } from "../components/AvatarImg";
 
 export function LockScreen({ member, onUnlock, onSkip, onSwitchIdentity }: { member: Member; onUnlock: () => void; onSkip: () => void; onSwitchIdentity?: () => void }) {
   const [authenticating, setAuthenticating] = useState(false);
@@ -120,7 +121,7 @@ export function LockScreen({ member, onUnlock, onSkip, onSwitchIdentity }: { mem
             } : {}}
             className="w-32 h-32 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center border-2 border-primary/30 shadow-2xl shadow-primary/20 backdrop-blur-sm"
           >
-            <span className="text-6xl">{member.avatar}</span>
+            <AvatarImg avatar={member.avatar} size="text-6xl" />
           </motion.div>
         </div>
 

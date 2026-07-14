@@ -5,6 +5,7 @@ import type { Member, Expense } from "../types";
 import { formatCurrency } from "../utils/currency";
 import { calculateMemberBreakdown } from "../utils/debts";
 import { fadeUp } from "../constants";
+import { AvatarImg } from "../components/AvatarImg";
 
 export function BalancesTab({
   members,
@@ -51,7 +52,7 @@ export function BalancesTab({
                 selectedMember === member.id ? 'border-primary/30 bg-card/70' : 'hover:border-primary/20'
               }`}
             >
-              <span className="text-3xl">{member.avatar}</span>
+              <AvatarImg avatar={member.avatar} size="text-3xl" />
               <div className="flex-1 text-left">
                 <p className="text-sm font-semibold">{member.name}</p>
                 <p className="text-xs text-muted-foreground">
@@ -126,7 +127,7 @@ export function BalancesTab({
                     return (
                       <div key={i} className="flex items-center justify-between text-sm bg-background/30 rounded-lg p-2">
                         <div className="flex items-center gap-2">
-                          <span className="text-base">{to?.avatar}</span>
+                          <AvatarImg avatar={to?.avatar ?? ""} size="text-base" />
                           <div>
                             <p className="font-medium">{to?.name}</p>
                             <p className="text-[10px] text-muted-foreground">{debt.reason}</p>
@@ -164,7 +165,7 @@ export function BalancesTab({
                     return (
                       <div key={i} className="flex items-center justify-between text-sm bg-background/30 rounded-lg p-2">
                         <div className="flex items-center gap-2">
-                          <span className="text-base">{from?.avatar}</span>
+                          <AvatarImg avatar={from?.avatar ?? ""} size="text-base" />
                           <div>
                             <p className="font-medium">{from?.name}</p>
                             <p className="text-[10px] text-muted-foreground">{debt.reason}</p>
@@ -210,9 +211,9 @@ export function BalancesTab({
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <span className="text-xl">{from?.avatar}</span>
+                      <AvatarImg avatar={from?.avatar ?? ""} size="text-xl" />
                       <ArrowUpRight size={16} className="text-primary" />
-                      <span className="text-xl">{to?.avatar}</span>
+                      <AvatarImg avatar={to?.avatar ?? ""} size="text-xl" />
                     </div>
                     <p className="text-base font-bold">{formatCurrency(t.amount)}</p>
                   </div>

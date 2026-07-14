@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, Check, Users } from "lucide-react";
+import { AvatarImg } from "./AvatarImg";
 
 interface Member {
   id: string;
@@ -49,7 +50,7 @@ export function MemberSelect({
         {selectedMember ? (
           <>
             <span className="w-8 h-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-base shrink-0">
-              {selectedMember.avatar}
+              <AvatarImg avatar={selectedMember.avatar} size="text-base" />
             </span>
             <span className="flex-1 text-left truncate">{selectedMember.name}</span>
           </>
@@ -101,7 +102,7 @@ export function MemberSelect({
                   }`}
                 >
                   <span className="w-8 h-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-base shrink-0">
-                    {m.avatar}
+                    <AvatarImg avatar={m.avatar} size="text-base" />
                   </span>
                   <span className="flex-1 text-left truncate">{m.name}</span>
                   {selected === m.id && <Check size={16} className="text-primary shrink-0" />}

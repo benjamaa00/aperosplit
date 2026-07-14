@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import type { Member } from "../types";
 import { fadeUp, spring } from "../constants";
 import { useHaptic } from "../hooks/useHaptic";
+import { AvatarImg } from "../components/AvatarImg";
 
 export function ProfileTab({
   currentMember,
@@ -24,6 +25,7 @@ export function ProfileTab({
   onOpenReports,
   onOpenGroupSettings,
   onOpenMembers,
+  onResetAllData,
 }: {
   currentMember: Member;
   members: Member[];
@@ -39,6 +41,7 @@ export function ProfileTab({
   onOpenReports?: () => void;
   onOpenGroupSettings?: () => void;
   onOpenMembers?: () => void;
+  onResetAllData?: () => void;
 }) {
   const { theme, toggleTheme } = useThemeContext();
   const shareUrl = window.location.origin;
@@ -103,7 +106,7 @@ export function ProfileTab({
           transition={{ duration: 0.5 }}
         >
           <div className="w-24 h-24 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border-2 border-primary/30 shadow-2xl shadow-primary/20 backdrop-blur-sm mb-4">
-            <span className="text-6xl">{currentMember.avatar}</span>
+            <AvatarImg avatar={currentMember.avatar} size="text-6xl" />
           </div>
           <motion.div
             animate={{ scale: [1, 1.1, 1] }}
@@ -364,7 +367,7 @@ export function ProfileTab({
               whileHover={{ scale: 1.1, rotate: [0, -5, 5, 0] }}
               transition={{ duration: 0.3 }}
             >
-              {member.avatar}
+              <AvatarImg avatar={member.avatar} size="text-2xl" />
             </motion.span>
             <p className="text-sm font-medium flex-1">{member.name}</p>
             {member.id === currentMember.id && (
@@ -425,29 +428,27 @@ export function ProfileTab({
         </motion.button>
       )}
 
-      {/* Clear All Data - Available for Mohamed */}
-      {currentMember.name === "Mohamed" && (
-        <motion.button
+      {/* Reset All Data - Admin Only */}
+      {!isLocked && currentMember.role === "admin" && onResetAllData && (
+        <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          whileTap={{ scale: 0.97 }}
-          whileHover={{ scale: 1.02 }}
-          onClick={() => {
-            haptic("heavy");
-            if (window.confirm("Êtes-vous sûr de vouloir effacer toutes les données ? Cette action est irréversible.")) {
-              localStorage.clear();
-              sessionStorage.clear();
-              toast.success("Toutes les données ont été effacées");
-              setTimeout(() => {
-                window.location.reload();
-              }, 1000);
-            }
-          }}
-          className="w-full bg-red-500/20 text-red-400 font-semibold py-3.5 rounded-2xl border border-red-500/20 press-scale shadow-lg shadow-red-500/10"
         >
-          🗑️ Effacer toutes les données
-        </motion.button>
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            whileHover={{ scale: 1.02 }}
+            onClick={() => {
+              haptic("heavy");
+              if (window.confirm("Réinitialiser toutes les données du groupe ?\n\nCette action supprimera :\n- Toutes les dépenses\n- Tous les paiements\n- Tout l'historique\n- Les notifications\n- Les membres invités\n\nSeul le groupe sera conservé. Cette action est irréversible.")) {
+                onResetAllData();
+              }
+            }}
+            className="w-full bg-red-500/20 text-red-400 font-semibold py-3.5 rounded-2xl border border-red-500/20 press-scale shadow-lg shadow-red-500/10 flex items-center justify-center gap-2"
+          >
+            🗑️ Réinitialiser toutes les données
+          </motion.button>
+        </motion.div>
       )}
 
       <div className="h-4" />

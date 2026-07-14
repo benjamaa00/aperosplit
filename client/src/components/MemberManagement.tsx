@@ -3,9 +3,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft, UserPlus, UserMinus, Shield, ShieldOff, ChevronRight, Check,
   X, Clock, Eye, History, Search, MoreVertical, Crown, Users, UserCheck,
-  AlertTriangle, Copy, Share2, Link as LinkIcon, RefreshCw,
+  AlertTriangle, Copy, Share2, Link as LinkIcon, RefreshCw, Settings,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
+import { AvatarImg } from "./AvatarImg";
 
 interface Member {
   id: string;
@@ -46,15 +47,114 @@ interface MemberManagementProps {
   onRefuseMember?: (id: string) => void;
   pendingRequests?: PendingRequest[];
   onBack: () => void;
+  onUpdateGroupSettings?: (settings: { name?: string; pinCode?: string | null; requireApproval?: boolean }) => void;
+  onResetAllData?: () => void;
+  groupName?: string;
+  groupRequireApproval?: boolean;
 }
 
 const spring = { type: "spring" as const, stiffness: 300, damping: 30 };
 
+function SettingsTab({ groupName, requireApproval, onUpdateSettings, onResetAllData }: {
+  groupName: string;
+  requireApproval: boolean;
+  onUpdateSettings?: (settings: { name?: string; pinCode?: string | null; requireApproval?: boolean }) => void;
+  onResetAllData?: () => void;
+}) {
+  const [name, setName] = useState(groupName);
+  const [approval, setApproval] = useState(requireApproval);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+      <h3 className="text-sm font-semibold text-muted-foreground">Paramètres du groupe</h3>
+
+      {/* Group Name */}
+      <div className="glass-card-enhanced rounded-2xl p-4 space-y-3">
+        <label className="text-xs font-semibold text-muted-foreground">Nom du groupe</label>
+        <input type="text" value={name} onChange={e => setName(e.target.value)}
+          className="w-full px-4 py-3 rounded-xl bg-background/50 border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+        <motion.button whileTap={{ scale: 0.97 }}
+          onClick={() => onUpdateSettings?.({ name })}
+          className="w-full py-2.5 rounded-xl bg-primary text-primary-foreground text-xs font-semibold">
+          Sauvegarder
+        </motion.button>
+      </div>
+
+      {/* Approval Toggle */}
+      <div className="glass-card-enhanced rounded-2xl p-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-semibold">Approbation requise</p>
+            <p className="text-[11px] text-muted-foreground mt-0.5">Les nouveaux membres doivent être approuvés</p>
+          </div>
+          <motion.button whileTap={{ scale: 0.95 }}
+            onClick={() => { setApproval(!approval); onUpdateSettings?.({ requireApproval: !approval }); }}
+            className={`w-[52px] h-8 rounded-full transition-all duration-300 relative ${approval ? "bg-primary shadow-lg shadow-primary/30" : "bg-secondary"}`}>
+            <motion.div animate={{ x: approval ? 22 : 3 }} transition={spring}
+              className="absolute top-1 w-6 h-6 rounded-full bg-white shadow-md" />
+          </motion.button>
+        </div>
+      </div>
+
+      {/* Danger Zone */}
+      <div className="rounded-2xl border border-red-500/20 overflow-hidden">
+        <div className="px-4 py-3 bg-red-500/5 border-b border-red-500/10">
+          <p className="text-xs font-semibold text-red-400">Zone dangereuse</p>
+        </div>
+        <div className="p-4">
+          <p className="text-xs text-muted-foreground mb-3">
+            Réinitialiser toutes les données du groupe (dépenses, paiements, historique, membres invités). Seul le groupe sera conservé.
+          </p>
+          <motion.button whileTap={{ scale: 0.97 }}
+            onClick={() => setShowResetConfirm(true)}
+            className="w-full py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-semibold flex items-center justify-center gap-2">
+            <AlertTriangle size={14} /> Réinitialiser toutes les données
+          </motion.button>
+        </div>
+      </div>
+
+      {/* Reset Confirm Modal */}
+      <AnimatePresence>
+        {showResetConfirm && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] px-6"
+            onClick={() => setShowResetConfirm(false)}>
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
+              onClick={e => e.stopPropagation()}
+              className="glass-card-enhanced rounded-[2rem] p-6 w-full max-w-sm shadow-2xl">
+              <div className="w-14 h-14 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto mb-4">
+                <AlertTriangle size={24} className="text-red-400" />
+              </div>
+              <h3 className="text-lg font-bold text-center">Réinitialiser ?</h3>
+              <p className="text-sm text-muted-foreground text-center mt-2">
+                Toutes les dépenses, paiements, historique et membres invités seront supprimés. Cette action est irréversible.
+              </p>
+              <div className="flex gap-2 mt-6">
+                <motion.button whileTap={{ scale: 0.97 }} onClick={() => setShowResetConfirm(false)}
+                  className="flex-1 py-3 rounded-2xl bg-card/30 border border-border text-sm font-semibold">
+                  Annuler
+                </motion.button>
+                <motion.button whileTap={{ scale: 0.97 }}
+                  onClick={() => { setShowResetConfirm(false); onResetAllData?.(); }}
+                  className="flex-1 py-3 rounded-2xl bg-red-500 text-white text-sm font-semibold">
+                  Réinitialiser
+                </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+}
+
 export function MemberManagement({
   members, currentMemberId, expenses, onRemoveMember, onAddMember,
   onChangeRole, onApproveMember, onRefuseMember, pendingRequests = [], onBack,
+  onUpdateGroupSettings, onResetAllData, groupName = "Équilibra Groupe", groupRequireApproval = false,
 }: MemberManagementProps) {
-  const [tab, setTab] = useState<"list" | "pending" | "memberDetail">("list");
+  const [tab, setTab] = useState<"list" | "pending" | "memberDetail" | "settings">("list");
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [showConfirmExpel, setShowConfirmExpel] = useState<string | null>(null);
@@ -136,7 +236,7 @@ export function MemberManagement({
           <div className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-white/60 to-transparent" />
           <motion.div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border-2 border-primary/30 mx-auto shadow-xl shadow-primary/10"
             whileHover={{ scale: 1.05, rotate: [0, -3, 3, 0] }}>
-            <span className="text-4xl">{selectedMember.avatar}</span>
+            <AvatarImg avatar={selectedMember.avatar} size="text-4xl" />
           </motion.div>
           <h3 className="text-xl font-bold mt-3">{selectedMember.name}</h3>
           <div className="flex items-center justify-center gap-2 mt-1">
@@ -250,6 +350,12 @@ export function MemberManagement({
                   <span className="w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">{pendingRequests.length}</span>
                 )}
               </button>
+              {isAdmin(currentMemberId) && (
+                <button onClick={() => setTab("settings")}
+                  className={`flex-1 py-2.5 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-1.5 ${tab === "settings" ? "bg-primary text-primary-foreground shadow-lg shadow-primary/30" : "text-muted-foreground"}`}>
+                  <Settings size={14} /> Paramètres
+                </button>
+              )}
             </div>
 
             {tab === "list" && (
@@ -268,7 +374,7 @@ export function MemberManagement({
                       <div className="glass-card-enhanced rounded-2xl p-4 flex items-center gap-3 relative">
                         <motion.div whileHover={{ scale: 1.1 }}
                           className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary/15 to-primary/5 flex items-center justify-center border border-primary/20 shadow-md shadow-primary/5">
-                          <span className="text-2xl">{member.avatar}</span>
+                          <AvatarImg avatar={member.avatar} size="text-2xl" />
                         </motion.div>
                         <div className="flex-1 min-w-0" onClick={() => { setSelectedMemberId(member.id); setTab("memberDetail"); }}>
                           <div className="flex items-center gap-2">
@@ -355,6 +461,15 @@ export function MemberManagement({
                   ))
                 )}
               </div>
+            )}
+
+            {tab === "settings" && (
+              <SettingsTab
+                groupName={groupName}
+                requireApproval={groupRequireApproval}
+                onUpdateSettings={onUpdateGroupSettings}
+                onResetAllData={onResetAllData}
+              />
             )}
           </motion.div>
         )}

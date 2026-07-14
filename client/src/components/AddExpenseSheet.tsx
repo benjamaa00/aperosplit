@@ -4,6 +4,7 @@ import { X, Check } from "lucide-react";
 import { toast } from "sonner";
 import type { Member, Expense, GroupCategory } from "../types";
 import { CATEGORIES } from "../constants";
+import { AvatarImg } from "./AvatarImg";
 
 function AddExpenseSheet({
   members,
@@ -124,7 +125,7 @@ function AddExpenseSheet({
                   : "bg-card/50 border border-border hover:bg-card/80"
               }`}
             >
-              <span className="text-3xl">{member.avatar}</span>
+              <AvatarImg avatar={member.avatar} size="text-3xl" />
               <span className="font-semibold flex-1 text-left">{member.name}</span>
               {payerId === member.id && <Check size={20} />}
             </motion.button>
@@ -147,7 +148,7 @@ function AddExpenseSheet({
                   : "bg-card/50 border border-border hover:bg-card/80 opacity-50"
               }`}
             >
-              <span className="text-3xl">{member.avatar}</span>
+              <AvatarImg avatar={member.avatar} size="text-3xl" />
               <span className="font-semibold flex-1 text-left">{member.name}</span>
               {participants.includes(member.id) && <Check size={20} />}
             </motion.button>

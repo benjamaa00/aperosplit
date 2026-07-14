@@ -9,6 +9,7 @@ import {
   PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   LineChart, Line, ResponsiveContainer, Tooltip as RechartsTooltip,
 } from "recharts";
+import { AvatarImg } from "./AvatarImg";
 
 interface Expense {
   id: string;
@@ -249,7 +250,7 @@ export function ReportsScreen({ expenses, members, pendingPayments, completedPay
             {/* Top Spender */}
             {topSpender && topSpender.total > 0 && (
               <div className="glass-card-enhanced rounded-[1.5rem] p-5 flex items-center gap-4">
-                <span className="text-3xl">{topSpender.avatar}</span>
+                <AvatarImg avatar={topSpender.avatar} size="text-3xl" />
                 <div className="flex-1">
                   <p className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">Top dépensier</p>
                   <p className="text-sm font-bold">{topSpender.name}</p>
@@ -313,7 +314,7 @@ export function ReportsScreen({ expenses, members, pendingPayments, completedPay
             <div className="glass-card-enhanced rounded-[1.5rem] overflow-hidden">
               {memberData.map((m, i) => (
                 <div key={m.name} className={`flex items-center gap-3 p-4 ${i > 0 ? "border-t border-border" : ""}`}>
-                  <span className="text-xl">{m.avatar}</span>
+                  <AvatarImg avatar={m.avatar} size="text-xl" />
                   <div className="flex-1">
                     <p className="text-sm font-semibold">{m.name}</p>
                     <p className="text-[11px] text-muted-foreground">

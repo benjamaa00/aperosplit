@@ -1,13 +1,15 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Home, Receipt, Scale, History, BarChart3, User, Plus } from "lucide-react";
 import { trpc } from "@/lib/trpc";
+import { toast } from "sonner";
 
 import type { Member, Expense, PendingPayment, Notification, GroupCategory, Screen, Tab } from "./types";
 import { CATEGORIES, GROUP_ID, spring, fadeUp } from "./constants";
 import { formatCurrency, formatDate } from "./utils/currency";
 import { simplifyDebts } from "./utils/debts";
 import { checkBiometricAvailable, registerBiometric, authenticateBiometric } from "./utils/biometric";
+import { storePhotoAvatar, resolveAvatar } from "./utils/avatarStorage";
 import { useNotifications } from "./hooks/useNotifications";
 import { useHaptic } from "./hooks/useHaptic";
 
@@ -33,6 +35,11 @@ import { RegisterScreen } from "./components/RegisterScreen";
 import { InviteScreen } from "./components/InviteScreen";
 
 const isNetlify = import.meta.env.VITE_NETLIFY === "true";
+
+function prepareAvatar(memberId: string, avatar: string): string {
+  if (avatar.startsWith("data:")) return storePhotoAvatar(memberId, avatar);
+  return avatar;
+}
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>("identity");
@@ -84,8 +91,10 @@ export default function App() {
   const markAllNotificationsReadMutation = trpc.equilibra.markAllNotificationsRead.useMutation();
   const exportCSVMutation = trpc.equilibra.exportCSV.useMutation();
   const confirmReceiptMutation = trpc.equilibra.confirmReceipt.useMutation();
+  const resetAllDataMutation = trpc.equilibra.resetAllData.useMutation();
+  const updateGroupSettingsMutation = trpc.equilibra.updateGroupSettings.useMutation();
 
-  const { refetch } = trpc.equilibra.getGroupData.useQuery(undefined, { enabled: !isNetlify, refetchInterval: 10000, retry: 2, refetchOnWindowFocus: true });
+  const { data: groupData, refetch } = trpc.equilibra.getGroupData.useQuery(undefined, { enabled: !isNetlify, refetchInterval: 10000, retry: 2, refetchOnWindowFocus: true });
   const getNotificationsQuery = trpc.equilibra.getNotifications.useQuery({ memberId: currentMemberId }, { enabled: !!currentMemberId && !isNetlify, refetchInterval: 5000 });
 
   // ─── Effects ───────────────────────────────────────────────
@@ -113,10 +122,11 @@ export default function App() {
   }, [accessCode]);
 
   useEffect(() => {
+    if (syncingFromServer.current) { syncingFromServer.current = false; return; }
     if (!isNetlify && members.length > 0) {
       initGroup.mutateAsync({ members: members.map(m => ({ id: m.id, name: m.name, avatar: m.avatar })) }).catch(() => {});
     }
-  }, [isNetlify]);
+  }, [isNetlify, members.length]);
 
   useEffect(() => {
     if (getNotificationsQuery.data) {
@@ -140,6 +150,20 @@ export default function App() {
     } catch {}
   }, []);
 
+  // Prevent sending server-synced data back to server (infinite loop guard)
+  const syncingFromServer = useRef(false);
+
+  // Sync server data to client state (server is source of truth)
+  useEffect(() => {
+    if (!groupData) return;
+    syncingFromServer.current = true;
+    if (groupData.members && groupData.members.length > 0) {
+      setMembers(groupData.members.map((m: any) => ({ id: m.id, name: m.name, avatar: m.avatar, role: m.role, status: m.status })));
+    }
+    if (groupData.expenses) setExpenses(groupData.expenses);
+    if (groupData.pending) setPendingPayments(groupData.pending);
+  }, [groupData]);
+
   useEffect(() => {
     try {
       localStorage.setItem("equilibra_data", JSON.stringify({ members, expenses, pendingPayments, currentMemberId, biometricEnabled }));
@@ -151,7 +175,7 @@ export default function App() {
   }, [completedPayments]);
 
   useEffect(() => {
-    if (isNetlify) return;
+    if (isNetlify || groupData) return;
     const interval = setInterval(() => {
       try {
         const stored = localStorage.getItem("equilibra_data");
@@ -164,7 +188,7 @@ export default function App() {
       } catch {}
     }, 5000);
     return () => clearInterval(interval);
-  }, [isNetlify]);
+  }, [isNetlify, groupData]);
 
   // ─── Computed ──────────────────────────────────────────────
   const balances = useMemo(() => {
@@ -301,16 +325,20 @@ export default function App() {
     showNotification("Litige ouvert", "Le paiement est en litige");
   }, [haptic, showNotification]);
 
-  const handleRegister = useCallback(async (name: string, avatar: string) => {
-    const newMember: Member = { id: Date.now().toString(), name, avatar, role: "member", status: "pending" };
+  const handleRegister = useCallback(async (name: string, rawAvatar: string) => {
+    const memberId = Date.now().toString();
+    const avatar = prepareAvatar(memberId, rawAvatar);
+    const newMember: Member = { id: memberId, name, avatar, role: "member", status: "pending" };
     setMembers((prev) => [...prev, newMember]);
     setCurrentMemberId(newMember.id);
     setScreen("main");
     if (!isNetlify && inviteToken) { try { await joinGroupByInviteMutation.mutateAsync({ token: inviteToken, memberId: newMember.id, memberName: name, memberAvatar: avatar }); await refetch(); } catch {} }
   }, [inviteToken, joinGroupByInviteMutation, refetch, isNetlify]);
 
-  const addMember = useCallback(async (name: string, avatar: string) => {
-    const newMember: Member = { id: Date.now().toString(), name, avatar };
+  const addMember = useCallback(async (name: string, rawAvatar: string) => {
+    const memberId = Date.now().toString();
+    const avatar = prepareAvatar(memberId, rawAvatar);
+    const newMember: Member = { id: memberId, name, avatar };
     setMembers((prev) => [...prev, newMember]);
     if (!isNetlify) { try { await initGroup.mutateAsync({ members: [...members, newMember] }); await refetch(); } catch {} }
   }, [members, initGroup, refetch, isNetlify]);
@@ -324,8 +352,10 @@ export default function App() {
   // ─── Screen Routing ────────────────────────────────────────
   if (screen === "access") return <AppShell><AccessScreen onSubmit={handleAccessCode} /></AppShell>;
   if (screen === "identity") {
-    if (members.length === 0) return <AppShell><RegisterScreen onRegister={(name, avatar) => {
-      const newMember: Member = { id: Date.now().toString(), name, avatar, role: "admin" };
+    if (members.length === 0) return <AppShell><RegisterScreen onRegister={(name, rawAvatar) => {
+      const memberId = Date.now().toString();
+      const avatar = prepareAvatar(memberId, rawAvatar);
+      const newMember: Member = { id: memberId, name, avatar, role: "admin" };
       setMembers([newMember]);
       setCurrentMemberId(newMember.id);
       setScreen("main");
@@ -333,8 +363,9 @@ export default function App() {
     return <AppShell><IdentityScreen members={members} onSelect={selectIdentity} /></AppShell>;
   }
   if (screen === "register") return <AppShell><RegisterScreen onRegister={handleRegister} onBack={() => setScreen("access")} /></AppShell>;
-  if (screen === "invite") return <AppShell><InviteScreen inviteToken={inviteToken!} onJoinByPin={async (pin, name, avatar) => {
+  if (screen === "invite") return <AppShell><InviteScreen inviteToken={inviteToken!} onJoinByPin={async (pin, name, rawAvatar) => {
     const memberId = Date.now().toString();
+    const avatar = prepareAvatar(memberId, rawAvatar);
     try {
       const r = await joinGroupByPinMutation.mutateAsync({ pinCode: pin, groupId: selectedGroupId, memberId, memberName: name, memberAvatar: avatar });
       if (r?.success) {
@@ -345,8 +376,9 @@ export default function App() {
       }
       return r ?? { success: false };
     } catch { return { success: false, error: "Erreur de connexion" }; }
-  }} onJoinByInvite={async (name, avatar) => {
+  }} onJoinByInvite={async (name, rawAvatar) => {
     const memberId = Date.now().toString();
+    const avatar = prepareAvatar(memberId, rawAvatar);
     try {
       const r = await joinGroupByInviteMutation.mutateAsync({ token: inviteToken!, memberId, memberName: name, memberAvatar: avatar });
       if (r?.success) {
@@ -362,7 +394,7 @@ export default function App() {
   if (screen === "notifications") return <AppShell><NotificationsScreen notifications={notifications} currentMemberId={currentMemberId} onBack={() => setScreen("main")} onMarkRead={(id) => markNotificationReadMutation.mutate({ notificationId: id })} onMarkAllRead={() => markAllNotificationsReadMutation.mutate({ memberId: currentMemberId })} /></AppShell>;
   if (screen === "notificationSettings") return <AppShell><NotificationSettingsScreen settings={{ pushEnabled: pushNotifications, emailEnabled: false, reminderFrequency: reminderDelay.toString() + "h" }} onBack={() => setScreen("main")} onSave={(s) => { if (s.pushEnabled !== undefined) setPushNotifications(s.pushEnabled); }} /></AppShell>;
   if (screen === "groupSettings" || screen === "settings") return <AppShell><SettingsScreen monthlyBudget={monthlyBudget} onSetBudget={updateBudget} currency={currency} onSetCurrency={updateCurrency} autoReminders={autoReminders} onToggleReminders={() => setAutoReminders(!autoReminders)} privacyMode={privacyMode} onTogglePrivacy={() => setPrivacyMode(!privacyMode)} offlineMode={offlineMode} onToggleOffline={() => setOfflineMode(!offlineMode)} pushNotifications={pushNotifications} onTogglePushNotifications={() => setPushNotifications(!pushNotifications)} reminderDelay={reminderDelay} onSetReminderDelay={(d: number) => setReminderDelay(d)} onClearData={() => { localStorage.clear(); window.location.reload(); }} biometricEnabled={!!biometricEnabled[currentMemberId]} onToggleBiometric={toggleBiometric} onBack={() => setScreen("main")} /></AppShell>;
-  if (screen === "members") return <AppShell><MemberManagement members={members} currentMemberId={currentMemberId} expenses={expenses} onChangeRole={(id, role) => { setMembers((prev) => prev.map((m) => m.id === id ? { ...m, role } : m)); changeMemberRoleMutation.mutate({ memberId: id, role: role as "admin" | "member" }); }} onRemoveMember={removeMember} onAddMember={() => addMember("Nouveau", "👤")} onBack={() => setScreen("main")} /></AppShell>;
+  if (screen === "members") return <AppShell><MemberManagement members={members} currentMemberId={currentMemberId} expenses={expenses} onChangeRole={(id, role) => { setMembers((prev) => prev.map((m) => m.id === id ? { ...m, role } : m)); changeMemberRoleMutation.mutate({ memberId: id, role: role as "admin" | "member" }); }} onRemoveMember={removeMember} onAddMember={() => addMember("Nouveau", "👤")} onBack={() => setScreen("main")} onUpdateGroupSettings={(settings) => { updateGroupSettingsMutation.mutate(settings); toast.success("Paramètres mis à jour"); }} onResetAllData={async () => { try { await resetAllDataMutation.mutateAsync(); setMembers([]); setExpenses([]); setPendingPayments([]); setCompletedPayments([]); setScreen("identity"); toast.success("Toutes les données ont été réinitialisées"); } catch { toast.error("Erreur lors de la réinitialisation"); } }} groupName="Équilibra Groupe" /></AppShell>;
   if (screen === "reports") return <AppShell><ReportsScreen expenses={expenses} members={members} pendingPayments={pendingPayments} completedPayments={completedPayments} monthlyBudget={monthlyBudget} onBack={() => setScreen("main")} /></AppShell>;
   if (!currentMember) return <AppShell><div className="flex items-center justify-center h-screen"><p className="text-muted-foreground">Chargement...</p></div></AppShell>;
 
@@ -382,7 +414,7 @@ export default function App() {
           {activeTab === "balances" && <BalancesTab key="balances" members={members} balances={balances} suggestedTransactions={suggestedTransactions} currentMemberId={currentMemberId} onRequestPayment={(toId, amount) => requestPayment(toId, amount)} expenses={expenses} />}
           {activeTab === "history" && <PaymentHistory key="history" payments={[...completedPayments, ...pendingPayments].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))} expenses={expenses} members={members} currentMemberId={currentMemberId} />}
           {activeTab === "stats" && <StatsTab key="stats" expenses={expenses} members={members} currentMemberId={currentMemberId} pendingPayments={pendingPayments} completedPayments={completedPayments} monthlyBudget={monthlyBudget} />}
-          {activeTab === "profile" && <ProfileTab key="profile" currentMember={currentMember} members={members} biometricEnabled={!!biometricEnabled[currentMemberId]} biometricAvailable={biometricAvailable} onToggleBiometric={toggleBiometric} onLogout={() => { setCurrentMemberId(""); setScreen("identity"); }} onRemoveMember={removeMember} isLocked={!!localStorage.getItem("equilibra_locked_member")} unreadCount={unreadCount} onOpenNotifications={() => setScreen("notifications")} onOpenReports={() => setScreen("reports")} onOpenGroupSettings={() => setScreen("groupSettings")} onOpenMembers={() => setScreen("members")} />}
+          {activeTab === "profile" && <ProfileTab key="profile" currentMember={currentMember} members={members} biometricEnabled={!!biometricEnabled[currentMemberId]} biometricAvailable={biometricAvailable} onToggleBiometric={toggleBiometric} onLogout={() => { setCurrentMemberId(""); setScreen("identity"); }} onRemoveMember={removeMember} isLocked={!!localStorage.getItem("equilibra_locked_member")} unreadCount={unreadCount} onOpenNotifications={() => setScreen("notifications")} onOpenReports={() => setScreen("reports")} onOpenGroupSettings={() => setScreen("groupSettings")} onOpenMembers={() => setScreen("members")} onResetAllData={async () => { try { await resetAllDataMutation.mutateAsync(); setMembers([]); setExpenses([]); setPendingPayments([]); setCompletedPayments([]); setScreen("identity"); toast.success("Toutes les données ont été réinitialisées"); } catch { toast.error("Erreur lors de la réinitialisation"); } }} />}
         </AnimatePresence>
 
         {/* Bottom Navigation */}

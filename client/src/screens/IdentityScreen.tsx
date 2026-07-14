@@ -3,6 +3,7 @@ import { Sparkles } from "lucide-react";
 import { Member } from "../types";
 import { fadeUp, spring } from "../constants";
 import { useHaptic } from "../hooks/useHaptic";
+import { AvatarImg } from "../components/AvatarImg";
 
 export function IdentityScreen({ members, onSelect }: { members: Member[]; onSelect: (id: string) => void }) {
   const haptic = useHaptic();
@@ -64,7 +65,7 @@ export function IdentityScreen({ members, onSelect }: { members: Member[]; onSel
               whileHover={{ rotate: [0, -10, 10, -10, 0] }}
               transition={{ duration: 0.5 }}
             >
-              {member.avatar}
+              <AvatarImg avatar={member.avatar} size="text-4xl" />
             </motion.span>
             <span className="text-sm font-semibold">{member.name}</span>
           </motion.button>

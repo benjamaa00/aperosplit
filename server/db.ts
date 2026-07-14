@@ -363,20 +363,13 @@ export async function addMembers(groupId: string, members: Array<{ id: string; n
   try {
     await client.query("BEGIN");
     await client.query(`INSERT INTO groups (id) VALUES ($1) ON CONFLICT (id) DO NOTHING`, [groupId]);
-    const ids = members.map(member => member.id);
-    if (ids.length === 0) {
-      await client.query(`DELETE FROM group_members WHERE group_id = $1`, [groupId]);
-    } else {
-      await client.query(`DELETE FROM group_members WHERE group_id = $1 AND NOT (id = ANY($2::text[]))`, [groupId, ids]);
-      for (const member of members) {
-        await client.query(
-          `INSERT INTO group_members (id, group_id, name, avatar) VALUES ($1, $2, $3, $4)
-           ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, avatar = EXCLUDED.avatar`,
-          [member.id, groupId, member.name, member.avatar],
-        );
-      }
+    for (const member of members) {
+      await client.query(
+        `INSERT INTO group_members (id, group_id, name, avatar) VALUES ($1, $2, $3, $4)
+         ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, avatar = EXCLUDED.avatar`,
+        [member.id, groupId, member.name, member.avatar],
+      );
     }
-    await client.query(`UPDATE groups SET share_url = $2, updated_at = NOW() WHERE id = $1`, [groupId, JSON.stringify(members)]);
     await client.query("COMMIT");
     return true;
   } catch (error) {
@@ -852,4 +845,25 @@ export async function exportExpensesCSV(groupId: string) {
     `"${r.description}",${r.amount},"${r.category}","${r.payerId}","${JSON.stringify(r.participants)}","${r.date}"`
   ).join("\n");
   return header + rows;
+}
+
+export async function resetAllGroupData(groupId: string) {
+  const db = await ready();
+  if (!db) {
+    updateStorage("expenses", []);
+    updateStorage("members", []);
+    updateStorage("pendingPayments", []);
+    updateStorage("completedPayments", []);
+    return true;
+  }
+  await db.query(`DELETE FROM expenses WHERE group_id = $1`, [groupId]);
+  await db.query(`DELETE FROM payments WHERE group_id = $1`, [groupId]);
+  await db.query(`DELETE FROM activity_history WHERE group_id = $1`, [groupId]);
+  await db.query(`DELETE FROM notifications WHERE group_id = $1`, [groupId]);
+  await db.query(`DELETE FROM notification_settings WHERE group_id = $1`, [groupId]);
+  await db.query(`DELETE FROM expense_categories WHERE group_id = $1 AND is_default = FALSE`, [groupId]);
+  await db.query(`DELETE FROM group_invites WHERE group_id = $1`, [groupId]);
+  await db.query(`DELETE FROM group_members WHERE group_id = $1`, [groupId]);
+  await db.query(`UPDATE groups SET share_url = NULL WHERE id = $1`, [groupId]);
+  return true;
 }

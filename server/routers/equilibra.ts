@@ -537,4 +537,11 @@ export const equilibraRouter = router({
       const csv = await exportExpensesCSV(GROUP_ID);
       return { success: true, csv };
     }),
+
+  resetAllData: groupProcedure
+    .mutation(async () => {
+      const { resetAllGroupData } = await import("../db");
+      const success = await resetAllGroupData(GROUP_ID);
+      return { success };
+    }),
 });

@@ -6,6 +6,7 @@ import { MemberSelect } from "../components/MemberSelect";
 import type { Member, Expense, PendingPayment } from "../types";
 import { formatCurrency } from "../utils/currency";
 import { fadeUp } from "../constants";
+import { AvatarImg } from "../components/AvatarImg";
 
 export function StatsTab({ expenses, members, currentMemberId, pendingPayments, completedPayments, monthlyBudget }: {
   expenses: Expense[];
@@ -254,7 +255,7 @@ export function StatsTab({ expenses, members, currentMemberId, pendingPayments, 
           {biggestSpender && biggestSpender.total > 0 && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }}
               className="glass-card-enhanced rounded-[1.5rem] p-4 flex items-center gap-4">
-              <span className="text-3xl">{biggestSpender.avatar}</span>
+              <AvatarImg avatar={biggestSpender.avatar} size="text-3xl" />
               <div className="flex-1">
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">Plus gros dépensier</p>
                 <p className="text-sm font-bold">{biggestSpender.name}</p>

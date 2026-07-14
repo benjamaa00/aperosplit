@@ -4,6 +4,7 @@ import { Plus, Trash2 } from "lucide-react";
 import type { Member, Expense } from "../types";
 import { formatCurrency, formatDate } from "../utils/currency";
 import { fadeUp } from "../constants";
+import { AvatarImg } from "../components/AvatarImg";
 
 export function ExpensesTab({
   expenses,
@@ -106,7 +107,7 @@ export function ExpensesTab({
                       const participant = members.find((m) => m.id === pid);
                       return (
                         <span key={pid} className="text-xs bg-background/50 px-2 py-1 rounded-full flex items-center gap-1">
-                          <span className="text-sm">{participant?.avatar}</span>
+                          <AvatarImg avatar={participant?.avatar ?? ""} size="text-sm" />
                           {participant?.name}
                         </span>
                       );

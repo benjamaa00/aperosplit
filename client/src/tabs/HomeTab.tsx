@@ -6,6 +6,7 @@ import type { Member, Expense, PendingPayment } from "../types";
 import { formatCurrency, formatDate } from "../utils/currency";
 import { calculateMemberBreakdown } from "../utils/debts";
 import { fadeUp, spring } from "../constants";
+import { AvatarImg } from "../components/AvatarImg";
 
 export function HomeTab({
   currentMember,
@@ -73,7 +74,7 @@ export function HomeTab({
       {/* Greeting */}
       <div>
         <p className="text-muted-foreground text-sm font-medium">Bonjour,</p>
-        <h1 className="text-2xl font-bold tracking-tight">{currentMember.name} {currentMember.avatar}</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{currentMember.name} <AvatarImg avatar={currentMember.avatar} size="text-2xl" /></h1>
       </div>
 
       {/* Balance Card - Premium Glass */}
@@ -180,7 +181,7 @@ export function HomeTab({
                   return (
                     <div key={i} className="flex items-center justify-between text-sm">
                       <div className="flex items-center gap-2">
-                        <span className="text-lg">{to?.avatar}</span>
+                        <AvatarImg avatar={to?.avatar ?? ""} size="text-lg" />
                         <div>
                           <p className="font-medium">{to?.name}</p>
                           <p className="text-xs text-muted-foreground">{debt.reason}</p>
@@ -208,7 +209,7 @@ export function HomeTab({
                   return (
                     <div key={i} className="flex items-center justify-between text-sm">
                       <div className="flex items-center gap-2">
-                        <span className="text-lg">{from?.avatar}</span>
+                        <AvatarImg avatar={from?.avatar ?? ""} size="text-lg" />
                         <div>
                           <p className="font-medium">{from?.name}</p>
                           <p className="text-xs text-muted-foreground">{debt.reason}</p>
@@ -296,7 +297,7 @@ export function HomeTab({
                   className="bg-card/30 backdrop-blur-sm border border-border rounded-2xl p-3 flex items-center justify-between opacity-70"
                 >
                   <div className="flex items-center gap-3">
-                    <span className="text-xl">{from?.avatar}</span>
+                    <AvatarImg avatar={from?.avatar ?? ""} size="text-xl" />
                     <div>
                       <p className="text-xs font-medium">
                         {from?.name} → {to?.name}
