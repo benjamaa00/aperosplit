@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Filter, X, Clock, Search, Receipt, ArrowUpRight, ArrowDownLeft, Trash2, Check, AlertTriangle } from "lucide-react";
 import { MemberSelect } from "./MemberSelect";
+import { AvatarImg } from "./AvatarImg";
 
 interface PendingPayment {
   id: string;
@@ -292,11 +293,10 @@ export function PaymentHistory({ payments, expenses, members, currentMemberId }:
                     transition={{ delay: idx * 0.03 }}
                     className="glass-card-enhanced rounded-2xl p-4 flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-muted/30 flex items-center justify-center text-lg shrink-0">
-                      {item.fromAvatar ? item.emoji : <Icon size={18} className="text-muted-foreground" />}
+                      {item.fromAvatar ? <AvatarImg avatar={item.fromAvatar} size="text-lg" /> : <Icon size={18} className="text-muted-foreground" />}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5">
-                        {item.fromAvatar && <span className="text-sm">{item.fromAvatar}</span>}
                         <p className="text-sm font-medium truncate">
                           {item.type === "expense_added" ? item.description : item.description}
                         </p>

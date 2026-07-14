@@ -61,10 +61,24 @@ export function RegisterScreen({ onRegister, onBack, groupName }: RegisterScreen
     }
     const reader = new FileReader();
     reader.onload = (ev) => {
-      const dataUrl = ev.target?.result as string;
-      setPhotoPreview(dataUrl);
-      setAvatar(dataUrl);
-      setAvatarMode("photo");
+      const img = new Image();
+      img.onload = () => {
+        const MAX = 256;
+        let w = img.width, h = img.height;
+        if (w > MAX || h > MAX) {
+          if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+          else { w = Math.round(w * MAX / h); h = MAX; }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        canvas.getContext("2d")!.drawImage(img, 0, 0, w, h);
+        const compressed = canvas.toDataURL("image/jpeg", 0.6);
+        setPhotoPreview(compressed);
+        setAvatar(compressed);
+        setAvatarMode("photo");
+      };
+      img.src = ev.target?.result as string;
     };
     reader.readAsDataURL(file);
   }, []);

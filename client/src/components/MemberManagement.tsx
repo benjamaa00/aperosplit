@@ -440,7 +440,7 @@ export function MemberManagement({
                   pendingRequests.map((req, i) => (
                     <motion.div key={req.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
                       className="glass-card-enhanced rounded-2xl p-4 flex items-center gap-3">
-                      <span className="text-2xl">{req.memberAvatar}</span>
+                      <AvatarImg avatar={req.memberAvatar} size="text-2xl" />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold">{req.memberName}</p>
                         <p className="text-[11px] text-muted-foreground">

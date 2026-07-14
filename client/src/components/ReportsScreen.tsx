@@ -123,7 +123,7 @@ export function ReportsScreen({ expenses, members, pendingPayments, completedPay
       ...categoryData.map(c => `  ${c.emoji} ${c.name}: ${fmt(c.value)} (${((c.value / total) * 100).toFixed(0)}%)`),
       "",
       "─── PAR MEMBRE ───",
-      ...memberData.map(m => `  ${m.avatar} ${m.name}: ${fmt(m.total)}`),
+      ...memberData.map(m => `  ${m.name}: ${fmt(m.total)}`),
       "",
       "─── PAIEMENTS ───",
       `En attente: ${pendingPayments.filter(p => p.status === "pending").length}`,
