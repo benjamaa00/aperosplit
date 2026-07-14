@@ -92,6 +92,7 @@ export function initializeDatabase(): Promise<void> {
           payer_id VARCHAR(128) NOT NULL,
           participants JSONB NOT NULL,
           photo_url TEXT,
+          category_emoji VARCHAR(8),
           status VARCHAR(16) NOT NULL DEFAULT 'validated',
           is_recurring BOOLEAN NOT NULL DEFAULT FALSE,
           recurrence_interval VARCHAR(16),
@@ -331,7 +332,7 @@ export async function getGroupData(groupId: string) {
   const [group, members, expenses, payments, history, categories, notifications] = await Promise.all([
     db.query(`SELECT id, name, share_url AS "shareUrl", pin_code AS "pinCode", require_approval AS "requireApproval" FROM groups WHERE id = $1`, [groupId]),
     db.query(`SELECT id, name, avatar, role, status, user_id AS "userId", biometric_enabled AS "biometricEnabled", credential_id AS "credentialId", joined_at AS "joinedAt" FROM group_members WHERE group_id = $1 ORDER BY joined_at`, [groupId]),
-    db.query(`SELECT id, group_id AS "groupId", description, amount, category, payer_id AS "payerId", participants, photo_url AS "photoUrl", status, is_recurring AS "isRecurring", recurrence_interval AS "recurrenceInterval", recurrence_end_date AS "recurrenceEndDate", validated_by AS "validatedBy", date, created_at AS "createdAt" FROM expenses WHERE group_id = $1 ORDER BY date`, [groupId]),
+    db.query(`SELECT id, group_id AS "groupId", description, amount, category, payer_id AS "payerId", participants, photo_url AS "photoUrl", category_emoji AS "categoryEmoji", status, is_recurring AS "isRecurring", recurrence_interval AS "recurrenceInterval", recurrence_end_date AS "recurrenceEndDate", validated_by AS "validatedBy", date, created_at AS "createdAt" FROM expenses WHERE group_id = $1 ORDER BY date`, [groupId]),
     db.query(`SELECT id, group_id AS "groupId", from_id AS "fromId", from_name AS "fromName", to_id AS "toId", to_name AS "toName", amount, original_amount AS "originalAmount", status, expense_id AS "expenseId", notification_count AS "notificationCount", attempt_count AS "attemptCount", is_group_request AS "isGroupRequest", request_group_id AS "requestGroupId", request_note AS "requestNote", accept_note AS "acceptNote", paid_at AS "paidAt", confirmed_at AS "confirmedAt", dispute_note AS "disputeNote", date, responded_at AS "respondedAt", created_at AS "createdAt" FROM payments WHERE group_id = $1 ORDER BY created_at DESC`, [groupId]),
     db.query(`SELECT id, group_id AS "groupId", type, author_id AS "authorId", description, amount, from_id AS "fromId", to_id AS "toId", date FROM activity_history WHERE group_id = $1 ORDER BY date DESC LIMIT 200`, [groupId]),
     db.query(`SELECT id, name, emoji, is_default AS "isDefault" FROM expense_categories WHERE group_id = $1 ORDER BY is_default DESC, name`, [groupId]),
@@ -389,9 +390,9 @@ export async function addExpense(expense: any) {
     return true;
   }
   await db.query(
-    `INSERT INTO expenses (id, group_id, description, amount, category, payer_id, participants, photo_url, date)
-     VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,$8,$9)`,
-    [expense.id, expense.groupId, expense.description, expense.amount, expense.category, expense.payerId, JSON.stringify(expense.participants), expense.photoUrl, expense.date],
+    `INSERT INTO expenses (id, group_id, description, amount, category, payer_id, participants, photo_url, category_emoji, is_recurring, recurrence_interval, date)
+     VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,$8,$9,$10,$11,$12)`,
+    [expense.id, expense.groupId, expense.description, expense.amount, expense.category, expense.payerId, JSON.stringify(expense.participants), expense.photoUrl, expense.categoryEmoji || null, expense.isRecurring || false, expense.recurrenceInterval || null, expense.date],
   );
   return true;
 }

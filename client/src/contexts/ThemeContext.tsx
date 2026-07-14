@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
 
 type Theme = "light" | "dark";
 
@@ -167,13 +167,40 @@ const DEFAULT_PREFS: ThemePreferences = {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-export function ThemeProvider({ children }: { children: React.ReactNode }) {
+const memberThemeKey = (id?: string | null) => id ? `equilibra_theme_prefs_${id}` : null;
+
+export function ThemeProvider({ children, memberId }: { children: React.ReactNode; memberId?: string | null }) {
   const [prefs, setPrefsState] = useState<ThemePreferences>(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       return stored ? { ...DEFAULT_PREFS, ...JSON.parse(stored) } : DEFAULT_PREFS;
     } catch { return DEFAULT_PREFS; }
   });
+
+  const prevMemberRef = useRef(memberId);
+
+  useEffect(() => {
+    if (memberId === prevMemberRef.current) return;
+    const oldKey = memberThemeKey(prevMemberRef.current);
+    const newKey = memberThemeKey(memberId);
+    try {
+      const current = localStorage.getItem(STORAGE_KEY);
+      if (current && oldKey) localStorage.setItem(oldKey, current);
+      if (newKey) {
+        const stored = localStorage.getItem(newKey);
+        if (stored) {
+          const loaded = { ...DEFAULT_PREFS, ...JSON.parse(stored) };
+          setPrefsState(loaded);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(loaded));
+          prevMemberRef.current = memberId;
+          return;
+        }
+      }
+      setPrefsState(DEFAULT_PREFS);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_PREFS));
+    } catch {}
+    prevMemberRef.current = memberId;
+  }, [memberId]);
 
   const setPrefs = useCallback((partial: Partial<ThemePreferences>) => {
     setPrefsState(prev => {

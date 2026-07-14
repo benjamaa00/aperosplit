@@ -104,9 +104,11 @@ export const equilibraRouter = router({
   addExpense: groupProcedure
     .input(
       z.object({
+        id: z.string().max(128).optional(),
         description: z.string().trim().min(1).max(255),
         amount: z.number().positive().max(1_000_000),
         category: z.string().trim().min(1).max(64),
+        categoryEmoji: z.string().max(8).optional(),
         payerId: z.string().min(1).max(128),
         participants: z.array(z.string().min(1).max(128)).min(1).max(20),
         photoUrl: z.string().max(2048).optional(),
@@ -117,13 +119,14 @@ export const equilibraRouter = router({
       })
     )
     .mutation(async ({ input }) => {
-      const expenseId = `exp_${randomUUID()}`;
+      const expenseId = input.id || `exp_${randomUUID()}`;
       const success = await addExpense({
         id: expenseId,
         groupId: GROUP_ID,
         description: input.description,
         amount: input.amount.toString(),
         category: input.category,
+        categoryEmoji: input.categoryEmoji || null,
         payerId: input.payerId,
         participants: input.participants,
         photoUrl: input.photoUrl || null,
@@ -176,6 +179,7 @@ export const equilibraRouter = router({
   requestPayment: groupProcedure
     .input(
       z.object({
+        id: z.string().max(128).optional(),
         fromId: z.string().min(1).max(128),
         fromName: z.string().trim().min(1).max(80),
         toId: z.string().min(1).max(128),
@@ -189,7 +193,7 @@ export const equilibraRouter = router({
       })
     )
     .mutation(async ({ input }) => {
-      const paymentId = `pay_${randomUUID()}`;
+      const paymentId = input.id || `pay_${randomUUID()}`;
       const storedPaymentId = await addPendingPayment({
         id: paymentId,
         groupId: GROUP_ID,

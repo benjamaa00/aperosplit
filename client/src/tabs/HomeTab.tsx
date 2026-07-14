@@ -26,6 +26,7 @@ export function HomeTab({
   onMarkAsPaid,
   expenses,
   monthlyBudget,
+  currency,
   onUpdateBudget,
 }: {
   currentMember: Member;
@@ -44,8 +45,10 @@ export function HomeTab({
   onMarkAsPaid: (id: string) => void;
   expenses: Expense[];
   monthlyBudget: number;
+  currency: string;
   onUpdateBudget: (budget: number) => void;
 }) {
+  const [showBudgetPrompt, setShowBudgetPrompt] = useState(false);
   const breakdown = useMemo(() => 
     calculateMemberBreakdown(currentMember.id, expenses, members),
     [currentMember.id, expenses, members]
@@ -73,6 +76,7 @@ export function HomeTab({
   const budgetRemaining = monthlyBudget - currentMonthSpending;
 
   return (
+    <>
     <motion.div {...fadeUp} className="max-w-md mx-auto px-5 pt-16 space-y-6">
       {/* Greeting */}
       <div>
@@ -133,12 +137,7 @@ export function HomeTab({
           </div>
           <motion.button
             whileTap={{ scale: 0.95 }}
-            onClick={() => {
-              const newBudget = prompt("Entrez votre budget mensuel:", monthlyBudget.toString());
-              if (newBudget && !isNaN(parseFloat(newBudget))) {
-                onUpdateBudget(parseFloat(newBudget));
-              }
-            }}
+            onClick={() => setShowBudgetPrompt(true)}
             className="text-xs text-primary font-medium"
           >
             Modifier
@@ -275,6 +274,7 @@ export function HomeTab({
                 payment={p}
                 members={members}
                 currentMemberId={currentMember.id}
+                currency={currency}
                 onConfirmPayment={onConfirmPayment}
                 onRefusePayment={onRefusePayment}
                 onResentPayment={onResentPayment}
@@ -365,5 +365,20 @@ export function HomeTab({
         </div>
       </div>
     </motion.div>
+
+      <InputPrompt
+        open={showBudgetPrompt}
+        onClose={() => setShowBudgetPrompt(false)}
+        onConfirm={(val) => {
+          const num = parseFloat(val);
+          if (!isNaN(num) && num > 0) onUpdateBudget(num);
+        }}
+        title="Budget mensuel"
+        description="Entrez votre budget mensuel"
+        defaultValue={monthlyBudget.toString()}
+        confirmLabel="Enregistrer"
+        type="number"
+      />
+    </>
   );
 }

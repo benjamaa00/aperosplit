@@ -12,20 +12,24 @@ function AddExpenseSheet({
   onAdd,
   onClose,
   customCategories,
+  currency,
 }: {
   members: Member[];
   currentMemberId: string;
   onAdd: (expense: Omit<Expense, "id" | "date">) => void;
   onClose: () => void;
   customCategories?: GroupCategory[];
+  currency?: string;
 }) {
   const [step, setStep] = useState(0);
   const [amount, setAmount] = useState("");
+  const [description, setDescription] = useState("");
   const [category, setCategory] = useState<{ name: string; emoji: string }>(CATEGORIES[0]);
   const [payerId, setPayerId] = useState(currentMemberId);
   const [participants, setParticipants] = useState(members.map((m) => m.id));
   const [isRecurring, setIsRecurring] = useState(false);
   const [recurrenceInterval, setRecurrenceInterval] = useState<"weekly" | "monthly" | "yearly">("monthly");
+  const displayCurrency = currency || "MAD";
 
   const toggleParticipant = (id: string) => {
     setParticipants((prev) =>
@@ -43,7 +47,7 @@ function AddExpenseSheet({
       return;
     }
     onAdd({
-      description: category.name,
+      description: description.trim() || category.name,
       amount: parseFloat(amount),
       payerId,
       category: category.name,
@@ -74,7 +78,7 @@ function AddExpenseSheet({
               onChange={(e) => setAmount(e.target.value)}
               className="w-full bg-card/50 border border-border rounded-3xl px-6 py-6 text-5xl font-bold text-center focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/20 transition-all"
             />
-            <span className="absolute right-6 top-1/2 -translate-y-1/2 text-muted-foreground font-bold text-2xl">MAD</span>
+            <span className="absolute right-6 top-1/2 -translate-y-1/2 text-muted-foreground font-bold text-2xl">{displayCurrency}</span>
           </div>
           <div className="flex gap-2 justify-center">
             {[50, 100, 200, 500].map((val) => (
@@ -134,6 +138,24 @@ function AddExpenseSheet({
               </div>
             </div>
           ))}
+        </div>
+      ),
+    },
+    {
+      title: "Description (optionnel)",
+      content: (
+        <div className="space-y-4">
+          <input
+            type="text"
+            placeholder={category.name}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            autoFocus
+            className="w-full bg-card/50 border border-border rounded-2xl px-5 py-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/20 transition-all"
+          />
+          <p className="text-xs text-muted-foreground text-center">
+            Laissez vide pour utiliser "{category.name}"
+          </p>
         </div>
       ),
     },

@@ -7,7 +7,6 @@ import superjson from "superjson";
 
 import App from "./App";
 import { getLoginUrl } from "./const";
-import { ThemeProvider } from "./contexts/ThemeContext";
 import "./index.css";
 
 // Register Service Worker for PWA
@@ -137,9 +136,7 @@ if (!rootElement) {
 createRoot(rootElement).render(
   <trpc.Provider client={trpcClient} queryClient={queryClient}>
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
-        <App />
-      </ThemeProvider>
+      <App />
     </QueryClientProvider>
   </trpc.Provider>
 );

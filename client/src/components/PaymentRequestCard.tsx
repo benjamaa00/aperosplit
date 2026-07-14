@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Check, X, RefreshCw, AlertTriangle, Clock, Send } from "lucide-react";
 import { AvatarImg } from "./AvatarImg";
 import { TextAreaPrompt } from "./TextAreaPrompt";
+import { formatCurrency } from "../utils/currency";
 
 interface PendingPayment {
   id: string;
@@ -28,6 +29,7 @@ interface PaymentRequestCardProps {
   payment: PendingPayment;
   members: Member[];
   currentMemberId: string;
+  currency: string;
   onConfirmPayment: (id: string) => void;
   onRefusePayment: (id: string, comment?: string) => void;
   onResentPayment: (id: string) => void;
@@ -40,6 +42,7 @@ export function PaymentRequestCard({
   payment,
   members,
   currentMemberId,
+  currency,
   onConfirmPayment,
   onRefusePayment,
   onResentPayment,
@@ -56,14 +59,7 @@ export function PaymentRequestCard({
   const isToCurrentUser = payment.toId === currentMemberId;
   const attempts = payment.attemptCount || 0;
 
-  const formatCurrency = (amount: number): string => {
-    return new Intl.NumberFormat("fr-MA", {
-      style: "currency",
-      currency: "MAD",
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(amount);
-  };
+  const formatAmount = (amount: number): string => formatCurrency(amount, currency);
 
   const getStatusColor = () => {
     switch (payment.status) {
@@ -102,7 +98,7 @@ export function PaymentRequestCard({
                 {isFromCurrentUser ? "Vous demandez" : `${from?.name} demande`}
                 {isToCurrentUser ? " à vous" : ` à ${to?.name}`}
               </p>
-              <p className="text-lg font-bold">{formatCurrency(payment.amount)}</p>
+              <p className="text-lg font-bold">{formatAmount(payment.amount)}</p>
             </div>
           </div>
           <div className="text-right">
@@ -263,7 +259,7 @@ export function PaymentRequestCard({
             >
               <h3 className="text-lg font-bold mb-2">Refuser le paiement</h3>
               <p className="text-sm text-muted-foreground mb-4">
-                Expliquez pourquoi vous refusez ce paiement de {formatCurrency(payment.amount)}
+                Expliquez pourquoi vous refusez ce paiement de {formatAmount(payment.amount)}
               </p>
               <textarea
                 value={refuseComment}
