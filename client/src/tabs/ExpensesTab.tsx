@@ -161,7 +161,7 @@ export function ExpensesTab({
                         Demander remboursement
                       </motion.button>
                     )}
-                    {exp.payerId === currentMemberId && (
+                    {(exp.payerId === currentMemberId || members.find(m => m.id === currentMemberId)?.role === "admin") && (
                       <motion.button
                         whileTap={{ scale: 0.8 }}
                         onClick={() => onDelete(exp.id)}

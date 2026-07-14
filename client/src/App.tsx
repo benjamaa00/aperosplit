@@ -235,11 +235,13 @@ export default function App() {
 
   const deleteExpense = useCallback((id: string) => {
     const expense = expenses.find((e) => e.id === id);
-    if (!expense || expense.payerId !== currentMemberId) return;
+    if (!expense) return;
+    const currentMember = members.find((m) => m.id === currentMemberId);
+    if (expense.payerId !== currentMemberId && currentMember?.role !== "admin") return;
     haptic("medium");
     setExpenses((prev) => prev.filter((e) => e.id !== id));
     if (!isNetlify) { deleteExpenseMutation.mutateAsync({ expenseId: id, description: expense.description, amount: expense.amount, authorId: currentMemberId }).then(() => refetch()).catch(() => {}); }
-  }, [expenses, currentMemberId, haptic, deleteExpenseMutation, refetch, isNetlify]);
+  }, [expenses, currentMemberId, members, haptic, deleteExpenseMutation, refetch, isNetlify]);
 
   const requestPayment = useCallback(async (toId: string, amount: number, expenseId?: string) => {
     if (!currentMemberId) return;
@@ -300,7 +302,7 @@ export default function App() {
   }, [haptic, showNotification]);
 
   const handleRegister = useCallback(async (name: string, avatar: string) => {
-    const newMember: Member = { id: Date.now().toString(), name, avatar, status: "pending" };
+    const newMember: Member = { id: Date.now().toString(), name, avatar, role: "member", status: "pending" };
     setMembers((prev) => [...prev, newMember]);
     setCurrentMemberId(newMember.id);
     setScreen("main");
@@ -336,7 +338,7 @@ export default function App() {
     try {
       const r = await joinGroupByPinMutation.mutateAsync({ pinCode: pin, groupId: selectedGroupId, memberId, memberName: name, memberAvatar: avatar });
       if (r?.success) {
-        const newMember: Member = { id: memberId, name, avatar, status: "approved" };
+        const newMember: Member = { id: memberId, name, avatar, role: "member", status: "approved" };
         setMembers((prev) => [...prev, newMember]);
         setCurrentMemberId(memberId);
         setScreen("main");
@@ -348,7 +350,7 @@ export default function App() {
     try {
       const r = await joinGroupByInviteMutation.mutateAsync({ token: inviteToken!, memberId, memberName: name, memberAvatar: avatar });
       if (r?.success) {
-        const newMember: Member = { id: memberId, name, avatar, status: "approved" };
+        const newMember: Member = { id: memberId, name, avatar, role: "member", status: "approved" };
         setMembers((prev) => [...prev, newMember]);
         setCurrentMemberId(memberId);
         setScreen("main");

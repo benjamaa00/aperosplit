@@ -111,18 +111,20 @@ export function ProfileTab({
             className="absolute inset-0 rounded-full bg-primary/10 blur-xl -z-10"
           />
           {/* Admin Badge */}
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg shadow-primary/30 border-2 border-background"
-          >
-            <Sparkles size={14} className="text-white" />
-          </motion.div>
+          {currentMember.role === "admin" && (
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg shadow-primary/30 border-2 border-background"
+            >
+              <Sparkles size={14} className="text-white" />
+            </motion.div>
+          )}
         </motion.div>
         <h1 className="text-2xl font-bold tracking-tight">{currentMember.name}</h1>
         <div className="flex items-center justify-center gap-2 mt-1">
           <span className="text-sm text-muted-foreground">Membre du groupe</span>
-          <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-semibold border border-primary/20">Admin</span>
+          <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold border ${currentMember.role === "admin" ? "bg-primary/10 text-primary border-primary/20" : "bg-secondary text-muted-foreground border-border"}`}>{currentMember.role === "admin" ? "Admin" : "Membre"}</span>
         </div>
       </motion.div>
 
@@ -239,7 +241,7 @@ export function ProfileTab({
             <span className="text-xs font-medium">Rapports</span>
           </motion.button>
         )}
-        {onOpenGroupSettings && (
+        {onOpenGroupSettings && currentMember.role === "admin" && (
           <motion.button
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -252,7 +254,7 @@ export function ProfileTab({
             <span className="text-xs font-medium">Paramètres</span>
           </motion.button>
         )}
-        {onOpenMembers && (
+        {onOpenMembers && currentMember.role === "admin" && (
           <motion.button
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -268,7 +270,7 @@ export function ProfileTab({
       </div>
 
       {/* Share Section - Admin Only */}
-      {currentMember.id === "admin" && (
+      {currentMember.role === "admin" && (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -374,7 +376,7 @@ export function ProfileTab({
                 Vous
               </motion.span>
             )}
-            {onRemoveMember && currentMember.id === "admin" && member.id !== currentMember.id && (
+            {onRemoveMember && currentMember.role === "admin" && member.id !== currentMember.id && (
               <motion.button
                 whileTap={{ scale: 0.8 }}
                 onClick={() => onRemoveMember(member.id)}
@@ -406,7 +408,7 @@ export function ProfileTab({
       )}
 
       {/* Logout - Admin Only and Not Locked */}
-      {!isLocked && currentMember.id === "admin" && (
+      {!isLocked && currentMember.role === "admin" && (
         <motion.button
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}

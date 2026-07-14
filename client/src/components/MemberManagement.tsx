@@ -115,7 +115,7 @@ export function MemberManagement({
     return members.filter(m => m.name.toLowerCase().includes(q));
   }, [members, search]);
 
-  const isAdmin = (id: string) => members.find(m => m.id === id)?.role === "admin" || id === "admin";
+  const isAdmin = (id: string) => members.find(m => m.id === id)?.role === "admin";
 
   const fadeSlide = { initial: { opacity: 0, x: 20 }, animate: { opacity: 1, x: 0 }, exit: { opacity: 0, x: -20 } };
 
@@ -192,7 +192,7 @@ export function MemberManagement({
         </div>
 
         {/* Actions */}
-        {currentMemberId === "admin" && selectedMember.id !== currentMemberId && (
+        {isAdmin(currentMemberId) && selectedMember.id !== currentMemberId && (
           <div className="space-y-2">
             <motion.button whileTap={{ scale: 0.97 }}
               onClick={() => onChangeRole?.(selectedMember.id, isAdmin(selectedMember.id) ? "member" : "admin")}
@@ -224,7 +224,7 @@ export function MemberManagement({
           <h1 className="text-3xl font-bold tracking-tight">Membres</h1>
           <p className="text-sm text-muted-foreground">{members.length} membres</p>
         </div>
-        {currentMemberId === "admin" && (
+        {isAdmin(currentMemberId) && (
           <motion.button whileTap={{ scale: 0.9 }} onClick={() => setShowInvite(true)}
             className="w-10 h-10 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center shadow-lg shadow-primary/30">
             <UserPlus size={20} />
@@ -280,7 +280,7 @@ export function MemberManagement({
                           </p>
                         </div>
                         <div className="flex items-center gap-1.5">
-                          {currentMemberId === "admin" && member.id !== currentMemberId && (
+                          {isAdmin(currentMemberId) && member.id !== currentMemberId && (
                             <>
                               <motion.button whileTap={{ scale: 0.9 }}
                                 onClick={() => setShowRoleMenu(showRoleMenu === member.id ? null : member.id)}
