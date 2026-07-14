@@ -4,7 +4,7 @@ import { Home, Receipt, Scale, History, BarChart3, User, Plus } from "lucide-rea
 import { trpc } from "@/lib/trpc";
 
 import type { Member, Expense, PendingPayment, Notification, GroupCategory, Screen, Tab } from "./types";
-import { CATEGORIES, DEFAULT_MEMBERS, GROUP_ID, spring, fadeUp } from "./constants";
+import { CATEGORIES, GROUP_ID, spring, fadeUp } from "./constants";
 import { formatCurrency, formatDate } from "./utils/currency";
 import { simplifyDebts } from "./utils/debts";
 import { checkBiometricAvailable, registerBiometric, authenticateBiometric } from "./utils/biometric";
@@ -37,7 +37,7 @@ const isNetlify = import.meta.env.VITE_NETLIFY === "true";
 export default function App() {
   const [screen, setScreen] = useState<Screen>("identity");
   const [accessCode, setAccessCode] = useState<string>(() => localStorage.getItem("equilibra_access") || localStorage.getItem("aperosplit_access") || "");
-  const [members, setMembers] = useState<Member[]>(DEFAULT_MEMBERS);
+  const [members, setMembers] = useState<Member[]>([]);
   const [currentMemberId, setCurrentMemberId] = useState<string>("");
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [pendingPayments, setPendingPayments] = useState<PendingPayment[]>([]);
@@ -113,8 +113,8 @@ export default function App() {
   }, [accessCode]);
 
   useEffect(() => {
-    if (!isNetlify) {
-      initGroup.mutateAsync({ members: DEFAULT_MEMBERS.map(m => ({ id: m.id, name: m.name, avatar: m.avatar })) }).catch(() => {});
+    if (!isNetlify && members.length > 0) {
+      initGroup.mutateAsync({ members: members.map(m => ({ id: m.id, name: m.name, avatar: m.avatar })) }).catch(() => {});
     }
   }, [isNetlify]);
 
@@ -321,7 +321,15 @@ export default function App() {
 
   // ─── Screen Routing ────────────────────────────────────────
   if (screen === "access") return <AppShell><AccessScreen onSubmit={handleAccessCode} /></AppShell>;
-  if (screen === "identity") return <AppShell><IdentityScreen members={members} onSelect={selectIdentity} /></AppShell>;
+  if (screen === "identity") {
+    if (members.length === 0) return <AppShell><RegisterScreen onRegister={(name, avatar) => {
+      const newMember: Member = { id: Date.now().toString(), name, avatar, role: "admin" };
+      setMembers([newMember]);
+      setCurrentMemberId(newMember.id);
+      setScreen("main");
+    }} onBack={() => setScreen("access")} groupName="Équilibra" /></AppShell>;
+    return <AppShell><IdentityScreen members={members} onSelect={selectIdentity} /></AppShell>;
+  }
   if (screen === "register") return <AppShell><RegisterScreen onRegister={handleRegister} onBack={() => setScreen("access")} /></AppShell>;
   if (screen === "invite") return <AppShell><InviteScreen inviteToken={inviteToken!} onJoinByPin={async (pin, name, avatar) => {
     const memberId = Date.now().toString();
