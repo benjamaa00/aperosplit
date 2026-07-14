@@ -64,7 +64,6 @@ export default function App() {
   const [offlineMode, setOfflineMode] = useState(() => localStorage.getItem("equilibra_offline_mode") === "true");
   const [pushNotifications, setPushNotifications] = useState(() => localStorage.getItem("equilibra_push_notifications") !== "false");
   const [reminderDelay, setReminderDelay] = useState(() => parseInt(localStorage.getItem("equilibra_reminder_delay") || "3"));
-  const [selectedGroupId] = useState<string>(GROUP_ID);
   const [groupPin, setGroupPin] = useState<string | null>(null);
   const [requireApproval, setRequireApproval] = useState(false);
   const [inviteToken, setInviteToken] = useState<string | null>(null);
@@ -84,7 +83,6 @@ export default function App() {
   const requestPaymentMutation = trpc.equilibra.requestPayment.useMutation();
   const confirmPaymentMutation = trpc.equilibra.confirmPayment.useMutation();
   const refusePaymentMutation = trpc.equilibra.refusePayment.useMutation();
-  const joinGroupByPinMutation = trpc.equilibra.joinGroupByPin.useMutation();
   const joinGroupByInviteMutation = trpc.equilibra.joinGroupByInvite.useMutation();
   const expelMemberMutation = trpc.equilibra.expelMember.useMutation();
   const changeMemberRoleMutation = trpc.equilibra.changeMemberRole.useMutation();
@@ -124,9 +122,17 @@ export default function App() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const invite = params.get("invite");
-    if (invite) { setInviteToken(invite); setScreen("invite"); return; }
+    if (invite) {
+      Object.keys(localStorage).forEach(k => {
+        if (k.startsWith("equilibra_")) localStorage.removeItem(k);
+      });
+      setInviteToken(invite);
+      setScreen("invite");
+      window.history.replaceState({}, "", window.location.pathname);
+      return;
+    }
     if (!accessCode) setScreen("access");
-  }, [accessCode]);
+  }, []);
 
   useEffect(() => {
     if (syncingFromServer.current) { syncingFromServer.current = false; return; }
@@ -454,27 +460,13 @@ export default function App() {
     return themed(<AppShell><IdentityScreen members={members} onSelect={selectIdentity} onReset={async () => { try { await resetAllDataMutation.mutateAsync(); setMembers([]); setExpenses([]); setPendingPayments([]); setCompletedPayments([]); toast.success("Groupe réinitialisé"); } catch { toast.error("Erreur lors de la réinitialisation"); } }} /></AppShell>);
   }
   if (screen === "register") return themed(<AppShell><RegisterScreen onRegister={handleRegister} onBack={() => setScreen("access")} /></AppShell>);
-  if (screen === "invite") return themed(<AppShell><InviteScreen inviteToken={inviteToken!} onJoinByPin={async (pin, name, rawAvatar) => {
-    const memberId = Date.now().toString();
-    const avatar = prepareAvatar(memberId, rawAvatar);
-    try {
-      const r = await joinGroupByPinMutation.mutateAsync({ pinCode: pin, groupId: selectedGroupId, memberId, memberName: name, memberAvatar: avatar });
-      if (r?.success) {
-        const status = r.requiresApproval ? "pending" : "active";
-        const newMember: Member = { id: memberId, name, avatar, role: "member", status };
-        setMembers((prev) => [...prev, newMember]);
-        setCurrentMemberId(memberId);
-        if (r.requiresApproval) { setScreen("identity"); toast.info("Votre demande est en attente d'approbation par l'admin."); }
-        else { setScreen("main"); }
-      }
-      return r ?? { success: false };
-    } catch { return { success: false, error: "Erreur de connexion" }; }
-  }} onJoinByInvite={async (name, rawAvatar) => {
+  if (screen === "invite") return themed(<AppShell><InviteScreen inviteToken={inviteToken!} onJoinByInvite={async (name, rawAvatar) => {
     const memberId = Date.now().toString();
     const avatar = prepareAvatar(memberId, rawAvatar);
     try {
       const r = await joinGroupByInviteMutation.mutateAsync({ token: inviteToken!, memberId, memberName: name, memberAvatar: avatar });
       if (r?.success) {
+        await refetch();
         const status = r.requiresApproval ? "pending" : "active";
         const newMember: Member = { id: memberId, name, avatar, role: "member", status };
         setMembers((prev) => [...prev, newMember]);

@@ -181,7 +181,7 @@ export function MemberManagement({
     }
   }, [showInvite]);
 
-  const inviteUrl = inviteTokenValue ? `${window.location.origin}?invite=${inviteTokenValue}` : `${window.location.origin}?invite=true`;
+  const inviteUrl = inviteTokenValue ? `${window.location.origin}?invite=${inviteTokenValue}` : "";
   const handleCopyInvite = async () => {
     try { await navigator.clipboard.writeText(inviteUrl); } catch {}
   };

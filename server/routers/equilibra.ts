@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { groupProcedure, router } from "../_core/trpc";
+import { groupProcedure, publicProcedure, router } from "../_core/trpc";
 import { storagePut } from "../storage";
 import { invokeLLM } from "../_core/llm";
 import { randomUUID } from "node:crypto";
@@ -24,6 +24,7 @@ import {
   expelMember,
   changeMemberRole,
   generateInviteToken,
+  validateInviteToken,
   createExpenseCategory,
   deleteExpenseCategory,
   addNotification,
@@ -459,6 +460,12 @@ export const equilibraRouter = router({
       const expiresAt = input.expiresHours ? new Date(Date.now() + input.expiresHours * 3600_000) : undefined;
       const result = await generateInviteToken(GROUP_ID, expiresAt, input.maxUses);
       return result;
+    }),
+
+  validateInvite: publicProcedure
+    .input(z.object({ token: z.string().min(1).max(128) }))
+    .query(async ({ input }) => {
+      return await validateInviteToken(input.token);
     }),
 
   approveMember: groupProcedure

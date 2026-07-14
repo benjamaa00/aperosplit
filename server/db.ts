@@ -687,6 +687,24 @@ export async function generateInviteToken(groupId: string, expiresAt?: Date, max
   return { token, url: token };
 }
 
+export async function validateInviteToken(token: string) {
+  const db = await ready();
+  if (!db) return { valid: false, error: "Offline mode" };
+  const result = await db.query(
+    `SELECT gi.id, gi.group_id AS "groupId", gi.expires_at AS "expiresAt", gi.max_uses AS "maxUses", gi.used_count AS "usedCount",
+            g.name AS "groupName"
+     FROM group_invites gi
+     JOIN groups g ON g.id = gi.group_id
+     WHERE gi.token = $1`,
+    [token]
+  );
+  const invite = result.rows[0];
+  if (!invite) return { valid: false, error: "Lien d'invitation invalide" };
+  if (invite.expiresAt && new Date(invite.expiresAt) < new Date()) return { valid: false, error: "Lien d'invitation expiré" };
+  if (invite.maxUses && invite.usedCount >= invite.maxUses) return { valid: false, error: "Lien d'invitation épuisé" };
+  return { valid: true, groupName: invite.groupName || "Équilibra" };
+}
+
 export async function createExpenseCategory(groupId: string, name: string, emoji: string, isDefault?: boolean) {
   const db = await ready();
   if (!db) return { id: `cat_${Date.now()}`, name, emoji };

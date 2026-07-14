@@ -1,66 +1,57 @@
 import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  ArrowLeft, Shield, Lock, Check, AlertTriangle, Loader2,
-} from "lucide-react";
+import { ArrowLeft, Loader2, Check, AlertTriangle, Users } from "lucide-react";
 import { RegisterScreen } from "./RegisterScreen";
+import { trpc } from "@/lib/trpc";
 
 const spring = { type: "spring" as const, stiffness: 300, damping: 30 };
 
 interface InviteScreenProps {
   inviteToken: string;
-  onJoinByPin: (pinCode: string, name: string, avatar: string) => Promise<{ success: boolean; error?: string }>;
   onJoinByInvite: (name: string, avatar: string) => Promise<{ success: boolean; error?: string }>;
   onBack?: () => void;
-  groupName?: string;
 }
 
-type InviteStep = "pin" | "register" | "joining" | "success" | "error";
+type InviteStep = "loading" | "register" | "joining" | "done" | "error";
 
-export function InviteScreen({ inviteToken, onJoinByPin, onJoinByInvite, onBack, groupName }: InviteScreenProps) {
-  const [step, setStep] = useState<InviteStep>("pin");
-  const [pinCode, setPinCode] = useState("");
-  const [pinError, setPinError] = useState("");
-  const [isVerifyingPin, setIsVerifyingPin] = useState(false);
+export function InviteScreen({ inviteToken, onJoinByInvite, onBack }: InviteScreenProps) {
+  const [step, setStep] = useState<InviteStep>("loading");
+  const [groupName, setGroupName] = useState("");
   const [joinError, setJoinError] = useState("");
   const [memberName, setMemberName] = useState("");
-  const [memberAvatar, setMemberAvatar] = useState("");
+
+  const validateQuery = trpc.equilibra.validateInvite.useQuery(
+    { token: inviteToken },
+    { retry: false }
+  );
 
   useEffect(() => {
-    if (inviteToken) {
-      setStep("register");
+    if (validateQuery.data) {
+      if (validateQuery.data.valid) {
+        setGroupName(validateQuery.data.groupName || "Équilibra");
+        setStep("register");
+      } else {
+        setJoinError(validateQuery.data.error || "Lien d'invitation invalide");
+        setStep("error");
+      }
     }
-  }, [inviteToken]);
+  }, [validateQuery.data, validateQuery.isError]);
 
-  const handlePinSubmit = useCallback(() => {
-    if (pinCode.length < 4) {
-      setPinError("Le code PIN doit contenir au moins 4 chiffres");
-      return;
+  useEffect(() => {
+    if (validateQuery.isError) {
+      setJoinError("Impossible de vérifier le lien. Vérifiez votre connexion.");
+      setStep("error");
     }
-    setIsVerifyingPin(true);
-    setPinError("");
-
-    setTimeout(() => {
-      setIsVerifyingPin(false);
-      setStep("register");
-    }, 800);
-  }, [pinCode]);
+  }, [validateQuery.isError]);
 
   const handleRegister = useCallback(async (name: string, avatar: string) => {
     setMemberName(name);
-    setMemberAvatar(avatar);
     setStep("joining");
 
     try {
-      let result;
-      if (pinCode) {
-        result = await onJoinByPin(pinCode, name, avatar);
-      } else {
-        result = await onJoinByInvite(name, avatar);
-      }
-
+      const result = await onJoinByInvite(name, avatar);
       if (result.success) {
-        setStep("success");
+        setStep("done");
       } else {
         setJoinError(result.error || "Erreur lors de l'inscription");
         setStep("error");
@@ -69,7 +60,7 @@ export function InviteScreen({ inviteToken, onJoinByPin, onJoinByInvite, onBack,
       setJoinError("Erreur de connexion au serveur");
       setStep("error");
     }
-  }, [pinCode, onJoinByPin, onJoinByInvite]);
+  }, [onJoinByInvite]);
 
   return (
     <div className="min-h-screen bg-background relative overflow-hidden">
@@ -87,82 +78,19 @@ export function InviteScreen({ inviteToken, onJoinByPin, onJoinByInvite, onBack,
       </div>
 
       <AnimatePresence mode="wait">
-        {step === "pin" && (
+        {step === "loading" && (
           <motion.div
-            key="pin"
+            key="loading"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             className="relative z-10 min-h-screen flex flex-col items-center justify-center px-6"
           >
-            {onBack && (
-              <motion.button
-                whileTap={{ scale: 0.9 }}
-                onClick={onBack}
-                className="absolute top-6 left-6 w-10 h-10 rounded-2xl bg-card/30 border border-border flex items-center justify-center"
-              >
-                <ArrowLeft size={20} />
-              </motion.button>
-            )}
-
-            <motion.div
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ delay: 0.1, ...spring }}
-              className="w-16 h-16 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border border-primary/20 shadow-lg shadow-primary/10"
-            >
-              <Lock size={28} className="text-primary" />
-            </motion.div>
-
-            <h1 className="text-2xl font-bold tracking-tight text-center mb-1">
-              Code d'accès
-            </h1>
-            <p className="text-muted-foreground text-sm text-center mb-8">
-              {groupName ? `Entrez le PIN pour rejoindre "${groupName}"` : "Entrez le code PIN du groupe"}
+            <Loader2 size={40} className="text-primary animate-spin mb-6" />
+            <h2 className="text-xl font-bold tracking-tight mb-2">Vérification du lien...</h2>
+            <p className="text-muted-foreground text-sm text-center">
+              Chargement des informations du groupe
             </p>
-
-            <div className="w-full max-w-xs space-y-4">
-              <input
-                type="password"
-                inputMode="numeric"
-                value={pinCode}
-                onChange={(e) => {
-                  setPinCode(e.target.value.replace(/\D/g, "").slice(0, 12));
-                  setPinError("");
-                }}
-                onKeyDown={(e) => e.key === "Enter" && handlePinSubmit()}
-                placeholder="••••••"
-                autoFocus
-                className="w-full bg-card/50 border border-border rounded-2xl px-5 py-4 text-2xl font-bold text-center tracking-[0.3em] focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/20 transition-all placeholder:text-muted-foreground/30"
-              />
-
-              {pinError && (
-                <motion.div
-                  initial={{ opacity: 0, y: -5 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="flex items-center gap-2 text-red-400 text-sm"
-                >
-                  <AlertTriangle size={14} />
-                  {pinError}
-                </motion.div>
-              )}
-
-              <motion.button
-                whileTap={{ scale: 0.97 }}
-                onClick={handlePinSubmit}
-                disabled={pinCode.length < 4 || isVerifyingPin}
-                className="w-full bg-primary text-primary-foreground font-semibold py-4 rounded-2xl shadow-xl shadow-primary/25 text-base disabled:opacity-40 disabled:shadow-none flex items-center justify-center gap-2"
-              >
-                {isVerifyingPin ? (
-                  <Loader2 size={18} className="animate-spin" />
-                ) : (
-                  <>
-                    <Shield size={18} />
-                    Vérifier
-                  </>
-                )}
-              </motion.button>
-            </div>
           </motion.div>
         )}
 
@@ -175,7 +103,7 @@ export function InviteScreen({ inviteToken, onJoinByPin, onJoinByInvite, onBack,
           >
             <RegisterScreen
               onRegister={handleRegister}
-              onBack={inviteToken ? onBack : () => setStep("pin")}
+              onBack={onBack}
               groupName={groupName}
             />
           </motion.div>
@@ -197,14 +125,14 @@ export function InviteScreen({ inviteToken, onJoinByPin, onJoinByInvite, onBack,
             </motion.div>
             <h2 className="text-xl font-bold tracking-tight mb-2">Inscription en cours...</h2>
             <p className="text-muted-foreground text-sm text-center">
-              Bienvenue {memberName} ! Configuration de votre profil.
+              Bienvenue {memberName} ! Vous rejoignez « {groupName} »
             </p>
           </motion.div>
         )}
 
-        {step === "success" && (
+        {step === "done" && (
           <motion.div
-            key="success"
+            key="done"
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             className="relative z-10 min-h-screen flex flex-col items-center justify-center px-6"
@@ -218,9 +146,13 @@ export function InviteScreen({ inviteToken, onJoinByPin, onJoinByInvite, onBack,
               <Check size={36} className="text-green-500" />
             </motion.div>
             <h2 className="text-2xl font-bold tracking-tight mb-2">Bienvenue {memberName} !</h2>
-            <p className="text-muted-foreground text-sm text-center max-w-xs">
-              Vous avez rejoint le groupe avec succès. Redirection...
+            <p className="text-muted-foreground text-sm text-center max-w-xs mb-4">
+              Vous avez rejoint « {groupName} » avec succès.
             </p>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Users size={14} />
+              <span>Chargement du groupe...</span>
+            </div>
           </motion.div>
         )}
 
@@ -239,17 +171,17 @@ export function InviteScreen({ inviteToken, onJoinByPin, onJoinByInvite, onBack,
             >
               <AlertTriangle size={36} className="text-red-400" />
             </motion.div>
-            <h2 className="text-2xl font-bold tracking-tight mb-2">Erreur</h2>
+            <h2 className="text-2xl font-bold tracking-tight mb-2">Lien invalide</h2>
             <p className="text-muted-foreground text-sm text-center max-w-xs mb-6">
               {joinError}
             </p>
             <div className="flex gap-3 w-full max-w-xs">
               <motion.button
                 whileTap={{ scale: 0.97 }}
-                onClick={() => { setStep(inviteToken ? "register" : "pin"); setPinCode(""); setJoinError(""); }}
+                onClick={() => onBack?.()}
                 className="flex-1 bg-primary text-primary-foreground font-semibold py-3.5 rounded-2xl"
               >
-                Réessayer
+                Retour
               </motion.button>
             </div>
           </motion.div>

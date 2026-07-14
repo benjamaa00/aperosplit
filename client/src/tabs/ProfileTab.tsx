@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
-import { Fingerprint, Moon, Sun, Sparkles, Copy, Share2, X, DollarSign, Bell, Shield, Clock } from "lucide-react";
+import { Fingerprint, Moon, Sun, Sparkles, Copy, Share2, X, DollarSign, Bell, Shield, Clock, Loader2, QrCode } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useThemeContext } from "../contexts/ThemeContext";
 import { trpc } from "../lib/trpc";
@@ -74,6 +74,7 @@ export function ProfileTab({
   const shareUrl = window.location.origin;
   const haptic = useHaptic();
   const [inviteTokenValue, setInviteTokenValue] = useState<string | null>(null);
+  const [inviteLoading, setInviteLoading] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showBudgetInput, setShowBudgetInput] = useState(false);
@@ -81,6 +82,7 @@ export function ProfileTab({
   const generateInviteMutation = trpc.equilibra.generateInvite.useMutation();
 
   const handleGenerateInvite = async () => {
+    setInviteLoading(true);
     try {
       const result = await generateInviteMutation.mutateAsync({});
       if (result?.token) {
@@ -88,14 +90,10 @@ export function ProfileTab({
       }
     } catch {
       toast.error("Erreur lors de la génération du lien d'invitation");
+    } finally {
+      setInviteLoading(false);
     }
   };
-
-  useEffect(() => {
-    if (!inviteTokenValue) {
-      handleGenerateInvite();
-    }
-  }, []);
 
   const inviteLink = inviteTokenValue ? `${shareUrl}?invite=${inviteTokenValue}` : "";
 
@@ -480,42 +478,74 @@ export function ProfileTab({
           </div>
 
           <div className="p-6 flex flex-col items-center">
-            <motion.div 
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="bg-white rounded-3xl p-5 shadow-2xl mb-4"
-            >
-              <QRCodeSVG
-                value={inviteLink}
-                size={200}
-                level="H"
-                includeMargin={false}
-                bgColor="#ffffff"
-                fgColor="#000000"
-              />
-            </motion.div>
+            {inviteTokenValue ? (
+              <motion.div 
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="bg-white rounded-3xl p-5 shadow-2xl mb-4"
+              >
+                <QRCodeSVG
+                  value={inviteLink}
+                  size={200}
+                  level="H"
+                  includeMargin={false}
+                  bgColor="#ffffff"
+                  fgColor="#000000"
+                />
+              </motion.div>
+            ) : (
+              <motion.button
+                whileTap={{ scale: 0.97 }}
+                onClick={handleGenerateInvite}
+                disabled={inviteLoading}
+                className="bg-white/50 border border-dashed border-primary/30 rounded-3xl w-[210px] h-[210px] flex flex-col items-center justify-center gap-3 mb-4 hover:bg-white/80 transition-colors"
+              >
+                {inviteLoading ? (
+                  <Loader2 size={28} className="text-primary animate-spin" />
+                ) : (
+                  <QrCode size={28} className="text-primary" />
+                )}
+                <span className="text-xs text-muted-foreground font-medium">
+                  {inviteLoading ? "Génération..." : "Générer le QR code"}
+                </span>
+              </motion.button>
+            )}
             
             <p className="text-xs text-center text-muted-foreground mb-4">
-              Scannez ce QR code pour rejoindre le groupe
+              {inviteTokenValue ? "Scannez ce QR code pour rejoindre le groupe" : "Générez un lien d'invitation"}
             </p>
 
             <div className="flex gap-2 w-full">
-              <motion.button
-                whileTap={{ scale: 0.97 }}
-                onClick={copyLink}
-                className="flex-1 bg-primary text-primary-foreground font-semibold py-3 rounded-xl press-scale flex items-center justify-center gap-2"
-              >
-                <Copy size={16} />
-                Copier le lien
-              </motion.button>
-              <motion.button
-                whileTap={{ scale: 0.97 }}
-                onClick={shareLink}
-                className="flex-1 bg-secondary text-secondary-foreground font-semibold py-3 rounded-xl press-scale flex items-center justify-center gap-2"
-              >
-                <Share2 size={16} />
-                Partager
-              </motion.button>
+              {inviteTokenValue ? (
+                <>
+                  <motion.button
+                    whileTap={{ scale: 0.97 }}
+                    onClick={copyLink}
+                    className="flex-1 bg-primary text-primary-foreground font-semibold py-3 rounded-xl press-scale flex items-center justify-center gap-2"
+                  >
+                    <Copy size={16} />
+                    Copier le lien
+                  </motion.button>
+                  <motion.button
+                    whileTap={{ scale: 0.97 }}
+                    onClick={shareLink}
+                    className="flex-1 bg-secondary text-secondary-foreground font-semibold py-3 rounded-xl press-scale flex items-center justify-center gap-2"
+                  >
+                    <Share2 size={16} />
+                    Partager
+                  </motion.button>
+                </>
+              ) : (
+                <motion.button
+                  whileTap={{ scale: 0.97 }}
+                  onClick={handleGenerateInvite}
+                  disabled={inviteLoading}
+                  className="flex-1 bg-primary text-primary-foreground font-semibold py-3 rounded-xl press-scale flex items-center justify-center gap-2 disabled:opacity-40"
+                >
+                  {inviteLoading ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+                  Générer un lien
+                </motion.button>
+              )}
             </div>
           </div>
 
