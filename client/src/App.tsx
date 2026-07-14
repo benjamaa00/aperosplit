@@ -323,7 +323,31 @@ export default function App() {
   if (screen === "access") return <AppShell><AccessScreen onSubmit={handleAccessCode} /></AppShell>;
   if (screen === "identity") return <AppShell><IdentityScreen members={members} onSelect={selectIdentity} /></AppShell>;
   if (screen === "register") return <AppShell><RegisterScreen onRegister={handleRegister} onBack={() => setScreen("access")} /></AppShell>;
-  if (screen === "invite") return <AppShell><InviteScreen inviteToken={inviteToken!} onJoinByPin={(pin, name, avatar) => joinGroupByPinMutation.mutateAsync({ pinCode: pin, groupId: selectedGroupId, memberId: Date.now().toString(), memberName: name, memberAvatar: avatar }).then((r) => r ?? { success: false })} onJoinByInvite={(name, avatar) => joinGroupByInviteMutation.mutateAsync({ token: inviteToken!, memberId: Date.now().toString(), memberName: name, memberAvatar: avatar }).then((r) => r ?? { success: false })} onBack={() => setScreen("access")} /></AppShell>;
+  if (screen === "invite") return <AppShell><InviteScreen inviteToken={inviteToken!} onJoinByPin={async (pin, name, avatar) => {
+    const memberId = Date.now().toString();
+    try {
+      const r = await joinGroupByPinMutation.mutateAsync({ pinCode: pin, groupId: selectedGroupId, memberId, memberName: name, memberAvatar: avatar });
+      if (r?.success) {
+        const newMember: Member = { id: memberId, name, avatar, status: "approved" };
+        setMembers((prev) => [...prev, newMember]);
+        setCurrentMemberId(memberId);
+        setScreen("main");
+      }
+      return r ?? { success: false };
+    } catch { return { success: false, error: "Erreur de connexion" }; }
+  }} onJoinByInvite={async (name, avatar) => {
+    const memberId = Date.now().toString();
+    try {
+      const r = await joinGroupByInviteMutation.mutateAsync({ token: inviteToken!, memberId, memberName: name, memberAvatar: avatar });
+      if (r?.success) {
+        const newMember: Member = { id: memberId, name, avatar, status: "approved" };
+        setMembers((prev) => [...prev, newMember]);
+        setCurrentMemberId(memberId);
+        setScreen("main");
+      }
+      return r ?? { success: false };
+    } catch { return { success: false, error: "Erreur de connexion" }; }
+  }} onBack={() => setScreen("access")} /></AppShell>;
   if (screen === "lock" && currentMember) return <AppShell><LockScreen member={currentMember} onUnlock={handleBiometricUnlock} onSkip={() => setScreen("main")} onSwitchIdentity={() => setScreen("identity")} /></AppShell>;
   if (screen === "notifications") return <AppShell><NotificationsScreen notifications={notifications} currentMemberId={currentMemberId} onBack={() => setScreen("main")} onMarkRead={(id) => markNotificationReadMutation.mutate({ notificationId: id })} onMarkAllRead={() => markAllNotificationsReadMutation.mutate({ memberId: currentMemberId })} /></AppShell>;
   if (screen === "notificationSettings") return <AppShell><NotificationSettingsScreen settings={{ pushEnabled: pushNotifications, emailEnabled: false, reminderFrequency: reminderDelay.toString() + "h" }} onBack={() => setScreen("main")} onSave={(s) => { if (s.pushEnabled !== undefined) setPushNotifications(s.pushEnabled); }} /></AppShell>;
