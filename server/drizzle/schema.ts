@@ -32,7 +32,7 @@ export const members = mysqlTable("members", {
   id: varchar("id", { length: 64 }).primaryKey(),
   groupId: varchar("groupId", { length: 64 }).notNull(),
   name: varchar("name", { length: 255 }).notNull(),
-  avatar: varchar("avatar", { length: 10 }).notNull(),
+  avatar: text("avatar").notNull(),
   role: varchar("role", { length: 16 }).default("member").notNull(),
   status: varchar("status", { length: 16 }).default("active").notNull(),
   userId: varchar("userId", { length: 128 }),

@@ -74,7 +74,7 @@ export function initializeDatabase(): Promise<void> {
           id VARCHAR(128) PRIMARY KEY,
           group_id VARCHAR(128) NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
           name VARCHAR(255) NOT NULL,
-          avatar VARCHAR(32) NOT NULL,
+          avatar TEXT NOT NULL,
           role VARCHAR(16) NOT NULL DEFAULT 'member',
           status VARCHAR(16) NOT NULL DEFAULT 'active',
           user_id VARCHAR(128),
@@ -226,6 +226,11 @@ export function initializeDatabase(): Promise<void> {
           ALTER TABLE payments ADD COLUMN IF NOT EXISTS dispute_note TEXT;
         EXCEPTION WHEN duplicate_column THEN null; END $$;
       `);
+
+      // Migrate avatar column to TEXT for photo data URLs
+      try {
+        await pool!.query(`ALTER TABLE group_members ALTER COLUMN avatar TYPE TEXT`);
+      } catch {}
     } catch (error) {
       console.error("[DB] Database initialization failed, switching to JSON storage:", error);
       useJsonStorage = true;

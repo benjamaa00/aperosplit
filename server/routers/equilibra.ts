@@ -52,7 +52,7 @@ export const equilibraRouter = router({
           z.object({
             id: z.string().min(1).max(128),
             name: z.string().trim().min(1).max(80),
-            avatar: z.string().min(1).max(32),
+            avatar: z.string().min(1).max(50000),
           })
         ),
       })
@@ -380,7 +380,7 @@ export const equilibraRouter = router({
         pinCode: z.string().min(1).max(32),
         memberId: z.string().min(1).max(128),
         memberName: z.string().trim().min(1).max(80),
-        memberAvatar: z.string().min(1).max(32),
+        memberAvatar: z.string().min(1).max(50000),
       })
     )
     .mutation(async ({ input }) => {
@@ -396,7 +396,7 @@ export const equilibraRouter = router({
         token: z.string().min(1).max(128),
         memberId: z.string().min(1).max(128),
         memberName: z.string().trim().min(1).max(80),
-        memberAvatar: z.string().min(1).max(32),
+        memberAvatar: z.string().min(1).max(50000),
       })
     )
     .mutation(async ({ input }) => {
