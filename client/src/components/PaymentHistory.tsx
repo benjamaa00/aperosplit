@@ -11,7 +11,7 @@ interface PendingPayment {
   toId: string;
   toName: string;
   amount: number;
-  status: "pending" | "accepted" | "refused" | "resent" | "in_progress" | "completed" | "permanently_refused" | "disputed" | "paid";
+  status: "pending" | "accepted" | "refused" | "resent" | "in_progress" | "completed" | "late" | "disputed" | "paid";
   comment?: string;
   createdAt: number;
   completedAt?: number;
@@ -96,7 +96,7 @@ export function PaymentHistory({ payments, expenses, members, currentMemberId }:
       let emoji = "💸";
       if (p.status === "completed") { type = "payment_completed"; emoji = "✅"; }
       else if (p.status === "accepted") { emoji = "👍"; }
-      else if (p.status === "refused" || p.status === "permanently_refused") { type = "payment_refused"; emoji = "❌"; }
+      else if (p.status === "refused" || p.status === "late") { type = "payment_refused"; emoji = "❌"; }
       else if (p.status === "disputed") { type = "payment_disputed"; emoji = "⚠️"; }
 
       items.push({
@@ -168,9 +168,9 @@ export function PaymentHistory({ payments, expenses, members, currentMemberId }:
     switch (status) {
       case "completed": return "text-green-400 bg-green-500/10 border-green-500/20";
       case "pending": return "text-orange-400 bg-orange-500/10 border-orange-500/20";
+      case "late": return "text-red-400 bg-red-500/10 border-red-500/20";
       case "accepted": return "text-blue-400 bg-blue-500/10 border-blue-500/20";
-      case "refused":
-      case "permanently_refused": return "text-red-400 bg-red-500/10 border-red-500/20";
+      case "refused": return "text-red-400 bg-red-500/10 border-red-500/20";
       case "disputed": return "text-purple-400 bg-purple-500/10 border-purple-500/20";
       case "paid": return "text-cyan-400 bg-cyan-500/10 border-cyan-500/20";
       default: return "text-muted-foreground bg-muted border-border";
@@ -181,9 +181,9 @@ export function PaymentHistory({ payments, expenses, members, currentMemberId }:
     switch (status) {
       case "completed": return "Terminé";
       case "pending": return "En attente";
+      case "late": return "En retard";
       case "accepted": return "Accepté";
       case "refused": return "Refusé";
-      case "permanently_refused": return "Refus définitif";
       case "disputed": return "Litige";
       case "paid": return "Payé";
       default: return status;

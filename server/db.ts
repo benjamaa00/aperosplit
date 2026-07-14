@@ -343,9 +343,9 @@ export async function getGroupData(groupId: string) {
     members: memberList,
     expenses: expenses.rows,
     settlements: [],
-    pending: payments.rows.filter(payment => !["completed","refused","permanently_refused"].includes(payment.status)),
+    pending: payments.rows.filter(payment => ["pending", "late", "accepted", "in_progress", "disputed", "paid"].includes(payment.status)),
     history: [
-      ...payments.rows.filter(payment => ["completed","refused","permanently_refused"].includes(payment.status)),
+      ...payments.rows.filter(payment => ["completed","refused"].includes(payment.status)),
       ...history.rows,
     ],
     categories: categories.rows,
@@ -784,7 +784,7 @@ export async function resendPaymentRequest(paymentId: string) {
   const db = await ready();
   if (!db) return false;
   return (await db.query(
-    `UPDATE payments SET status = 'pending', attempt_count = attempt_count + 1, responded_at = NULL WHERE id = $1 AND status IN ('refused', 'permanently_refused')`,
+    `UPDATE payments SET status = 'pending', attempt_count = attempt_count + 1, responded_at = NULL WHERE id = $1 AND status IN ('refused', 'late')`,
     [paymentId]
   )).rowCount === 1;
 }

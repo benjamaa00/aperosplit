@@ -30,7 +30,7 @@ export interface PendingPayment {
   toName: string;
   amount: number;
   originalAmount?: number;
-  status: "pending" | "accepted" | "refused" | "resent" | "in_progress" | "completed" | "permanently_refused" | "disputed" | "paid";
+  status: "pending" | "accepted" | "refused" | "resent" | "in_progress" | "completed" | "late" | "disputed" | "paid";
   response?: "accepted" | "refused";
   expenseId?: string;
   createdAt: number;

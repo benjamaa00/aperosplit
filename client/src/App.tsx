@@ -166,6 +166,7 @@ export default function App() {
     }
     if (groupData.expenses) setExpenses(groupData.expenses);
     if (groupData.pending) setPendingPayments(groupData.pending);
+    if (groupData.history) setCompletedPayments(groupData.history);
     if (groupData.requireApproval !== undefined) setRequireApproval(groupData.requireApproval);
     if (groupData.pinCode) setGroupPin(groupData.pinCode);
   }, [groupData]);
@@ -211,8 +212,14 @@ export default function App() {
         if (b[p.toId] !== undefined) b[p.toId] -= p.amount;
       }
     });
+    pendingPayments.forEach((p) => {
+      if (p.status === "accepted" || p.status === "in_progress" || p.status === "paid") {
+        if (b[p.fromId] !== undefined) b[p.fromId] += p.amount;
+        if (b[p.toId] !== undefined) b[p.toId] -= p.amount;
+      }
+    });
     return b;
-  }, [members, expenses, completedPayments]);
+  }, [members, expenses, completedPayments, pendingPayments]);
 
   const suggestedTransactions = useMemo(() => simplifyDebts(balances), [balances]);
 
@@ -310,8 +317,8 @@ export default function App() {
     setPendingPayments((prev) => prev.map((p) => {
       if (p.id !== id) return p;
       const attempts = (p.attemptCount || 0) + 1;
-      if (attempts >= 3) return { ...p, status: "permanently_refused" as const, attemptCount: attempts };
-      return { ...p, notificationCount: p.notificationCount + 1, attemptCount: attempts, status: "pending" as const };
+      if (attempts >= 3) return { ...p, status: "late" as const, attemptCount: attempts, notificationCount: p.notificationCount + 1 };
+      return { ...p, notificationCount: p.notificationCount + 1, attemptCount: attempts, status: p.status === "pending" ? "late" as const : p.status };
     }));
   }, [haptic]);
 
@@ -439,7 +446,7 @@ export default function App() {
   const totalSpent = expenses.reduce((s, e) => s + e.amount, 0);
   const myBalance = balances[currentMemberId] || 0;
   const recentExpenses = [...expenses].sort((a, b) => b.date - a.date).slice(0, 5);
-  const myPendingPayments = pendingPayments.filter((p) => p.toId === currentMemberId && p.status === "pending");
+  const myPendingPayments = pendingPayments.filter((p) => p.toId === currentMemberId && (p.status === "pending" || p.status === "late"));
   const myCompletedPayments = completedPayments.filter((p) => p.toId === currentMemberId || p.fromId === currentMemberId);
 
   return (
