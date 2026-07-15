@@ -434,4 +434,23 @@
     0% { background-position: 200% 0; }
     100% { background-position: -200% 0; }
   }
+
+  /* Hide scrollbar but keep scroll functionality */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Smooth overscroll behavior */
+  .overscroll-contain {
+    overscroll-behavior: contain;
+  }
+
+  /* Scroll snap helpers */
+  .scroll-snap-start {
+    scroll-snap-align: start;
+  }
 }

@@ -214,6 +214,7 @@ export function initializeDatabase(): Promise<void> {
           ALTER TABLE expenses ADD COLUMN IF NOT EXISTS recurrence_interval VARCHAR(16);
           ALTER TABLE expenses ADD COLUMN IF NOT EXISTS recurrence_end_date TIMESTAMPTZ;
           ALTER TABLE expenses ADD COLUMN IF NOT EXISTS validated_by VARCHAR(128);
+          ALTER TABLE expenses ADD COLUMN IF NOT EXISTS category_emoji VARCHAR(8);
         EXCEPTION WHEN duplicate_column THEN null; END $$;
         DO $$ BEGIN
           ALTER TABLE payments ADD COLUMN IF NOT EXISTS original_amount NUMERIC(12,2);
