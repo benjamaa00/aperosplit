@@ -1,4 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
+import { THEMES, type ThemeColors } from "@/themes/definitions";
+import { GRADIENT_DEFINITIONS, getGradientById } from "@/themes/gradients";
+import { BACKGROUND_DEFINITIONS, getBackgroundById, BACKGROUND_ANIMATION_KEYFRAMES } from "@/themes/backgrounds";
 
 type Theme = "light" | "dark";
 
@@ -11,14 +14,26 @@ export type GradientStyle = "none" | "subtle" | "vivid" | "aurora" | "sunset" | 
 
 export type BackgroundStyle = "solid" | "mesh" | "dots" | "waves" | "circles" | "noise";
 
+export type AnimationSpeed = "standard" | "smooth" | "fast" | "disabled";
+export type CardSize = "compact" | "normal" | "spacious";
+
 interface ThemePreferences {
   theme: Theme;
   palette: ColorPalette;
   gradient: GradientStyle;
   background: BackgroundStyle;
-  borderRadius: number; // 0.5 to 2.0 rem
-  cardBlur: number; // 0 to 64 px
-  fontScale: number; // 0.8 to 1.2
+  borderRadius: number;
+  cardBlur: number;
+  fontScale: number;
+  themeId: string;
+  backgroundId: string;
+  gradientBgId: string;
+  shadowIntensity: number;
+  transparency: number;
+  glassmorphism: boolean;
+  animationSpeed: AnimationSpeed;
+  cardSize: CardSize;
+  iconScale: number;
 }
 
 interface ThemeContextType {
@@ -29,6 +44,15 @@ interface ThemeContextType {
   borderRadius: number;
   cardBlur: number;
   fontScale: number;
+  themeId: string;
+  backgroundId: string;
+  gradientBgId: string;
+  shadowIntensity: number;
+  transparency: number;
+  glassmorphism: boolean;
+  animationSpeed: AnimationSpeed;
+  cardSize: CardSize;
+  iconScale: number;
   preferences: ThemePreferences;
   toggleTheme: () => void;
   setPalette: (p: ColorPalette) => void;
@@ -37,6 +61,15 @@ interface ThemeContextType {
   setBorderRadius: (r: number) => void;
   setCardBlur: (b: number) => void;
   setFontScale: (s: number) => void;
+  setThemeId: (id: string) => void;
+  setBackgroundId: (id: string) => void;
+  setGradientBgId: (id: string) => void;
+  setShadowIntensity: (v: number) => void;
+  setTransparency: (v: number) => void;
+  setGlassmorphism: (v: boolean) => void;
+  setAnimationSpeed: (s: AnimationSpeed) => void;
+  setCardSize: (s: CardSize) => void;
+  setIconScale: (s: number) => void;
   setPreferences: (prefs: Partial<ThemePreferences>) => void;
   resetPreferences: () => void;
 }
@@ -104,7 +137,7 @@ const PALETTES: Record<ColorPalette, { light: Record<string, string>; dark: Reco
   },
 };
 
-const GRADIENTS: Record<GradientStyle, { light: string; dark: string } | null> = {
+const LEGACY_GRADIENTS: Record<GradientStyle, { light: string; dark: string } | null> = {
   none: null,
   subtle: {
     light: "linear-gradient(180deg, oklch(0.985 0 0) 0%, oklch(0.965 0.001 286) 100%)",
@@ -144,13 +177,26 @@ const GRADIENTS: Record<GradientStyle, { light: string; dark: string } | null> =
   },
 };
 
-const BACKGROUNDS: Record<BackgroundStyle, string> = {
+const LEGACY_BACKGROUNDS: Record<BackgroundStyle, string> = {
   solid: "",
   mesh: "radial-gradient(at 40% 20%, oklch(var(--primary) / 8%) 0, transparent 50%), radial-gradient(at 80% 0%, oklch(var(--primary) / 5%) 0, transparent 50%), radial-gradient(at 0% 50%, oklch(var(--primary) / 6%) 0, transparent 50%)",
   dots: "radial-gradient(circle, oklch(var(--primary) / 10%) 1px, transparent 1px)",
   waves: "repeating-linear-gradient(0deg, oklch(var(--primary) / 3%) 0, oklch(var(--primary) / 3%) 2px, transparent 2px, transparent 20px)",
   circles: "radial-gradient(circle at 20% 80%, oklch(var(--primary) / 6%) 0, transparent 40%), radial-gradient(circle at 80% 20%, oklch(var(--primary) / 6%) 0, transparent 40%)",
   noise: "",
+};
+
+const ANIMATION_SPEED_MAP: Record<AnimationSpeed, string> = {
+  standard: "1",
+  smooth: "1.5",
+  fast: "0.6",
+  disabled: "0",
+};
+
+const CARD_SIZE_MAP: Record<CardSize, { padding: string; gap: string; fontSize: string }> = {
+  compact: { padding: "0.75rem", gap: "0.5rem", fontSize: "0.875rem" },
+  normal: { padding: "1rem", gap: "0.75rem", fontSize: "1rem" },
+  spacious: { padding: "1.25rem", gap: "1rem", fontSize: "1.05rem" },
 };
 
 const STORAGE_KEY = "equilibra_theme_prefs";
@@ -163,11 +209,137 @@ const DEFAULT_PREFS: ThemePreferences = {
   borderRadius: 1.0,
   cardBlur: 32,
   fontScale: 1.0,
+  themeId: "blanc",
+  backgroundId: "pur",
+  gradientBgId: "",
+  shadowIntensity: 0.5,
+  transparency: 0.7,
+  glassmorphism: true,
+  animationSpeed: "standard",
+  cardSize: "normal",
+  iconScale: 1.0,
 };
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 const memberThemeKey = (id?: string | null) => id ? `equilibra_theme_prefs_${id}` : null;
+
+function applyThemeToDom(prefs: ThemePreferences) {
+  const root = document.documentElement;
+  const isDark = prefs.theme === "dark";
+
+  if (isDark) root.classList.add("dark");
+  else root.classList.remove("dark");
+
+  if (isDark) root.classList.add("dark");
+  else root.classList.remove("dark");
+
+  const themeDef = THEMES.find(t => t.id === prefs.themeId);
+  if (themeDef) {
+    const colors: ThemeColors = isDark ? themeDef.dark : themeDef.light;
+    root.style.setProperty("--background", colors.background);
+    root.style.setProperty("--foreground", colors.foreground);
+    root.style.setProperty("--card", colors.card);
+    root.style.setProperty("--card-foreground", colors.cardForeground);
+    root.style.setProperty("--popover", colors.popover);
+    root.style.setProperty("--popover-foreground", colors.popoverForeground);
+    root.style.setProperty("--primary", colors.primary);
+    root.style.setProperty("--primary-foreground", colors.primaryForeground);
+    root.style.setProperty("--secondary", colors.secondary);
+    root.style.setProperty("--secondary-foreground", colors.secondaryForeground);
+    root.style.setProperty("--muted", colors.muted);
+    root.style.setProperty("--muted-foreground", colors.mutedForeground);
+    root.style.setProperty("--accent", colors.accent);
+    root.style.setProperty("--accent-foreground", colors.accentForeground);
+    root.style.setProperty("--destructive", colors.destructive);
+    root.style.setProperty("--destructive-foreground", colors.destructiveForeground);
+    root.style.setProperty("--border", colors.border);
+    root.style.setProperty("--input", colors.input);
+    root.style.setProperty("--ring", colors.ring);
+    root.style.setProperty("--success", colors.success);
+    root.style.setProperty("--warning", colors.warning);
+    root.style.setProperty("--sidebar-primary", colors.primary);
+    root.style.setProperty("--sidebar-primary-foreground", colors.primaryForeground);
+    root.style.setProperty("--sidebar-accent", colors.accent);
+    root.style.setProperty("--sidebar-accent-foreground", colors.accentForeground);
+    root.style.setProperty("--sidebar-border", colors.border);
+    root.style.setProperty("--sidebar-ring", colors.ring);
+    root.style.setProperty("--chart-1", colors.primary);
+    root.style.setProperty("--chart-2", colors.destructive);
+    root.style.setProperty("--chart-3", colors.success);
+    root.style.setProperty("--chart-4", colors.warning);
+    root.style.setProperty("--chart-5", colors.accent);
+  }
+
+  const paletteColors = isDark ? PALETTES[prefs.palette].dark : PALETTES[prefs.palette].light;
+  Object.entries(paletteColors).forEach(([key, value]) => {
+    root.style.setProperty(key, value);
+  });
+
+  let bgApplied = false;
+  if (prefs.gradientBgId) {
+    const gradientDef = getGradientById(prefs.gradientBgId);
+    if (gradientDef) {
+      root.style.setProperty("--app-bg", isDark ? gradientDef.cssDark : gradientDef.cssLight);
+      bgApplied = true;
+    }
+  }
+  if (!bgApplied && prefs.gradient !== "none") {
+    const legacyGradient = LEGACY_GRADIENTS[prefs.gradient];
+    if (legacyGradient) {
+      root.style.setProperty("--app-bg", isDark ? legacyGradient.dark : legacyGradient.light);
+      bgApplied = true;
+    }
+  }
+  if (!bgApplied) {
+    root.style.removeProperty("--app-bg");
+  }
+
+  let patternApplied = false;
+  if (prefs.backgroundId && prefs.backgroundId !== "pur") {
+    const bgDef = getBackgroundById(prefs.backgroundId);
+    if (bgDef) {
+      if (bgDef.category === "solid") {
+        root.style.setProperty("--app-bg-pattern", "");
+      } else if (bgDef.category === "animated") {
+        root.style.setProperty("--app-bg", isDark ? bgDef.cssDark : bgDef.cssLight);
+        root.style.setProperty("--app-bg-pattern", "");
+        patternApplied = true;
+      } else {
+        root.style.setProperty("--app-bg-pattern", isDark ? bgDef.cssDark : bgDef.cssLight);
+        patternApplied = true;
+      }
+    }
+  }
+  if (!patternApplied && prefs.background !== "solid") {
+    const legacyBg = LEGACY_BACKGROUNDS[prefs.background];
+    root.style.setProperty("--app-bg-pattern", legacyBg || "");
+  } else if (!patternApplied) {
+    root.style.setProperty("--app-bg-pattern", "");
+  }
+
+  root.style.setProperty("--radius", `${prefs.borderRadius}rem`);
+  root.style.setProperty("--card-blur", `${prefs.cardBlur}px`);
+  root.style.setProperty("--font-scale", prefs.fontScale.toString());
+  root.style.fontSize = `${prefs.fontScale * 16}px`;
+
+  root.style.setProperty("--shadow-intensity", prefs.shadowIntensity.toString());
+  root.style.setProperty("--transparency", prefs.transparency.toString());
+  root.style.setProperty("--glass-bg", prefs.glassmorphism
+    ? (isDark ? "oklch(0.15 0.008 270 / 70%)" : "oklch(1 0 0 / 70%)")
+    : (isDark ? "oklch(0.15 0.008 270)" : "oklch(1 0 0)")
+  );
+
+  const animMult = ANIMATION_SPEED_MAP[prefs.animationSpeed];
+  root.style.setProperty("--animation-multiplier", animMult);
+  root.style.setProperty("--transition-speed", prefs.animationSpeed === "disabled" ? "0ms" : `${300 * parseFloat(animMult)}ms`);
+
+  const cardMetrics = CARD_SIZE_MAP[prefs.cardSize];
+  root.style.setProperty("--card-padding", cardMetrics.padding);
+  root.style.setProperty("--card-gap", cardMetrics.gap);
+  root.style.setProperty("--card-font-size", cardMetrics.fontSize);
+  root.style.setProperty("--icon-scale", prefs.iconScale.toString());
+}
 
 export function ThemeProvider({ children, memberId }: { children: React.ReactNode; memberId?: string | null }) {
   const [prefs, setPrefsState] = useState<ThemePreferences>(() => {
@@ -211,40 +383,16 @@ export function ThemeProvider({ children, memberId }: { children: React.ReactNod
   }, []);
 
   useEffect(() => {
-    const root = document.documentElement;
-    const isDark = prefs.theme === "dark";
-
-    if (isDark) root.classList.add("dark");
-    else root.classList.remove("dark");
-
-    // Apply palette
-    const paletteColors = isDark ? PALETTES[prefs.palette].dark : PALETTES[prefs.palette].light;
-    Object.entries(paletteColors).forEach(([key, value]) => {
-      root.style.setProperty(key, value);
-    });
-
-    // Apply gradient
-    const gradient = GRADIENTS[prefs.gradient];
-    if (gradient) {
-      root.style.setProperty("--app-bg", isDark ? gradient.dark : gradient.light);
-    } else {
-      root.style.removeProperty("--app-bg");
-    }
-
-    // Apply background pattern
-    const bgPattern = BACKGROUNDS[prefs.background];
-    root.style.setProperty("--app-bg-pattern", bgPattern || "");
-
-    // Apply border radius
-    root.style.setProperty("--radius", `${prefs.borderRadius}rem`);
-
-    // Apply card blur
-    root.style.setProperty("--card-blur", `${prefs.cardBlur}px`);
-
-    // Apply font scale
-    root.style.setProperty("--font-scale", prefs.fontScale.toString());
-    root.style.fontSize = `${prefs.fontScale * 16}px`;
+    applyThemeToDom(prefs);
   }, [prefs]);
+
+  useEffect(() => {
+    const style = document.createElement("style");
+    style.id = "equilibra-animations";
+    style.textContent = BACKGROUND_ANIMATION_KEYFRAMES;
+    document.head.appendChild(style);
+    return () => { style.remove(); };
+  }, []);
 
   const toggleTheme = useCallback(() => {
     setPrefs({ theme: prefs.theme === "dark" ? "light" : "dark" });
@@ -265,6 +413,15 @@ export function ThemeProvider({ children, memberId }: { children: React.ReactNod
         borderRadius: prefs.borderRadius,
         cardBlur: prefs.cardBlur,
         fontScale: prefs.fontScale,
+        themeId: prefs.themeId,
+        backgroundId: prefs.backgroundId,
+        gradientBgId: prefs.gradientBgId,
+        shadowIntensity: prefs.shadowIntensity,
+        transparency: prefs.transparency,
+        glassmorphism: prefs.glassmorphism,
+        animationSpeed: prefs.animationSpeed,
+        cardSize: prefs.cardSize,
+        iconScale: prefs.iconScale,
         preferences: prefs,
         toggleTheme,
         setPalette: (p) => setPrefs({ palette: p }),
@@ -273,6 +430,15 @@ export function ThemeProvider({ children, memberId }: { children: React.ReactNod
         setBorderRadius: (r) => setPrefs({ borderRadius: r }),
         setCardBlur: (b) => setPrefs({ cardBlur: b }),
         setFontScale: (s) => setPrefs({ fontScale: s }),
+        setThemeId: (id) => setPrefs({ themeId: id }),
+        setBackgroundId: (id) => setPrefs({ backgroundId: id }),
+        setGradientBgId: (id) => setPrefs({ gradientBgId: id }),
+        setShadowIntensity: (v) => setPrefs({ shadowIntensity: v }),
+        setTransparency: (v) => setPrefs({ transparency: v }),
+        setGlassmorphism: (v) => setPrefs({ glassmorphism: v }),
+        setAnimationSpeed: (s) => setPrefs({ animationSpeed: s }),
+        setCardSize: (s) => setPrefs({ cardSize: s }),
+        setIconScale: (s) => setPrefs({ iconScale: s }),
         setPreferences: setPrefs,
         resetPreferences,
       }}

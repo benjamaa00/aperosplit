@@ -139,6 +139,20 @@
   }
 }
 
+:root {
+  --shadow-intensity: 0.5;
+  --transparency: 0.7;
+  --glass-bg: oklch(1 0 0 / 70%);
+  --animation-multiplier: 1;
+  --transition-speed: 300ms;
+  --card-padding: 1rem;
+  --card-gap: 0.75rem;
+  --card-font-size: 1rem;
+  --icon-scale: 1;
+  --success: #2ecc71;
+  --warning: #f39c12;
+}
+
 @layer components {
   .container {
     width: 100%;
@@ -170,44 +184,47 @@
 
   /* Apple-like glass card */
   .glass-card {
-    background: oklch(1 0 0 / 70%);
+    background: var(--glass-bg, oklch(1 0 0 / 70%));
     backdrop-filter: blur(var(--card-blur, 32px)) saturate(200%) brightness(1.1);
     -webkit-backdrop-filter: blur(var(--card-blur, 32px)) saturate(200%) brightness(1.1);
-    border: 1px solid oklch(1 0 0 / 25%);
-    box-shadow: 0 8px 32px oklch(0 0 0 / 8%);
+    border: 1px solid oklch(1 0 0 / calc(10% + var(--transparency, 0.7) * 20%));
+    box-shadow: 0 8px 32px oklch(0 0 0 / calc(var(--shadow-intensity, 0.5) * 20%));
+    padding: var(--card-padding, 1rem);
+    transition: all var(--transition-speed, 300ms) cubic-bezier(0.23, 1, 0.32, 1);
   }
 
   .dark .glass-card {
-    background: oklch(0.15 0.008 270 / 70%);
-    border: 1px solid oklch(1 0 0 / 10%);
-    box-shadow: 0 8px 32px oklch(0 0 0 / 30%);
+    border: 1px solid oklch(1 0 0 / calc(5% + var(--transparency, 0.7) * 10%));
+    box-shadow: 0 8px 32px oklch(0 0 0 / calc(var(--shadow-intensity, 0.5) * 40%));
   }
 
   /* Enhanced glassmorphism for cards */
   .glass-card-enhanced {
     background: linear-gradient(
       135deg,
-      oklch(1 0 0 / 80%) 0%,
-      oklch(1 0 0 / 60%) 100%
+      var(--glass-bg, oklch(1 0 0 / 80%)) 0%,
+      oklch(1 0 0 / calc(var(--transparency, 0.7) * 70%)) 100%
     );
     backdrop-filter: blur(var(--card-blur, 32px)) saturate(180%);
     -webkit-backdrop-filter: blur(var(--card-blur, 32px)) saturate(180%);
-    border: 1px solid oklch(1 0 0 / 30%);
+    border: 1px solid oklch(1 0 0 / calc(10% + var(--transparency, 0.7) * 25%));
     box-shadow:
-      0 4px 24px oklch(0 0 0 / 6%),
-      inset 0 1px 0 oklch(1 0 0 / 40%);
+      0 4px 24px oklch(0 0 0 / calc(var(--shadow-intensity, 0.5) * 12%)),
+      inset 0 1px 0 oklch(1 0 0 / calc(var(--transparency, 0.7) * 50%));
+    padding: var(--card-padding, 1rem);
+    transition: all var(--transition-speed, 300ms) cubic-bezier(0.23, 1, 0.32, 1);
   }
 
   .dark .glass-card-enhanced {
     background: linear-gradient(
       135deg,
-      oklch(0.18 0.008 270 / 80%) 0%,
-      oklch(0.13 0.008 270 / 60%) 100%
+      oklch(0.18 0.008 270 / calc(var(--transparency, 0.7) * 90%)) 0%,
+      oklch(0.13 0.008 270 / calc(var(--transparency, 0.7) * 70%)) 100%
     );
-    border: 1px solid oklch(1 0 0 / 12%);
+    border: 1px solid oklch(1 0 0 / calc(5% + var(--transparency, 0.7) * 12%));
     box-shadow:
-      0 4px 24px oklch(0 0 0 / 25%),
-      inset 0 1px 0 oklch(1 0 0 / 10%);
+      0 4px 24px oklch(0 0 0 / calc(var(--shadow-intensity, 0.5) * 30%)),
+      inset 0 1px 0 oklch(1 0 0 / calc(var(--transparency, 0.7) * 12%));
   }
 
   /* App background with pattern overlay */
@@ -229,7 +246,7 @@
 
   /* Smooth press animation */
   .press-scale {
-    transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1);
+    transition: transform calc(160ms * var(--animation-multiplier, 1)) cubic-bezier(0.23, 1, 0.32, 1);
   }
   .press-scale:active {
     transform: scale(0.97);
@@ -237,7 +254,7 @@
 
   /* iOS-style page transition */
   .page-transition {
-    animation: pageSlideIn 350ms cubic-bezier(0.23, 1, 0.32, 1) forwards;
+    animation: pageSlideIn calc(350ms * var(--animation-multiplier, 1)) cubic-bezier(0.23, 1, 0.32, 1) forwards;
   }
 
   @keyframes pageSlideIn {
@@ -268,7 +285,7 @@
 
   /* Micro-interaction: Button glow on hover */
   .button-glow {
-    transition: all 300ms cubic-bezier(0.23, 1, 0.32, 1);
+    transition: all calc(300ms * var(--animation-multiplier, 1)) cubic-bezier(0.23, 1, 0.32, 1);
   }
   .button-glow:hover {
     box-shadow: 0 0 20px oklch(0.546 0.245 262.881 / 30%);

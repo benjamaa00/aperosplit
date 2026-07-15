@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Fingerprint, Moon, Sun, Sparkles, Copy, Share2, X, DollarSign, Bell, Shield, Clock, Loader2, QrCode } from "lucide-react";
+import { Fingerprint, Moon, Sun, Sparkles, Copy, Share2, X, DollarSign, Bell, Shield, Clock, Loader2, QrCode, ChevronRight } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useThemeContext } from "../contexts/ThemeContext";
 import { trpc } from "../lib/trpc";
@@ -40,6 +40,7 @@ export function ProfileTab({
   onSetReminderDelay,
   privacyMode,
   onTogglePrivacy,
+  onOpenAppearance,
 }: {
   currentMember: Member;
   members: Member[];
@@ -69,6 +70,7 @@ export function ProfileTab({
   onSetReminderDelay: (d: number) => void;
   privacyMode: boolean;
   onTogglePrivacy: () => void;
+  onOpenAppearance?: () => void;
 }) {
   const { theme, toggleTheme } = useThemeContext();
   const shareUrl = window.location.origin;
@@ -397,6 +399,24 @@ export function ProfileTab({
           >
             <ToggleSwitch enabled={theme === "dark"} onToggle={() => { haptic("medium"); toggleTheme(); }} />
           </SettingRow>
+          {onOpenAppearance && (
+            <motion.button
+              whileTap={{ scale: 0.98 }}
+              onClick={() => { haptic("light"); onOpenAppearance(); }}
+              className="w-full p-4 flex items-center justify-between bg-card/50 border border-border rounded-2xl"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20">
+                  <Sparkles size={20} className="text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold">Apparence & Thèmes</p>
+                  <p className="text-xs text-muted-foreground">Thèmes, dégradés, arrière-plans, personnalisation</p>
+                </div>
+              </div>
+              <ChevronRight size={16} className="text-muted-foreground/50" />
+            </motion.button>
+          )}
         </div>
       </motion.div>
 
