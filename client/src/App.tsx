@@ -284,25 +284,25 @@ export default function App() {
     if (!isNetlify) { deleteExpenseMutation.mutateAsync({ expenseId: id, description: expense.description, amount: expense.amount, authorId: currentMemberId }).then(() => refetch()).catch(() => {}); }
   }, [expenses, currentMemberId, members, haptic, deleteExpenseMutation, refetch, isNetlify]);
 
-  const requestPayment = useCallback(async (toId: string, amount: number, expenseId?: string) => {
+  const requestPayment = useCallback(async (toId: string, amount: number, expenseId?: string, note?: string) => {
     if (!currentMemberId) return;
     haptic("light");
     const payment: PendingPayment = {
       id: Date.now().toString(), fromId: currentMemberId, fromName: members.find((m) => m.id === currentMemberId)?.name || "",
       toId, toName: members.find((m) => m.id === toId)?.name || "", amount, status: "pending",
-      createdAt: Date.now(), notificationSent: false, notificationCount: 0, expenseId,
+      createdAt: Date.now(), notificationSent: false, notificationCount: 0, expenseId, requestNote: note,
     };
     setPendingPayments((prev) => [...prev, payment]);
     showNotification("Demande envoyée", `Demande de ${formatCurrency(amount)} envoyée`);
     if (!isNetlify) { try { await requestPaymentMutation.mutateAsync({ ...payment, groupId: GROUP_ID }); await refetch(); } catch {} }
   }, [currentMemberId, members, haptic, pendingPayments, requestPaymentMutation, refetch, showNotification, isNetlify]);
 
-  const requestGroupPayment = useCallback((expenseId: string, participantIds?: string[]) => {
+  const requestGroupPayment = useCallback((expenseId: string, participantIds?: string[], note?: string) => {
     const expense = expenses.find((e) => e.id === expenseId);
     if (!expense) return;
     const ids = participantIds || expense.participants.filter((p) => p !== currentMemberId);
     const perPerson = expense.amount / expense.participants.length;
-    ids.forEach((pid) => requestPayment(pid, perPerson, expenseId));
+    ids.forEach((pid) => requestPayment(pid, perPerson, expenseId, note));
   }, [expenses, currentMemberId, requestPayment]);
 
   const confirmPayment = useCallback((id: string) => {
@@ -499,9 +499,9 @@ export default function App() {
       <div className="min-h-screen pb-24">
         <AnimatePresence mode="wait">
           {activeTab === "home" && <HomeTab key="home" currentMember={currentMember} balance={myBalance} totalSpent={totalSpent} expenseCount={expenses.length} recentExpenses={recentExpenses} members={members} pendingPayments={myPendingPayments} completedPayments={myCompletedPayments} onConfirmPayment={confirmPayment} onRefusePayment={refusePayment} onResentPayment={resentPayment} onConfirmReceipt={confirmReceipt} onReportNotReceived={reportNotReceived} onMarkAsPaid={markAsPaid} expenses={expenses} monthlyBudget={monthlyBudget} currency={currency} onUpdateBudget={updateBudget} />}
-          {activeTab === "expenses" && <ExpensesTab key="expenses" expenses={expenses} members={members} currentMemberId={currentMemberId} onDelete={deleteExpense} onAdd={() => setShowAddExpense(true)} onRequestPayment={requestPayment} onRequestGroupPayment={requestGroupPayment} />}
-          {activeTab === "balances" && <BalancesTab key="balances" members={members} balances={balances} suggestedTransactions={suggestedTransactions} currentMemberId={currentMemberId} onRequestPayment={(toId, amount) => requestPayment(toId, amount)} expenses={expenses} />}
-          {activeTab === "history" && <PaymentHistory key="history" payments={[...completedPayments, ...pendingPayments].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))} expenses={expenses} members={members} currentMemberId={currentMemberId} />}
+          {activeTab === "expenses" && <ExpensesTab key="expenses" expenses={expenses} members={members} currentMemberId={currentMemberId} onDelete={deleteExpense} onAdd={() => setShowAddExpense(true)} onRequestPayment={requestPayment} onRequestGroupPayment={requestGroupPayment} currency={currency} />}
+          {activeTab === "balances" && <BalancesTab key="balances" members={members} balances={balances} suggestedTransactions={suggestedTransactions} currentMemberId={currentMemberId} onRequestPayment={(toId, amount, note) => requestPayment(toId, amount, undefined, note)} expenses={expenses} currency={currency} />}
+          {activeTab === "history" && <PaymentHistory key="history" payments={[...completedPayments, ...pendingPayments].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))} expenses={expenses} members={members} currentMemberId={currentMemberId} currency={currency} />}
           {activeTab === "stats" && <StatsTab key="stats" expenses={expenses} members={members} currentMemberId={currentMemberId} pendingPayments={pendingPayments} completedPayments={completedPayments} monthlyBudget={monthlyBudget} />}
           {activeTab === "profile" && <ProfileTab key="profile" currentMember={currentMember} members={members} biometricEnabled={!!biometricEnabled[currentMemberId]} biometricAvailable={biometricAvailable} onToggleBiometric={toggleBiometric} onLogout={() => { setCurrentMemberId(""); setScreen("identity"); }} onRemoveMember={removeMember} isLocked={!!localStorage.getItem("equilibra_locked_member")} unreadCount={unreadCount} onOpenNotifications={() => setScreen("notifications")} onOpenReports={() => setScreen("reports")} onOpenGroupSettings={() => setScreen("groupSettings")} onOpenMembers={() => setScreen("members")} onOpenAppearance={() => setScreen("appearance")} onResetAllData={async () => { try { await resetAllDataMutation.mutateAsync(); setMembers([]); setExpenses([]); setPendingPayments([]); setCompletedPayments([]); setScreen("identity"); toast.success("Toutes les données ont été réinitialisées"); } catch { toast.error("Erreur lors de la réinitialisation"); } }} onLeaveGroup={leaveGroup} currency={currency} onSetCurrency={updateCurrency} monthlyBudget={monthlyBudget} onSetBudget={updateBudget} pushNotifications={pushNotifications} onTogglePushNotifications={() => setPushNotifications(!pushNotifications)} autoReminders={autoReminders} onToggleReminders={() => setAutoReminders(!autoReminders)} reminderDelay={reminderDelay} onSetReminderDelay={(d: number) => setReminderDelay(d)} privacyMode={privacyMode} onTogglePrivacy={() => setPrivacyMode(!privacyMode)} />}
         </AnimatePresence>

@@ -1,10 +1,45 @@
 import { useState } from "react";
-import { motion } from "framer-motion";
-import { Plus, Trash2 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  Plus,
+  Trash2,
+  Send,
+  Users,
+  UserCheck,
+  Search,
+  ChevronDown,
+  ChevronUp,
+  X,
+} from "lucide-react";
 import type { Member, Expense } from "../types";
 import { formatCurrency, formatDate } from "../utils/currency";
 import { fadeUp } from "../constants";
 import { AvatarImg } from "../components/AvatarImg";
+
+type ModalState =
+  | { type: null }
+  | {
+      type: "group";
+      expenseId: string;
+      participants: string[];
+      selectedIds: string[];
+      note: string;
+    }
+  | {
+      type: "individual";
+      expenseId: string;
+      participants: string[];
+      selectedId: string | null;
+      perPerson: number;
+      note: string;
+    }
+  | {
+      type: "reimbursement";
+      expenseId: string;
+      toId: string;
+      perPerson: number;
+      note: string;
+    };
 
 export function ExpensesTab({
   expenses,
@@ -14,170 +49,676 @@ export function ExpensesTab({
   onAdd,
   onRequestPayment,
   onRequestGroupPayment,
+  currency,
 }: {
   expenses: Expense[];
   members: Member[];
   currentMemberId: string;
   onDelete: (id: string) => void;
   onAdd: () => void;
-  onRequestPayment: (toId: string, amount: number, expenseId: string) => void;
-  onRequestGroupPayment: (expenseId: string, participantIds?: string[]) => void;
+  onRequestPayment: (
+    toId: string,
+    amount: number,
+    expenseId?: string,
+    note?: string
+  ) => void;
+  onRequestGroupPayment: (
+    expenseId: string,
+    participantIds?: string[],
+    note?: string
+  ) => void;
+  currency: string;
 }) {
   const [search, setSearch] = useState("");
+  const [modal, setModal] = useState<ModalState>({ type: null });
+
   const filtered = expenses
-    .filter((e) => e.description.toLowerCase().includes(search.toLowerCase()))
+    .filter((e) =>
+      e.description.toLowerCase().includes(search.toLowerCase())
+    )
     .sort((a, b) => b.date - a.date);
 
+  const close = () => setModal({ type: null });
+
+  const openGroupModal = (exp: Expense) => {
+    const otherIds = exp.participants.filter(
+      (pid) => pid !== currentMemberId
+    );
+    setModal({
+      type: "group",
+      expenseId: exp.id,
+      participants: otherIds,
+      selectedIds: [...otherIds],
+      note: "",
+    });
+  };
+
+  const openIndividualModal = (exp: Expense) => {
+    const otherIds = exp.participants.filter(
+      (pid) => pid !== currentMemberId
+    );
+    setModal({
+      type: "individual",
+      expenseId: exp.id,
+      participants: otherIds,
+      selectedId: null,
+      perPerson: exp.amount / exp.participants.length,
+      note: "",
+    });
+  };
+
+  const openReimbursementModal = (exp: Expense) => {
+    const otherId = exp.participants.find(
+      (pid) => pid !== currentMemberId
+    );
+    if (!otherId) return;
+    setModal({
+      type: "reimbursement",
+      expenseId: exp.id,
+      toId: otherId,
+      perPerson: exp.amount / exp.participants.length,
+      note: "",
+    });
+  };
+
+  const handleGroupConfirm = () => {
+    if (modal.type !== "group") return;
+    onRequestGroupPayment(
+      modal.expenseId,
+      modal.selectedIds,
+      modal.note || undefined
+    );
+    close();
+  };
+
+  const handleIndividualConfirm = () => {
+    if (modal.type !== "individual" || !modal.selectedId) return;
+    onRequestPayment(
+      modal.selectedId,
+      modal.perPerson,
+      modal.expenseId,
+      modal.note || undefined
+    );
+    close();
+  };
+
+  const handleReimbursementConfirm = () => {
+    if (modal.type !== "reimbursement") return;
+    onRequestPayment(
+      modal.toId,
+      modal.perPerson,
+      modal.expenseId,
+      modal.note || undefined
+    );
+    close();
+  };
+
+  const toggleGroupParticipant = (id: string) => {
+    if (modal.type !== "group") return;
+    setModal({
+      ...modal,
+      selectedIds: modal.selectedIds.includes(id)
+        ? modal.selectedIds.filter((sid) => sid !== id)
+        : [...modal.selectedIds, id],
+    });
+  };
+
+  const getMember = (id: string) =>
+    members.find((m) => m.id === id);
+
   return (
-    <motion.div {...fadeUp} className="max-w-md mx-auto px-5 pt-16 space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight">Dépenses</h1>
-        <motion.button
-          whileTap={{ scale: 0.9 }}
-          onClick={onAdd}
-          className="w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg shadow-primary/30"
-        >
-          <Plus size={20} />
-        </motion.button>
-      </div>
+    <>
+      <motion.div
+        {...fadeUp}
+        className="max-w-md mx-auto px-5 pt-16 space-y-4 overflow-y-auto pb-32"
+        style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+      >
+        <style>{`.scrollbar-hidden::-webkit-scrollbar{display:none}`}</style>
 
-      {/* Search */}
-      <div className="relative">
-        <input
-          type="text"
-          placeholder="Rechercher une dépense..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full bg-card/50 backdrop-blur-sm border border-border rounded-2xl px-4 py-3.5 text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/20 transition-all"
-        />
-      </div>
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold tracking-tight">Dépenses</h1>
+          <motion.button
+            whileTap={{ scale: 0.9 }}
+            onClick={onAdd}
+            className="w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg shadow-primary/30"
+          >
+            <Plus size={20} />
+          </motion.button>
+        </div>
 
-      {/* List */}
-      <div className="space-y-2">
-        {filtered.length === 0 ? (
-          <div className="text-center py-16 text-muted-foreground text-sm">
-            <div className="text-4xl mb-3">🔍</div>
-            Aucune dépense trouvée
-          </div>
-        ) : (
-          filtered.map((exp, i) => {
-            const payer = members.find((m) => m.id === exp.payerId);
-            const perPerson = exp.amount / exp.participants.length;
-            const userShare = exp.participants.includes(currentMemberId) ? perPerson : 0;
-            return (
-              <motion.div
-                key={exp.id}
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: i * 0.03 }}
-                className="bg-card/50 backdrop-blur-sm border border-border rounded-2xl p-4"
-              >
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-11 h-11 rounded-2xl bg-secondary/50 flex items-center justify-center text-xl">
-                    {exp.categoryEmoji}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold truncate">{exp.description}</p>
-                    <p className="text-xs text-muted-foreground">{payer?.name} • {formatDate(exp.date)}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-bold">{formatCurrency(exp.amount)}</p>
-                    <p className="text-[10px] text-muted-foreground">{exp.participants.length} pers.</p>
-                  </div>
-                </div>
-                
-                {/* Expense breakdown */}
-                <div className="bg-background/30 rounded-xl p-3 space-y-2">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-muted-foreground">Payé par {payer?.name}</span>
-                    <span className="font-semibold">{formatCurrency(exp.amount)}</span>
-                  </div>
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-muted-foreground">Part par personne</span>
-                    <span className="font-semibold">{formatCurrency(perPerson)}</span>
-                  </div>
-                  {exp.participants.includes(currentMemberId) && (
-                    <div className="flex items-center justify-between text-xs bg-primary/10 rounded-lg p-2 -mx-2">
-                      <span className="text-primary font-medium">Votre part</span>
-                      <span className="font-bold text-primary">{formatCurrency(userShare)}</span>
+        <div className="relative">
+          <Search
+            size={16}
+            className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground/60"
+          />
+          <input
+            type="text"
+            placeholder="Rechercher une dépense..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full bg-card/50 backdrop-blur-sm border border-border rounded-2xl pl-10 pr-4 py-3 text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/20 transition-all"
+          />
+        </div>
+
+        <div className="space-y-3">
+          {filtered.length === 0 ? (
+            <div className="text-center py-16 text-muted-foreground text-sm">
+              <div className="text-4xl mb-3">🔍</div>
+              Aucune dépense trouvée
+            </div>
+          ) : (
+            filtered.map((exp, i) => {
+              const payer = getMember(exp.payerId);
+              const perPerson = exp.amount / exp.participants.length;
+              const userShare = exp.participants.includes(currentMemberId)
+                ? perPerson
+                : 0;
+              const otherParticipants = exp.participants.filter(
+                (pid) => pid !== currentMemberId
+              );
+              const shownAvatars = exp.participants.slice(0, 4);
+              const extraCount = exp.participants.length - 4;
+              const isPayer = exp.payerId === currentMemberId;
+              const isReimbursementCase =
+                isPayer &&
+                exp.participants.length === 1 &&
+                otherParticipants.length === 1;
+
+              return (
+                <motion.div
+                  key={exp.id}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{
+                    delay: i * 0.04,
+                    type: "spring",
+                    stiffness: 300,
+                    damping: 24,
+                  }}
+                  className="glass-card-enhanced rounded-[1.25rem] p-4"
+                >
+                  <div className="flex items-start gap-3 mb-3">
+                    <div className="w-12 h-12 rounded-2xl bg-secondary/50 flex items-center justify-center text-xl shrink-0">
+                      {exp.categoryEmoji}
                     </div>
-                  )}
-                  <div className="flex flex-wrap gap-1 mt-2">
-                    {exp.participants.map((pid) => {
-                      const participant = members.find((m) => m.id === pid);
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold truncate">
+                        {exp.description}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {formatDate(exp.date)}
+                      </p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="text-base font-bold">
+                        {formatCurrency(exp.amount)}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 mb-3 px-1">
+                    <AvatarImg
+                      avatar={payer?.avatar ?? ""}
+                      size="text-xs"
+                    />
+                    <span className="text-xs text-muted-foreground">
+                      Payé par{" "}
+                      <span className="text-foreground font-medium">
+                        {payer?.name}
+                      </span>
+                    </span>
+                  </div>
+
+                  <div className="bg-background/30 rounded-xl p-3 space-y-2 mb-3">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground">
+                        Part par personne
+                      </span>
+                      <span className="font-semibold">
+                        {formatCurrency(perPerson)}
+                      </span>
+                    </div>
+                    {exp.participants.includes(currentMemberId) &&
+                      !isPayer && (
+                        <div className="flex items-center justify-between text-xs bg-primary/10 rounded-lg p-2 -mx-2">
+                          <span className="text-primary font-medium">
+                            Votre part
+                          </span>
+                          <span className="font-bold text-primary">
+                            {formatCurrency(userShare)}
+                          </span>
+                        </div>
+                      )}
+                  </div>
+
+                  <div className="flex items-center gap-1.5 mb-3">
+                    {shownAvatars.map((pid) => {
+                      const member = getMember(pid);
                       return (
-                        <span key={pid} className="text-xs bg-background/50 px-2 py-1 rounded-full flex items-center gap-1">
-                          <AvatarImg avatar={participant?.avatar ?? ""} size="text-sm" />
-                          {participant?.name}
-                        </span>
+                        <div
+                          key={pid}
+                          className="w-7 h-7 rounded-full border-2 border-background overflow-hidden -ml-1 first:ml-0"
+                        >
+                          <AvatarImg
+                            avatar={member?.avatar ?? ""}
+                            size="text-sm"
+                          />
+                        </div>
                       );
                     })}
+                    {extraCount > 0 && (
+                      <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center -ml-1 text-[10px] font-semibold text-muted-foreground">
+                        +{extraCount}
+                      </div>
+                    )}
+                    <span className="text-[11px] text-muted-foreground ml-1">
+                      {exp.participants.length} participant
+                      {exp.participants.length > 1 ? "s" : ""}
+                    </span>
                   </div>
-                </div>
 
-                <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
-                  <div className="flex items-center gap-2">
-                    {exp.payerId === currentMemberId && (
-                      <span className="text-[10px] text-green-400 bg-green-500/10 px-2 py-1 rounded-full">Vous avez payé</span>
-                    )}
-                    {exp.participants.includes(currentMemberId) && exp.payerId !== currentMemberId && (
-                      <span className="text-[10px] text-orange-400 bg-orange-500/10 px-2 py-1 rounded-full">Vous devez {formatCurrency(userShare)}</span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {exp.payerId === currentMemberId && exp.participants.length > 1 && (
-                      <>
-                        <motion.button
-                          whileTap={{ scale: 0.8 }}
-                          onClick={() => onRequestGroupPayment(exp.id)}
-                          className="text-[10px] bg-primary text-primary-foreground px-3 py-1.5 rounded-full font-medium hover:bg-primary/90 transition-colors"
-                        >
-                          Demander à tous
-                        </motion.button>
-                        <motion.button
-                          whileTap={{ scale: 0.8 }}
-                          onClick={() => {
-                            const otherParticipant = exp.participants.find(p => p !== currentMemberId);
-                            if (otherParticipant) {
-                              onRequestPayment(otherParticipant, perPerson, exp.id);
+                  <div className="flex items-center justify-between pt-3 border-t border-border">
+                    <div className="flex items-center gap-2">
+                      {isPayer && (
+                        <span className="text-[10px] text-green-400 bg-green-500/10 px-2.5 py-1 rounded-full font-medium">
+                          Vous avez payé
+                        </span>
+                      )}
+                      {exp.participants.includes(currentMemberId) &&
+                        !isPayer && (
+                          <span className="text-[10px] text-orange-400 bg-orange-500/10 px-2.5 py-1 rounded-full font-medium">
+                            Vous devez{" "}
+                            {formatCurrency(userShare)}
+                          </span>
+                        )}
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      {isPayer &&
+                        otherParticipants.length > 1 && (
+                          <motion.button
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() =>
+                              openGroupModal(exp)
                             }
-                          }}
-                          className="text-[10px] bg-primary/50 text-primary-foreground px-3 py-1.5 rounded-full font-medium hover:bg-primary/70 transition-colors"
-                        >
-                          Demander individuel
-                        </motion.button>
-                      </>
-                    )}
-                    {exp.payerId === currentMemberId && exp.participants.length === 1 && (
-                      <motion.button
-                        whileTap={{ scale: 0.8 }}
-                        onClick={() => {
-                          const otherParticipant = exp.participants.find(p => p !== currentMemberId);
-                          if (otherParticipant) {
-                            onRequestPayment(otherParticipant, perPerson, exp.id);
+                            className="bg-primary text-primary-foreground px-3 py-1.5 rounded-full text-[11px] font-semibold flex items-center gap-1 shadow-sm"
+                          >
+                            <Users size={12} />
+                            Demander à tous
+                          </motion.button>
+                        )}
+                      {isPayer &&
+                        otherParticipants.length > 1 && (
+                          <motion.button
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() =>
+                              openIndividualModal(exp)
+                            }
+                            className="bg-primary/15 text-primary px-3 py-1.5 rounded-full text-[11px] font-semibold flex items-center gap-1"
+                          >
+                            <UserCheck size={12} />
+                            Individuel
+                          </motion.button>
+                        )}
+                      {isReimbursementCase && (
+                        <motion.button
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() =>
+                            openReimbursementModal(exp)
                           }
-                        }}
-                        className="text-[10px] bg-primary text-primary-foreground px-3 py-1.5 rounded-full font-medium hover:bg-primary/90 transition-colors"
-                      >
-                        Demander remboursement
-                      </motion.button>
-                    )}
-                    {(exp.payerId === currentMemberId || members.find(m => m.id === currentMemberId)?.role === "admin") && (
-                      <motion.button
-                        whileTap={{ scale: 0.8 }}
-                        onClick={() => onDelete(exp.id)}
-                        className="w-8 h-8 rounded-full bg-red-500/10 text-red-400 flex items-center justify-center border border-red-500/10"
-                      >
-                        <Trash2 size={14} />
-                      </motion.button>
-                    )}
+                          className="bg-primary text-primary-foreground px-3 py-1.5 rounded-full text-[11px] font-semibold flex items-center gap-1 shadow-sm"
+                        >
+                          <Send size={12} />
+                          Demander remboursement
+                        </motion.button>
+                      )}
+                      {(isPayer ||
+                        getMember(currentMemberId)
+                          ?.role === "admin") && (
+                        <motion.button
+                          whileTap={{ scale: 0.85 }}
+                          onClick={() => onDelete(exp.id)}
+                          className="w-7 h-7 rounded-full bg-red-500/10 text-red-400 flex items-center justify-center"
+                        >
+                          <Trash2 size={13} />
+                        </motion.button>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </motion.div>
-            );
-          })
+                </motion.div>
+              );
+            })
+          )}
+        </div>
+      </motion.div>
+
+      <AnimatePresence>
+        {modal.type === "group" && (
+          <motion.div
+            key="group-backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm"
+            onClick={close}
+          />
         )}
-      </div>
-    </motion.div>
+        {modal.type === "group" && (
+          <motion.div
+            key="group-sheet"
+            initial={{ y: "100%" }}
+            animate={{ y: 0 }}
+            exit={{ y: "100%" }}
+            transition={{
+              type: "spring",
+              stiffness: 350,
+              damping: 30,
+            }}
+            className="fixed inset-x-0 bottom-0 z-50 bg-card rounded-t-[1.5rem] p-5 pb-8 max-h-[80vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-10 h-1 rounded-full bg-muted-foreground/30 mx-auto mb-4" />
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold">
+                Demander à tous
+              </h2>
+              <motion.button
+                whileTap={{ scale: 0.9 }}
+                onClick={close}
+                className="w-8 h-8 rounded-full bg-muted flex items-center justify-center"
+              >
+                <X size={16} />
+              </motion.button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto space-y-1 mb-4">
+              {modal.participants.map((pid) => {
+                const member = getMember(pid);
+                const checked = modal.selectedIds.includes(
+                  pid
+                );
+                return (
+                  <motion.button
+                    key={pid}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() =>
+                      toggleGroupParticipant(pid)
+                    }
+                    className={`w-full flex items-center gap-3 p-3 rounded-xl transition-colors ${
+                      checked
+                        ? "bg-primary/10 border border-primary/30"
+                        : "bg-background/50 border border-transparent"
+                    }`}
+                  >
+                    <div className="w-9 h-9 rounded-full overflow-hidden">
+                      <AvatarImg
+                        avatar={member?.avatar ?? ""}
+                        size="text-lg"
+                      />
+                    </div>
+                    <span className="flex-1 text-left text-sm font-medium">
+                      {member?.name}
+                    </span>
+                    <div
+                      className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
+                        checked
+                          ? "bg-primary border-primary"
+                          : "border-border"
+                      }`}
+                    >
+                      {checked && (
+                        <motion.div
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          className="w-2 h-2 rounded-full bg-primary-foreground"
+                        />
+                      )}
+                    </div>
+                  </motion.button>
+                );
+              })}
+            </div>
+
+            <div className="mb-4">
+              <textarea
+                placeholder="Ajouter une note..."
+                value={modal.note}
+                onChange={(e) =>
+                  setModal({
+                    ...modal,
+                    note: e.target.value,
+                  })
+                }
+                className="w-full bg-muted/30 border border-border rounded-xl px-3 py-2 text-sm resize-none h-16 focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted-foreground/50"
+              />
+            </div>
+
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={handleGroupConfirm}
+              disabled={modal.selectedIds.length === 0}
+              className="w-full bg-primary text-primary-foreground py-3.5 rounded-2xl text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-40"
+            >
+              <Send size={16} />
+              Envoyer la demande{" "}
+              {modal.selectedIds.length > 0 &&
+                `(${modal.selectedIds.length})`}
+            </motion.button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {modal.type === "individual" && (
+          <motion.div
+            key="indiv-backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm"
+            onClick={close}
+          />
+        )}
+        {modal.type === "individual" && (
+          <motion.div
+            key="indiv-sheet"
+            initial={{ y: "100%" }}
+            animate={{ y: 0 }}
+            exit={{ y: "100%" }}
+            transition={{
+              type: "spring",
+              stiffness: 350,
+              damping: 30,
+            }}
+            className="fixed inset-x-0 bottom-0 z-50 bg-card rounded-t-[1.5rem] p-5 pb-8 max-h-[70vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-10 h-1 rounded-full bg-muted-foreground/30 mx-auto mb-4" />
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold">
+                Choisir un membre
+              </h2>
+              <motion.button
+                whileTap={{ scale: 0.9 }}
+                onClick={close}
+                className="w-8 h-8 rounded-full bg-muted flex items-center justify-center"
+              >
+                <X size={16} />
+              </motion.button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto space-y-1 mb-4">
+              {modal.participants.map((pid) => {
+                const member = getMember(pid);
+                const selected =
+                  modal.selectedId === pid;
+                return (
+                  <motion.button
+                    key={pid}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() =>
+                      setModal({
+                        ...modal,
+                        selectedId: pid,
+                      })
+                    }
+                    className={`w-full flex items-center gap-3 p-3 rounded-xl transition-colors ${
+                      selected
+                        ? "bg-primary/10 border border-primary/30"
+                        : "bg-background/50 border border-transparent"
+                    }`}
+                  >
+                    <div className="w-10 h-10 rounded-full overflow-hidden">
+                      <AvatarImg
+                        avatar={member?.avatar ?? ""}
+                        size="text-xl"
+                      />
+                    </div>
+                    <div className="flex-1 text-left">
+                      <p className="text-sm font-medium">
+                        {member?.name}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatCurrency(modal.perPerson)}
+                      </p>
+                    </div>
+                    {selected && (
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{
+                          type: "spring",
+                          stiffness: 400,
+                          damping: 15,
+                        }}
+                        className="w-6 h-6 rounded-full bg-primary flex items-center justify-center"
+                      >
+                        <UserCheck
+                          size={14}
+                          className="text-primary-foreground"
+                        />
+                      </motion.div>
+                    )}
+                  </motion.button>
+                );
+              })}
+            </div>
+
+            <div className="mb-4">
+              <textarea
+                placeholder="Ajouter une note..."
+                value={modal.note}
+                onChange={(e) =>
+                  setModal({
+                    ...modal,
+                    note: e.target.value,
+                  })
+                }
+                className="w-full bg-muted/30 border border-border rounded-xl px-3 py-2 text-sm resize-none h-16 focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted-foreground/50"
+              />
+            </div>
+
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={handleIndividualConfirm}
+              disabled={!modal.selectedId}
+              className="w-full bg-primary text-primary-foreground py-3.5 rounded-2xl text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-40"
+            >
+              <Send size={16} />
+              Envoyer la demande
+            </motion.button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {modal.type === "reimbursement" && (
+          <motion.div
+            key="reimb-backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm"
+            onClick={close}
+          />
+        )}
+        {modal.type === "reimbursement" && (
+          <motion.div
+            key="reimb-sheet"
+            initial={{ y: "100%" }}
+            animate={{ y: 0 }}
+            exit={{ y: "100%" }}
+            transition={{
+              type: "spring",
+              stiffness: 350,
+              damping: 30,
+            }}
+            className="fixed inset-x-0 bottom-0 z-50 bg-card rounded-t-[1.5rem] p-5 pb-8"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-10 h-1 rounded-full bg-muted-foreground/30 mx-auto mb-4" />
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold">
+                Demander remboursement
+              </h2>
+              <motion.button
+                whileTap={{ scale: 0.9 }}
+                onClick={close}
+                className="w-8 h-8 rounded-full bg-muted flex items-center justify-center"
+              >
+                <X size={16} />
+              </motion.button>
+            </div>
+
+            <div className="bg-background/50 rounded-xl p-4 flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full overflow-hidden">
+                <AvatarImg
+                  avatar={
+                    getMember(modal.toId)?.avatar ?? ""
+                  }
+                  size="text-xl"
+                />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium">
+                  {getMember(modal.toId)?.name}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Montant à réclamer
+                </p>
+              </div>
+              <p className="text-base font-bold text-primary">
+                {formatCurrency(modal.perPerson)}
+              </p>
+            </div>
+
+            <div className="mb-4">
+              <textarea
+                placeholder="Ajouter une note..."
+                value={modal.note}
+                onChange={(e) =>
+                  setModal({
+                    ...modal,
+                    note: e.target.value,
+                  })
+                }
+                className="w-full bg-muted/30 border border-border rounded-xl px-3 py-2 text-sm resize-none h-16 focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted-foreground/50"
+              />
+            </div>
+
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={handleReimbursementConfirm}
+              className="w-full bg-primary text-primary-foreground py-3.5 rounded-2xl text-sm font-semibold flex items-center justify-center gap-2"
+            >
+              <Send size={16} />
+              Envoyer la demande
+            </motion.button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
   );
 }

@@ -150,6 +150,15 @@ export function initializeDatabase(): Promise<void> {
           created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         );
         CREATE INDEX IF NOT EXISTS notifications_member_idx ON notifications(member_id, read, created_at DESC);
+        CREATE TABLE IF NOT EXISTS payment_comments (
+          id VARCHAR(128) PRIMARY KEY,
+          payment_id VARCHAR(128) NOT NULL REFERENCES payments(id) ON DELETE CASCADE,
+          member_id VARCHAR(128) NOT NULL,
+          member_name VARCHAR(255) NOT NULL,
+          content TEXT NOT NULL,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        );
+        CREATE INDEX IF NOT EXISTS payment_comments_idx ON payment_comments(payment_id, created_at);
         CREATE TABLE IF NOT EXISTS notification_settings (
           id VARCHAR(128) PRIMARY KEY,
           member_id VARCHAR(128) NOT NULL,
@@ -853,6 +862,27 @@ export async function reportNotReceived(paymentId: string, note: string) {
     `UPDATE payments SET status = 'disputed', dispute_note = $2, responded_at = NOW() WHERE id = $1 AND status IN ('accepted', 'paid')`,
     [paymentId, note]
   )).rowCount === 1;
+}
+
+export async function addPaymentComment(paymentId: string, memberId: string, memberName: string, content: string) {
+  const db = await ready();
+  if (!db) return { id: `comment_${Date.now()}`, paymentId, memberId, memberName, content, createdAt: new Date().toISOString() };
+  const id = `comment_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  await db.query(
+    `INSERT INTO payment_comments (id, payment_id, member_id, member_name, content) VALUES ($1, $2, $3, $4, $5)`,
+    [id, paymentId, memberId, memberName, content],
+  );
+  return { id, paymentId, memberId, memberName, content, createdAt: new Date().toISOString() };
+}
+
+export async function getPaymentComments(paymentId: string) {
+  const db = await ready();
+  if (!db) return [];
+  const result = await db.query(
+    `SELECT id, payment_id AS "paymentId", member_id AS "memberId", member_name AS "memberName", content, created_at AS "createdAt" FROM payment_comments WHERE payment_id = $1 ORDER BY created_at ASC`,
+    [paymentId],
+  );
+  return result.rows;
 }
 
 export async function getGroupStats(groupId: string, month?: string) {

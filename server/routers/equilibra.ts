@@ -42,6 +42,8 @@ import {
   getGroupStats,
   exportExpensesCSV,
   leaveGroup,
+  addPaymentComment as dbAddPaymentComment,
+  getPaymentComments as dbGetPaymentComments,
 } from "../db";
 
 const GROUP_ID = "equilibra-fixed-group";
@@ -316,6 +318,20 @@ export const equilibraRouter = router({
     .mutation(async ({ input }) => {
       const success = await disputePayment(input.paymentId, input.note);
       return { success };
+    }),
+
+  addPaymentComment: groupProcedure
+    .input(z.object({ paymentId: z.string(), memberId: z.string(), memberName: z.string(), content: z.string().min(1).max(500) }))
+    .mutation(async ({ input }) => {
+      const comment = await dbAddPaymentComment(input.paymentId, input.memberId, input.memberName, input.content);
+      return { comment };
+    }),
+
+  getPaymentComments: groupProcedure
+    .input(z.object({ paymentId: z.string() }))
+    .query(async ({ input }) => {
+      const comments = await dbGetPaymentComments(input.paymentId);
+      return { comments };
     }),
 
   updateShareUrl: groupProcedure
