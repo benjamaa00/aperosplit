@@ -115,14 +115,19 @@ export default function App() {
   }, [notificationPermission, requestPermission]);
 
   // ─── Sync notification settings to server ─────────────────
+  const notifSettingsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (isNetlify || !currentMemberId) return;
-    updateNotificationSettingsMutation.mutate({
-      memberId: currentMemberId,
-      pushEnabled: pushNotifications,
-      reminderFrequency: reminderDelay + "h",
-    });
-  }, [pushNotifications, reminderDelay, autoReminders, currentMemberId, isNetlify, updateNotificationSettingsMutation]);
+    if (notifSettingsTimerRef.current) clearTimeout(notifSettingsTimerRef.current);
+    notifSettingsTimerRef.current = setTimeout(() => {
+      updateNotificationSettingsMutation.mutate({
+        memberId: currentMemberId,
+        pushEnabled: pushNotifications,
+        reminderFrequency: reminderDelay + "h",
+      });
+    }, 1000);
+    return () => { if (notifSettingsTimerRef.current) clearTimeout(notifSettingsTimerRef.current); };
+  }, [pushNotifications, reminderDelay, autoReminders, currentMemberId, isNetlify]);
 
   useEffect(() => { checkBiometricAvailable().then(setBiometricAvailable); }, []);
 
@@ -239,7 +244,8 @@ export default function App() {
       });
     }, Math.min(intervalMs, 60000)); // Check every minute (or at the delay interval if shorter)
     return () => clearInterval(interval);
-  }, [autoReminders, reminderDelay, isNetlify, currentMemberId, pendingPayments, resendPaymentRequestMutation]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoReminders, reminderDelay, isNetlify, currentMemberId, pendingPayments]);
 
   // ─── Refetch on window focus ──────────────────────────────
   useEffect(() => {
@@ -249,7 +255,7 @@ export default function App() {
     };
     document.addEventListener("visibilitychange", handleVisibility);
     return () => document.removeEventListener("visibilitychange", handleVisibility);
-  }, [isNetlify, refetch]);
+  }, [isNetlify]);
 
   // ─── Computed ──────────────────────────────────────────────
   const balances = useMemo(() => {

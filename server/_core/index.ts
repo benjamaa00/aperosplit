@@ -43,9 +43,10 @@ async function startServer() {
   app.use(helmet({ contentSecurityPolicy: false }));
   app.use(rateLimit({
     windowMs: 60_000,
-    limit: 90,
+    limit: 200,
     standardHeaders: "draft-8",
     legacyHeaders: false,
+    keyGenerator: (req) => req.ip || req.socket.remoteAddress || "unknown",
   }));
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "8mb" }));
