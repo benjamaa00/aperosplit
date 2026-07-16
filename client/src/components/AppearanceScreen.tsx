@@ -4,7 +4,7 @@ import {
   ArrowLeft, Moon, Sun, Palette, Sparkles, Image, Wand2,
   RotateCcw, Check, Eye,
 } from "lucide-react";
-import { useThemeContext } from "@/contexts/ThemeContext";
+import { useThemeContext, COLOR_PALETTE_OPTIONS } from "@/contexts/ThemeContext";
 import { THEMES } from "@/themes/definitions";
 import {
   GRADIENT_DEFINITIONS, GRADIENT_CATEGORIES,
@@ -19,6 +19,15 @@ const smooth = { duration: 0.3, ease: [0.23, 1, 0.32, 1] as const };
 interface AppearanceScreenProps {
   onBack: () => void;
 }
+
+const QUICK_PRESETS = [
+  { id: "midnight", name: "Minuit", emoji: "🌙", themeId: "noir", palette: "violet" as const, gradientBgId: "", backgroundId: "pur" },
+  { id: "ocean-breeze", name: "Brise marine", emoji: "🌊", themeId: "bleu-ocean", palette: "cyan" as const, gradientBgId: "", backgroundId: "pur" },
+  { id: "forest-calm", name: "Forêt", emoji: "🌿", themeId: "vert-sauge", palette: "emerald" as const, gradientBgId: "", backgroundId: "pur" },
+  { id: "sunset-glow", name: "Coucher", emoji: "🌅", themeId: "corail", palette: "orange" as const, gradientBgId: "", backgroundId: "pur" },
+  { id: "aurora", name: "Aurore boréale", emoji: "✨", themeId: "blanc", palette: "violet" as const, gradientBgId: "", backgroundId: "pur" },
+  { id: "royal", name: "Royal", emoji: "👑", themeId: "doré", palette: "amber" as const, gradientBgId: "", backgroundId: "pur" },
+];
 
 export default function AppearanceScreen({ onBack }: AppearanceScreenProps) {
   const {
@@ -35,10 +44,12 @@ export default function AppearanceScreen({ onBack }: AppearanceScreenProps) {
     iconScale, setIconScale,
     animationSpeed, setAnimationSpeed,
     cardSize, setCardSize,
+    palette, setPalette,
     resetPreferences,
   } = useThemeContext();
 
   const [previewMode, setPreviewMode] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [activeGradientCategory, setActiveGradientCategory] = useState<string>("classic");
   const [activeBackgroundCategory, setActiveBackgroundCategory] = useState<string>("solid");
 
@@ -175,6 +186,70 @@ export default function AppearanceScreen({ onBack }: AppearanceScreenProps) {
               </div>
             </div>
             <Toggle enabled={theme === "dark"} onToggle={toggleTheme} />
+          </div>
+        </SectionCard>
+
+        {/* ── Presets rapides ─────────────────────────────────── */}
+        <SectionCard>
+          <SectionHeader icon={Sparkles} title="Presets rapides" />
+          <div className="grid grid-cols-3 gap-2">
+            {QUICK_PRESETS.map((preset) => (
+              <motion.button
+                key={preset.id}
+                whileTap={{ scale: 0.93 }}
+                onClick={() => {
+                  setThemeId(preset.themeId);
+                  setPalette(preset.palette);
+                  setGradientBgId(preset.gradientBgId);
+                  setBackgroundId(preset.backgroundId);
+                }}
+                className="py-2.5 rounded-[14px] text-[11px] font-semibold transition-all border bg-card/30 border-border/50 text-muted-foreground hover:bg-card/50"
+              >
+                <span className="text-sm">{preset.emoji}</span>
+                <span className="block mt-0.5">{preset.name}</span>
+              </motion.button>
+            ))}
+          </div>
+        </SectionCard>
+
+        {/* ── Palette de couleurs ─────────────────────────────── */}
+        <SectionCard>
+          <SectionHeader icon={Palette} title="Palette de couleurs" />
+          <div className="grid grid-cols-5 gap-3">
+            {COLOR_PALETTE_OPTIONS.map((p) => (
+              <motion.button
+                key={p.id}
+                whileTap={{ scale: 0.88 }}
+                onClick={() => setPalette(p.id)}
+                className="flex flex-col items-center gap-1.5"
+              >
+                <div className={`relative w-9 h-9 rounded-full transition-all duration-200 ${
+                  palette === p.id
+                    ? "scale-110"
+                    : "hover:scale-105"
+                }`}
+                  style={{ 
+                    backgroundColor: p.color,
+                    boxShadow: palette === p.id ? `0 0 0 3px var(--background), 0 0 0 5px ${p.color}` : undefined,
+                  }}
+                >
+                  <AnimatePresence>
+                    {palette === p.id && (
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        exit={{ scale: 0 }}
+                        transition={spring}
+                        className="absolute inset-0 flex items-center justify-center"
+                      >
+                        <Check size={14} className="text-white" strokeWidth={3} />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+                <span className="text-[8px] font-medium text-muted-foreground">{p.label}</span>
+              </motion.button>
+            ))}
           </div>
         </SectionCard>
 
@@ -462,27 +537,43 @@ export default function AppearanceScreen({ onBack }: AppearanceScreenProps) {
         {/* ── Aperçu en direct ────────────────────────────────── */}
         <SectionCard>
           <SectionHeader icon={Eye} title="Aperçu en direct" />
-          <motion.div
-            layout
-            transition={spring}
-            className="glass-card-enhanced rounded-[16px] p-3.5 border border-border/40"
-            style={{
-              borderRadius: `${borderRadius}rem`,
-              opacity: glassmorphism ? 0.85 : 1,
-            }}
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-primary/10 border border-primary/15 flex items-center justify-center"
-                  style={{ transform: `scale(${iconScale})` }}>
-                  <span className="text-base">🍽️</span>
-                </div>
-                <div>
-                  <p className="text-[13px] font-semibold" style={{ fontSize: `${fontScale * 13}px` }}>Restaurant</p>
-                  <p className="text-[10px] text-muted-foreground" style={{ fontSize: `${fontScale * 10}px` }}>Payé par Mohammed</p>
-                </div>
+          <motion.div layout transition={spring} className="rounded-[16px] overflow-hidden border border-border/40 shadow-lg"
+            style={{ borderRadius: `${borderRadius}rem` }}>
+            {/* Header */}
+            <div className="px-4 py-3 flex items-center justify-between" 
+              style={{ backgroundColor: currentTheme ? (theme === "dark" ? currentTheme.dark.primary : currentTheme.light.primary) : "var(--primary)" }}>
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center text-xs">🍽️</div>
+                <span className="text-[12px] font-bold text-white" style={{ fontSize: `${fontScale * 12}px` }}>Équilibra</span>
               </div>
-              <p className="text-sm font-bold text-primary tabular-nums" style={{ fontSize: `${fontScale * 14}px` }}>45.00 MAD</p>
+              <span className="text-[10px] text-white/80">Aujourd'hui</span>
+            </div>
+            {/* Card body */}
+            <div className="p-3 space-y-2.5" style={{ 
+              backgroundColor: currentTheme ? (theme === "dark" ? currentTheme.dark.card : currentTheme.light.card) : "var(--card)",
+              padding: `calc(${cardSize === "compact" ? "0.5rem" : cardSize === "spacious" ? "1rem" : "0.75rem"} + 0.25rem)`
+            }}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-primary/15 flex items-center justify-center text-sm"
+                    style={{ transform: `scale(${iconScale})` }}>🧑</div>
+                  <div>
+                    <p className="text-[12px] font-semibold" style={{ fontSize: `${fontScale * 12}px`, color: currentTheme ? (theme === "dark" ? currentTheme.dark.foreground : currentTheme.light.foreground) : undefined }}>Restaurant</p>
+                    <p className="text-[9px]" style={{ fontSize: `${fontScale * 9}px`, color: currentTheme ? (theme === "dark" ? currentTheme.dark.mutedForeground : currentTheme.light.mutedForeground) : undefined }}>Payé par Mohammed</p>
+                  </div>
+                </div>
+                <p className="text-[13px] font-bold tabular-nums" style={{ fontSize: `${fontScale * 13}px`, color: currentTheme ? (theme === "dark" ? currentTheme.dark.primary : currentTheme.light.primary) : "var(--primary)" }}>45.00 MAD</p>
+              </div>
+              <div className="flex gap-1.5">
+                <div className="flex-1 py-1.5 rounded-lg text-center text-[10px] font-semibold" style={{ 
+                  backgroundColor: currentTheme ? (theme === "dark" ? currentTheme.dark.primary + "20" : currentTheme.light.primary + "20") : "var(--primary)",
+                  color: currentTheme ? (theme === "dark" ? currentTheme.dark.primary : currentTheme.light.primary) : "var(--primary)"
+                }}>J'ai payé</div>
+                <div className="flex-1 py-1.5 rounded-lg text-center text-[10px] font-semibold" style={{ 
+                  backgroundColor: currentTheme ? (theme === "dark" ? currentTheme.dark.destructive + "15" : currentTheme.light.destructive + "15") : undefined,
+                  color: currentTheme ? (theme === "dark" ? currentTheme.dark.destructive : currentTheme.light.destructive) : "var(--destructive)"
+                }}>Refuser</div>
+              </div>
             </div>
           </motion.div>
         </SectionCard>
@@ -490,12 +581,42 @@ export default function AppearanceScreen({ onBack }: AppearanceScreenProps) {
         {/* ── Reset ───────────────────────────────────────────── */}
         <motion.button
           whileTap={{ scale: 0.97 }}
-          onClick={resetPreferences}
+          onClick={() => setShowResetConfirm(true)}
           className="w-full py-3 rounded-[14px] bg-card/30 border border-border/50 text-[13px] font-semibold text-muted-foreground flex items-center justify-center gap-2 transition-colors active:bg-card/50"
         >
           <RotateCcw size={14} />
           Réinitialiser l'apparence
         </motion.button>
+
+        <AnimatePresence>
+          {showResetConfirm && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-6"
+              onClick={() => setShowResetConfirm(false)}>
+              <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
+                transition={spring} onClick={(e) => e.stopPropagation()}
+                className="bg-card border border-border rounded-[1.25rem] p-6 w-full max-w-sm shadow-xl">
+                <div className="text-center mb-4">
+                  <div className="w-12 h-12 rounded-full bg-orange-500/10 flex items-center justify-center mx-auto mb-3">
+                    <RotateCcw size={20} className="text-orange-400" />
+                  </div>
+                  <h3 className="text-lg font-bold mb-1">Réinitialiser ?</h3>
+                  <p className="text-sm text-muted-foreground">Toutes vos préférences d'apparence seront remises par défaut.</p>
+                </div>
+                <div className="flex gap-2">
+                  <motion.button whileTap={{ scale: 0.95 }} onClick={() => setShowResetConfirm(false)}
+                    className="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-muted/30 text-muted-foreground hover:bg-muted/50 transition-colors">
+                    Annuler
+                  </motion.button>
+                  <motion.button whileTap={{ scale: 0.95 }} onClick={() => { resetPreferences(); setShowResetConfirm(false); }}
+                    className="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-orange-500/10 text-orange-400 border border-orange-500/20 hover:bg-orange-500/20 transition-colors">
+                    Réinitialiser
+                  </motion.button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <div className="h-4" />
       </div>
