@@ -841,7 +841,7 @@ export async function markAsPaid(paymentId: string) {
   const db = await ready();
   if (!db) return false;
   return (await db.query(
-    `UPDATE payments SET status = 'paid', paid_at = NOW() WHERE id = $1 AND status IN ('accepted', 'disputed')`,
+    `UPDATE payments SET status = 'paid', paid_at = NOW() WHERE id = $1 AND status IN ('pending', 'late', 'accepted', 'disputed')`,
     [paymentId]
   )).rowCount === 1;
 }
@@ -850,7 +850,7 @@ export async function confirmReceipt(paymentId: string) {
   const db = await ready();
   if (!db) return false;
   return (await db.query(
-    `UPDATE payments SET status = 'completed', confirmed_at = NOW(), responded_at = NOW() WHERE id = $1 AND status IN ('accepted', 'paid')`,
+    `UPDATE payments SET status = 'completed', confirmed_at = NOW(), responded_at = NOW() WHERE id = $1 AND status IN ('accepted', 'paid', 'disputed')`,
     [paymentId]
   )).rowCount === 1;
 }

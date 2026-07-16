@@ -50,6 +50,8 @@ export function ExpensesTab({
   onRequestPayment,
   onRequestGroupPayment,
   currency,
+  pendingPayments,
+  completedPayments,
 }: {
   expenses: Expense[];
   members: Member[];
@@ -68,6 +70,8 @@ export function ExpensesTab({
     note?: string
   ) => void;
   currency: string;
+  pendingPayments: Array<{ id: string; expenseId?: string; toId: string; fromId: string; amount: number; status: string }>;
+  completedPayments: Array<{ id: string; expenseId?: string; toId: string; fromId: string; amount: number; status: string }>;
 }) {
   const [search, setSearch] = useState("");
   const [modal, setModal] = useState<ModalState>({ type: null });
@@ -224,6 +228,20 @@ export function ExpensesTab({
                 exp.participants.length === 1 &&
                 otherParticipants.length === 1;
 
+              const expensePayments = pendingPayments.filter((p: { expenseId?: string }) => p.expenseId === exp.id);
+              const expenseCompletedPayments = completedPayments.filter((p: { expenseId?: string }) => p.expenseId === exp.id);
+              const totalParticipantsExceptPayer = exp.participants.filter(pid => pid !== exp.payerId).length;
+              const paidCount = expenseCompletedPayments.filter((p: { status: string }) =>
+                p.status === "completed" || p.status === "paid"
+              ).length;
+              const pendingCount = expensePayments.filter((p: { status: string }) =>
+                p.status === "pending" || p.status === "late" || p.status === "accepted"
+              ).length;
+              const refusedCount = expensePayments.filter((p: { status: string }) =>
+                p.status === "refused" || p.status === "disputed"
+              ).length;
+              const hasPayments = expensePayments.length > 0 || expenseCompletedPayments.length > 0;
+
               return (
                 <motion.div
                   key={exp.id}
@@ -268,6 +286,32 @@ export function ExpensesTab({
                       </span>
                     </span>
                   </div>
+
+                  {isPayer && totalParticipantsExceptPayer > 0 && (
+                    <div className="mb-2">
+                      {paidCount >= totalParticipantsExceptPayer ? (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 px-2.5 py-1 rounded-full">
+                          ✓ Tout payé
+                        </span>
+                      ) : hasPayments ? (
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-blue-500/10 text-blue-400 px-2.5 py-1 rounded-full">
+                            {paidCount}/{totalParticipantsExceptPayer} payé{paidCount > 1 ? "s" : ""}
+                          </span>
+                          {pendingCount > 0 && (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-amber-500/10 text-amber-400 px-2.5 py-1 rounded-full">
+                              {pendingCount} en attente
+                            </span>
+                          )}
+                          {refusedCount > 0 && (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-red-500/10 text-red-400 px-2.5 py-1 rounded-full">
+                              {refusedCount} refusé{refusedCount > 1 ? "s" : ""}
+                            </span>
+                          )}
+                        </div>
+                      ) : null}
+                    </div>
+                  )}
 
                   <div className="bg-background/30 rounded-xl p-3 space-y-2 mb-3">
                     <div className="flex items-center justify-between text-xs">

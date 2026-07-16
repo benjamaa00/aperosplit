@@ -61,6 +61,7 @@ interface PaymentRequestCardProps {
   onConfirmReceipt: (id: string) => void;
   onReportNotReceived: (id: string, comment?: string) => void;
   onMarkAsPaid: (id: string) => void;
+  cancelPaymentRequest?: (id: string) => void;
 }
 
 const BORDER_COLORS: Record<string, string> = {
@@ -127,6 +128,7 @@ export function PaymentRequestCard({
   onConfirmReceipt,
   onReportNotReceived,
   onMarkAsPaid,
+  cancelPaymentRequest,
 }: PaymentRequestCardProps) {
   const [showRefuseModal, setShowRefuseModal] = useState(false);
   const [refuseComment, setRefuseComment] = useState("");
@@ -294,52 +296,17 @@ export function PaymentRequestCard({
         )}
 
         <div className="flex gap-2 mt-3">
-          {payment.status === "pending" && (
+          {(payment.status === "pending" || payment.status === "late") && (
             <>
               {isToCurrentUser && (
                 <>
                   <motion.button
                     whileTap={{ scale: 0.95 }}
-                    onClick={() => onConfirmPayment(payment.id)}
+                    onClick={() => onMarkAsPaid(payment.id)}
                     className="flex-1 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors"
                   >
                     <Check size={13} />
-                    Accepter
-                  </motion.button>
-                  <motion.button
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => setShowRefuseModal(true)}
-                    className="flex-1 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition-colors"
-                  >
-                    <X size={13} />
-                    Refuser
-                  </motion.button>
-                </>
-              )}
-              {isFromCurrentUser && (
-                <motion.button
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => onResentPayment(payment.id)}
-                  className="flex-1 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 transition-colors"
-                >
-                  <Send size={13} />
-                  Rappeler
-                </motion.button>
-              )}
-            </>
-          )}
-
-          {payment.status === "late" && (
-            <>
-              {isToCurrentUser && (
-                <>
-                  <motion.button
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => onConfirmPayment(payment.id)}
-                    className="flex-1 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors"
-                  >
-                    <Check size={13} />
-                    Accepter
+                    J'ai payé
                   </motion.button>
                   <motion.button
                     whileTap={{ scale: 0.95 }}
@@ -358,7 +325,7 @@ export function PaymentRequestCard({
                   className="flex-1 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 transition-colors"
                 >
                   <RefreshCw size={13} />
-                  Rappeler ({attempts + 1}/3)
+                  Rappeler {payment.status === "late" && `(${attempts + 1}/3)`}
                 </motion.button>
               )}
             </>
@@ -376,6 +343,27 @@ export function PaymentRequestCard({
           )}
 
           {payment.status === "accepted" && isFromCurrentUser && (
+            <>
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                onClick={() => onConfirmReceipt(payment.id)}
+                className="flex-1 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors"
+              >
+                <Check size={13} />
+                J'ai reçu
+              </motion.button>
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setShowNotReceivedModal(true)}
+                className="flex-1 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition-colors"
+              >
+                <AlertTriangle size={13} />
+                Pas reçu
+              </motion.button>
+            </>
+          )}
+
+          {payment.status === "paid" && isFromCurrentUser && (
             <>
               <motion.button
                 whileTap={{ scale: 0.95 }}
