@@ -271,6 +271,20 @@ export const equilibraRouter = router({
       return { success };
     }),
 
+  sendReminder: groupProcedure
+    .input(z.object({ paymentId: z.string(), toId: z.string(), toName: z.string(), fromName: z.string(), amount: z.number() }))
+    .mutation(async ({ input }) => {
+      const success = await resendPaymentRequest(input.paymentId);
+      if (success) {
+        await addNotification(input.toId, GROUP_ID, "payment_reminder",
+          "Rappel de paiement",
+          `${input.fromName} vous envoie un rappel pour ${input.amount.toFixed(2)} €`,
+          { paymentId: input.paymentId }
+        );
+      }
+      return { success };
+    }),
+
   markAsPaid: groupProcedure
     .input(z.object({ paymentId: z.string(), fromId: z.string() }))
     .mutation(async ({ input }) => {
@@ -314,16 +328,31 @@ export const equilibraRouter = router({
     }),
 
   disputePayment: groupProcedure
-    .input(z.object({ paymentId: z.string(), note: z.string().min(1).max(500) }))
+    .input(z.object({ paymentId: z.string(), note: z.string().min(1).max(500), fromId: z.string().optional() }))
     .mutation(async ({ input }) => {
       const success = await disputePayment(input.paymentId, input.note);
+      if (success && input.fromId) {
+        await addNotification(input.fromId, GROUP_ID, "payment_disputed",
+          "Litige ouvert",
+          `Un litige a été ouvert : ${input.note}`,
+          { paymentId: input.paymentId }
+        );
+      }
       return { success };
     }),
 
   addPaymentComment: groupProcedure
-    .input(z.object({ paymentId: z.string(), memberId: z.string(), memberName: z.string(), content: z.string().min(1).max(500) }))
+    .input(z.object({ paymentId: z.string(), memberId: z.string(), memberName: z.string(), content: z.string().min(1).max(500), fromId: z.string().optional(), toId: z.string().optional() }))
     .mutation(async ({ input }) => {
       const comment = await dbAddPaymentComment(input.paymentId, input.memberId, input.memberName, input.content);
+      if (input.fromId && input.toId) {
+        const notifyId = input.fromId === input.memberId ? input.toId : input.fromId;
+        await addNotification(notifyId, GROUP_ID, "payment_comment",
+          "Nouveau commentaire",
+          `${input.memberName} a commenté sur un paiement`,
+          { paymentId: input.paymentId }
+        );
+      }
       return { comment };
     }),
 

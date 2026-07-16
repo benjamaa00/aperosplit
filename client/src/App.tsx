@@ -99,6 +99,7 @@ export default function App() {
   const reportNotReceivedMutation = trpc.equilibra.reportNotReceived.useMutation();
   const resendPaymentRequestMutation = trpc.equilibra.resendPaymentRequest.useMutation();
   const markAsPaidMutation = trpc.equilibra.markAsPaid.useMutation();
+  const updateNotificationSettingsMutation = trpc.equilibra.updateNotificationSettings.useMutation();
 
   const { data: groupData, refetch } = trpc.equilibra.getGroupData.useQuery(undefined, { enabled: !isNetlify, refetchInterval: 10000, retry: 2, refetchOnWindowFocus: true });
   const getNotificationsQuery = trpc.equilibra.getNotifications.useQuery({ memberId: currentMemberId }, { enabled: !!currentMemberId && !isNetlify, refetchInterval: 5000 });
@@ -112,6 +113,16 @@ export default function App() {
       return () => { document.removeEventListener("click", handler); document.removeEventListener("touchstart", handler); };
     }
   }, [notificationPermission, requestPermission]);
+
+  // ─── Sync notification settings to server ─────────────────
+  useEffect(() => {
+    if (isNetlify || !currentMemberId) return;
+    updateNotificationSettingsMutation.mutate({
+      memberId: currentMemberId,
+      pushEnabled: pushNotifications,
+      reminderFrequency: reminderDelay + "h",
+    });
+  }, [pushNotifications, reminderDelay, autoReminders, currentMemberId, isNetlify, updateNotificationSettingsMutation]);
 
   useEffect(() => { checkBiometricAvailable().then(setBiometricAvailable); }, []);
 
@@ -207,6 +218,39 @@ export default function App() {
     return () => clearInterval(interval);
   }, [isNetlify, groupData]);
 
+  // ─── Auto-Reminder System ─────────────────────────────────
+  useEffect(() => {
+    if (!autoReminders || isNetlify) return;
+    const intervalMs = reminderDelay * 60 * 60 * 1000; // reminderDelay is in hours
+    const interval = setInterval(() => {
+      if (!currentMemberId) return;
+      const now = Date.now();
+      pendingPayments.forEach((p) => {
+        if (p.fromId === currentMemberId && p.status === "pending") {
+          const elapsed = now - (p.createdAt || 0);
+          if (elapsed >= intervalMs) {
+            resendPaymentRequestMutation.mutateAsync({
+              paymentId: p.id,
+              toId: p.toId,
+              amount: p.amount,
+            }).catch(() => {});
+          }
+        }
+      });
+    }, Math.min(intervalMs, 60000)); // Check every minute (or at the delay interval if shorter)
+    return () => clearInterval(interval);
+  }, [autoReminders, reminderDelay, isNetlify, currentMemberId, pendingPayments, resendPaymentRequestMutation]);
+
+  // ─── Refetch on window focus ──────────────────────────────
+  useEffect(() => {
+    if (isNetlify) return;
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") refetch();
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
+  }, [isNetlify, refetch]);
+
   // ─── Computed ──────────────────────────────────────────────
   const balances = useMemo(() => {
     const b: Record<string, number> = {};
@@ -286,67 +330,68 @@ export default function App() {
 
   const requestPayment = useCallback(async (toId: string, amount: number, expenseId?: string, note?: string) => {
     if (!currentMemberId) return;
-    haptic("light");
+    haptic("success");
+    const toName = members.find((m) => m.id === toId)?.name || "";
     const payment: PendingPayment = {
       id: Date.now().toString(), fromId: currentMemberId, fromName: members.find((m) => m.id === currentMemberId)?.name || "",
-      toId, toName: members.find((m) => m.id === toId)?.name || "", amount, status: "pending",
+      toId, toName, amount, status: "pending",
       createdAt: Date.now(), notificationSent: false, notificationCount: 0, expenseId, requestNote: note,
     };
     setPendingPayments((prev) => [...prev, payment]);
-    showNotification("Demande envoyée", `Demande de ${formatCurrency(amount)} envoyée`);
-    if (!isNetlify) { try { await requestPaymentMutation.mutateAsync({ ...payment, groupId: GROUP_ID }); await refetch(); } catch {} }
+    showNotification("Demande envoyée", `Demande de ${formatCurrency(amount)} à ${toName}`);
+    toast.success(`Demande de ${formatCurrency(amount)} envoyée à ${toName}`);
+    if (!isNetlify) { try { await requestPaymentMutation.mutateAsync({ ...payment, groupId: GROUP_ID }); await refetch(); } catch (e) { toast.error("Erreur lors de l'envoi de la demande"); } }
   }, [currentMemberId, members, haptic, pendingPayments, requestPaymentMutation, refetch, showNotification, isNetlify]);
 
-  const requestGroupPayment = useCallback((expenseId: string, participantIds?: string[], note?: string) => {
+  const requestGroupPayment = useCallback(async (expenseId: string, participantIds?: string[], note?: string) => {
     const expense = expenses.find((e) => e.id === expenseId);
     if (!expense) return;
     const ids = participantIds || expense.participants.filter((p) => p !== currentMemberId);
     const perPerson = expense.amount / expense.participants.length;
-    ids.forEach((pid) => requestPayment(pid, perPerson, expenseId, note));
-  }, [expenses, currentMemberId, requestPayment]);
+    haptic("success");
+    const promises = ids.map((pid) => requestPayment(pid, perPerson, expenseId, note));
+    await Promise.all(promises);
+    toast.success(`${ids.length} demande(s) envoyée(s) pour ${expense.description}`);
+  }, [expenses, currentMemberId, requestPayment, haptic]);
 
   const confirmPayment = useCallback((id: string) => {
     haptic("success");
+    const payment = pendingPayments.find((p) => p.id === id);
     setPendingPayments((prev) => prev.map((p) => p.id === id ? { ...p, status: "accepted" as const, respondedAt: Date.now() } : p));
-    if (!isNetlify) {
-      const payment = pendingPayments.find((p) => p.id === id);
-      if (payment) {
-        confirmPaymentMutation.mutateAsync({ paymentId: id, fromId: payment.fromId, toId: payment.toId, amount: payment.amount })
-          .then(() => refetch())
-          .catch(() => {});
-      }
+    if (payment) toast.success(`Paiement de ${formatCurrency(payment.amount)} accepté`);
+    if (!isNetlify && payment) {
+      confirmPaymentMutation.mutateAsync({ paymentId: id, fromId: payment.fromId, toId: payment.toId, amount: payment.amount })
+        .then(() => refetch())
+        .catch(() => {});
     }
   }, [haptic, isNetlify, pendingPayments, confirmPaymentMutation, refetch]);
 
   const refusePayment = useCallback((id: string, comment?: string) => {
     haptic("medium");
+    const payment = pendingPayments.find((p) => p.id === id);
     setPendingPayments((prev) => prev.map((p) => p.id === id ? { ...p, status: "refused" as const, respondedAt: Date.now(), comment } : p));
-    showNotification("Paiement refusé", "La demande a été refusée");
-    if (!isNetlify) {
-      const payment = pendingPayments.find((p) => p.id === id);
-      if (payment) {
-        refusePaymentMutation.mutateAsync({ paymentId: id, fromId: payment.fromId, comment })
-          .then(() => refetch())
-          .catch(() => {});
-      }
+    if (payment) toast.info(`Paiement de ${formatCurrency(payment.amount)} refusé`);
+    if (!isNetlify && payment) {
+      refusePaymentMutation.mutateAsync({ paymentId: id, fromId: payment.fromId, comment })
+        .then(() => refetch())
+        .catch(() => {});
     }
-  }, [haptic, showNotification, isNetlify, pendingPayments, refusePaymentMutation, refetch]);
+  }, [haptic, isNetlify, pendingPayments, refusePaymentMutation, refetch]);
 
   const resentPayment = useCallback((id: string) => {
     haptic("light");
+    const payment = pendingPayments.find((p) => p.id === id);
     setPendingPayments((prev) => prev.map((p) => {
       if (p.id !== id) return p;
       const attempts = (p.attemptCount || 0) + 1;
-      if (attempts >= 3) return { ...p, status: "late" as const, attemptCount: attempts, notificationCount: p.notificationCount + 1 };
-      return { ...p, notificationCount: p.notificationCount + 1, attemptCount: attempts, status: p.status === "pending" ? "late" as const : p.status };
+      if (attempts >= 3) return { ...p, status: "late" as const, attemptCount: attempts, notificationCount: (p.notificationCount || 0) + 1 };
+      return { ...p, notificationCount: (p.notificationCount || 0) + 1, attemptCount: attempts };
     }));
-    if (!isNetlify) {
-      const payment = pendingPayments.find((p) => p.id === id);
-      if (payment) {
-        resendPaymentRequestMutation.mutateAsync({ paymentId: id, toId: payment.toId, amount: payment.amount })
-          .then(() => refetch())
-          .catch(() => {});
-      }
+    if (payment) toast.success(`Rappel envoyé à ${payment.toName}`);
+    if (!isNetlify && payment) {
+      resendPaymentRequestMutation.mutateAsync({ paymentId: id, toId: payment.toId, amount: payment.amount })
+        .then(() => refetch())
+        .catch(() => {});
     }
   }, [haptic, isNetlify, pendingPayments, resendPaymentRequestMutation, refetch]);
 
@@ -356,44 +401,38 @@ export default function App() {
     if (payment) {
       setCompletedPayments((prev) => [...prev, { ...payment, status: "completed" as const, completedAt: Date.now() }]);
       setPendingPayments((prev) => prev.filter((p) => p.id !== id));
+      toast.success(`Paiement de ${formatCurrency(payment.amount)} confirmé comme reçu`);
     }
-    if (!isNetlify) {
-      const payment = pendingPayments.find((p) => p.id === id);
-      if (payment) {
-        confirmReceiptMutation.mutateAsync({ paymentId: id, toId: payment.toId })
-          .then(() => refetch())
-          .catch(() => {});
-      }
+    if (!isNetlify && payment) {
+      confirmReceiptMutation.mutateAsync({ paymentId: id, toId: payment.toId })
+        .then(() => refetch())
+        .catch(() => {});
     }
   }, [haptic, pendingPayments, confirmReceiptMutation, refetch, isNetlify]);
 
   const reportNotReceived = useCallback((id: string, comment?: string) => {
     haptic("medium");
+    const payment = pendingPayments.find((p) => p.id === id);
     setPendingPayments((prev) => prev.map((p) => p.id === id ? { ...p, status: "disputed" as const, disputeNote: comment } : p));
-    showNotification("Litige ouvert", "Le paiement est en litige");
-    if (!isNetlify) {
-      const payment = pendingPayments.find((p) => p.id === id);
-      if (payment && comment) {
-        reportNotReceivedMutation.mutateAsync({ paymentId: id, note: comment, toId: payment.toId })
-          .then(() => refetch())
-          .catch(() => {});
-      }
+    if (payment) toast.error(`Litige ouvert pour ${formatCurrency(payment.amount)}`);
+    if (!isNetlify && payment && comment) {
+      reportNotReceivedMutation.mutateAsync({ paymentId: id, note: comment, toId: payment.toId })
+        .then(() => refetch())
+        .catch(() => {});
     }
-  }, [haptic, showNotification, isNetlify, pendingPayments, reportNotReceivedMutation, refetch]);
+  }, [haptic, isNetlify, pendingPayments, reportNotReceivedMutation, refetch]);
 
   const markAsPaid = useCallback((id: string) => {
     haptic("success");
+    const payment = pendingPayments.find((p) => p.id === id);
     setPendingPayments((prev) => prev.map((p) => p.id === id ? { ...p, status: "paid" as const } : p));
-    showNotification("Paiement marqué", "Vous avez marqué le paiement comme effectué");
-    if (!isNetlify) {
-      const payment = pendingPayments.find((p) => p.id === id);
-      if (payment) {
-        markAsPaidMutation.mutateAsync({ paymentId: id, fromId: payment.fromId })
-          .then(() => refetch())
-          .catch(() => {});
-      }
+    if (payment) toast.success(`Paiement de ${formatCurrency(payment.amount)} marqué comme payé`);
+    if (!isNetlify && payment) {
+      markAsPaidMutation.mutateAsync({ paymentId: id, fromId: payment.fromId })
+        .then(() => refetch())
+        .catch(() => {});
     }
-  }, [haptic, showNotification, isNetlify, pendingPayments, markAsPaidMutation, refetch]);
+  }, [haptic, isNetlify, pendingPayments, markAsPaidMutation, refetch]);
 
   const handleRegister = useCallback(async (name: string, rawAvatar: string) => {
     const memberId = Date.now().toString();
@@ -480,7 +519,7 @@ export default function App() {
   }} onBack={() => setScreen("access")} /></AppShell>);
   if (screen === "lock" && currentMember) return themed(<AppShell><LockScreen member={currentMember} onUnlock={handleBiometricUnlock} onSkip={() => setScreen("main")} onSwitchIdentity={() => setScreen("identity")} /></AppShell>);
   if (screen === "notifications") return themed(<AppShell><NotificationsScreen notifications={notifications} currentMemberId={currentMemberId} onBack={() => setScreen("main")} onMarkRead={(id) => markNotificationReadMutation.mutate({ notificationId: id })} onMarkAllRead={() => markAllNotificationsReadMutation.mutate({ memberId: currentMemberId })} /></AppShell>);
-  if (screen === "notificationSettings") return themed(<AppShell><NotificationSettingsScreen settings={{ pushEnabled: pushNotifications, emailEnabled: false, reminderFrequency: reminderDelay.toString() + "h" }} onBack={() => setScreen("main")} onSave={(s) => { if (s.pushEnabled !== undefined) setPushNotifications(s.pushEnabled); }} /></AppShell>);
+  if (screen === "notificationSettings") return themed(<AppShell><NotificationSettingsScreen settings={{ pushEnabled: pushNotifications, emailEnabled: false, reminderFrequency: reminderDelay.toString() + "h" }} onBack={() => setScreen("main")} onSave={(s) => { if (s.pushEnabled !== undefined) setPushNotifications(s.pushEnabled); if (s.reminderFrequency) { const hours = parseInt(s.reminderFrequency); if (!isNaN(hours)) setReminderDelay(hours); } }} /></AppShell>);
   if (screen === "groupSettings" || screen === "settings") return themed(<AppShell><SettingsScreen monthlyBudget={monthlyBudget} onSetBudget={updateBudget} currency={currency} onSetCurrency={updateCurrency} autoReminders={autoReminders} onToggleReminders={() => setAutoReminders(!autoReminders)} privacyMode={privacyMode} onTogglePrivacy={() => setPrivacyMode(!privacyMode)} offlineMode={offlineMode} onToggleOffline={() => setOfflineMode(!offlineMode)} pushNotifications={pushNotifications} onTogglePushNotifications={() => setPushNotifications(!pushNotifications)} reminderDelay={reminderDelay} onSetReminderDelay={(d: number) => setReminderDelay(d)} onClearData={() => { Object.keys(localStorage).forEach(k => { if (k.startsWith("equilibra_")) localStorage.removeItem(k); }); window.location.reload(); }} biometricEnabled={!!biometricEnabled[currentMemberId]} onToggleBiometric={toggleBiometric} onBack={() => setScreen("main")} /></AppShell>);
   if (screen === "members") return themed(<AppShell><MemberManagement members={members} currentMemberId={currentMemberId} expenses={expenses} pendingRequests={pendingMembers.map(m => ({ id: `pending_${m.id}`, memberId: m.id, memberName: m.name, memberAvatar: m.avatar, requestedAt: 0 }))} onChangeRole={(id, role) => { setMembers((prev) => prev.map((m) => m.id === id ? { ...m, role } : m)); changeMemberRoleMutation.mutate({ memberId: id, role: role as "admin" | "member" }); }} onRemoveMember={removeMember} onAddMember={() => addMember("Nouveau", "👤")} onApproveMember={approveMember} onRefuseMember={refuseMemberCb} onBack={() => setScreen("main")} onUpdateGroupSettings={(settings) => { updateGroupSettingsMutation.mutate(settings); toast.success("Paramètres mis à jour"); }} onResetAllData={async () => { try { await resetAllDataMutation.mutateAsync(); setMembers([]); setExpenses([]); setPendingPayments([]); setCompletedPayments([]); setScreen("identity"); toast.success("Toutes les données ont été réinitialisées"); } catch { toast.error("Erreur lors de la réinitialisation"); } }} groupName="Équilibra Groupe" groupRequireApproval={requireApproval} /></AppShell>);
   if (screen === "appearance") return themed(<AppShell><AppearanceScreen onBack={() => setScreen("main")} /></AppShell>);
