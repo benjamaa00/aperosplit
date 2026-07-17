@@ -85,7 +85,7 @@ export function PaymentHistory({ payments, expenses, members, currentMemberId, c
       }
       if (search) {
         const q = search.toLowerCase();
-        return p.fromName.toLowerCase().includes(q) || p.toName.toLowerCase().includes(q);
+        return (p.fromName || "").toLowerCase().includes(q) || (p.toName || "").toLowerCase().includes(q);
       }
       return true;
     });
@@ -296,7 +296,7 @@ export function PaymentHistory({ payments, expenses, members, currentMemberId, c
                             <AvatarImg avatar={from.avatar} size="w-9 h-9 text-xs" />
                           ) : (
                             <div className="w-9 h-9 rounded-full bg-muted/40 flex items-center justify-center text-[11px] font-semibold text-muted-foreground">
-                              {p.fromName.charAt(0)}
+                              {(p.fromName || "?").charAt(0)}
                             </div>
                           )}
                           <ArrowUpRight size={12} className="text-muted-foreground/50" />
@@ -304,7 +304,7 @@ export function PaymentHistory({ payments, expenses, members, currentMemberId, c
                             <AvatarImg avatar={to.avatar} size="w-9 h-9 text-xs" />
                           ) : (
                             <div className="w-9 h-9 rounded-full bg-muted/40 flex items-center justify-center text-[11px] font-semibold text-muted-foreground">
-                              {p.toName.charAt(0)}
+                              {(p.toName || "?").charAt(0)}
                             </div>
                           )}
                         </div>
