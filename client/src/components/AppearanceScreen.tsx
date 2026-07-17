@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft, Moon, Sun, Palette, Sparkles, Image, Wand2,
@@ -47,6 +47,12 @@ export default function AppearanceScreen({ onBack }: AppearanceScreenProps) {
     palette, setPalette,
     resetPreferences,
   } = useThemeContext();
+
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (scrollRef.current) scrollRef.current.scrollTop = 0;
+  }, []);
 
   const [previewMode, setPreviewMode] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
@@ -144,10 +150,11 @@ export default function AppearanceScreen({ onBack }: AppearanceScreenProps) {
 
   return (
     <motion.div
+      ref={scrollRef}
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, ease: [0.23, 1, 0.32, 1] }}
-      className="h-full overflow-y-auto overflow-x-hidden scrollbar-hide overscroll-contain"
+      className="h-[100dvh] overflow-y-auto overflow-x-hidden scrollbar-hide"
       style={{ WebkitOverflowScrolling: "touch" }}
     >
       <div className="max-w-md mx-auto px-4 pt-10 pb-24 space-y-3.5">
