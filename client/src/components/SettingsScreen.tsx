@@ -86,7 +86,7 @@ export function SettingsScreen({
     <motion.div {...fadeSlide} className="space-y-6">
       <SectionHeader icon={Palette} title="Apparence" color="#a78bfa" />
 
-      <div className="glass-card-enhanced rounded-[1.5rem] p-5 space-y-4">
+      <div className="glass-card-enhanced rounded-[1.25rem] p-5 space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             {theme === "dark" ? <Moon size={20} className="text-blue-400" /> : <Sun size={20} className="text-amber-400" />}
@@ -153,7 +153,7 @@ export function SettingsScreen({
         </div>
       </div>
 
-      <div className="glass-card-enhanced rounded-[1.5rem] p-5 space-y-3">
+      <div className="glass-card-enhanced rounded-[1.25rem] p-5 space-y-3">
         <div className="flex items-center justify-between">
           <p className="text-sm font-semibold">Arrondi des coins</p>
           <span className="text-xs font-bold text-primary">{borderRadius.toFixed(1)}rem</span>
@@ -166,7 +166,7 @@ export function SettingsScreen({
         </div>
       </div>
 
-      <div className="glass-card-enhanced rounded-[1.5rem] p-5 space-y-3">
+      <div className="glass-card-enhanced rounded-[1.25rem] p-5 space-y-3">
         <div className="flex items-center justify-between">
           <p className="text-sm font-semibold">Flou des cartes</p>
           <span className="text-xs font-bold text-primary">{cardBlur}px</span>
@@ -179,7 +179,7 @@ export function SettingsScreen({
         </div>
       </div>
 
-      <div className="glass-card-enhanced rounded-[1.5rem] p-5 space-y-3">
+      <div className="glass-card-enhanced rounded-[1.25rem] p-5 space-y-3">
         <div className="flex items-center justify-between">
           <p className="text-sm font-semibold">Taille du texte</p>
           <span className="text-xs font-bold text-primary">{(fontScale * 100).toFixed(0)}%</span>
@@ -205,7 +205,7 @@ export function SettingsScreen({
     return (
       <motion.div {...fadeSlide} className="space-y-6">
         <SectionHeader icon={DollarSign} title="Budget & Devise" color="#fbbf24" />
-        <div className="glass-card-enhanced rounded-[1.5rem] p-5 space-y-4">
+        <div className="glass-card-enhanced rounded-[1.25rem] p-5 space-y-4">
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Budget mensuel du groupe</p>
           <div className="relative">
             <input type="number" inputMode="decimal" value={budgetInput} onChange={e => setBudgetInput(e.target.value)}
@@ -226,7 +226,7 @@ export function SettingsScreen({
           </motion.button>
         </div>
 
-        <div className="glass-card-enhanced rounded-[1.5rem] p-5 space-y-3">
+        <div className="glass-card-enhanced rounded-[1.25rem] p-5 space-y-3">
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Devise</p>
           <div className="grid grid-cols-3 gap-2">
             {[{ code: "MAD", label: "Dirham (MAD)", flag: "🇲🇦" }, { code: "EUR", label: "Euro (EUR)", flag: "🇪🇺" }, { code: "USD", label: "Dollar (USD)", flag: "🇺🇸" }].map(c => (
@@ -245,7 +245,7 @@ export function SettingsScreen({
   const NotificationsSection = () => (
     <motion.div {...fadeSlide} className="space-y-6">
       <SectionHeader icon={Bell} title="Notifications" color="#f472b6" />
-      <div className="glass-card-enhanced rounded-[1.5rem] p-5 space-y-4">
+      <div className="glass-card-enhanced rounded-[1.25rem] p-5 space-y-4">
         <SettingRow icon={Bell} label="Notifications push" description="Recevoir des alertes même hors de l'app"
           action={<Toggle enabled={pushNotifications} onToggle={onTogglePushNotifications} />} />
         <div className="h-px bg-muted/30" />
@@ -264,7 +264,7 @@ export function SettingsScreen({
             onClick={() => setShowDelayPicker(false)}>
             <motion.div initial={{ y: 200 }} animate={{ y: 0 }} exit={{ y: 200 }}
               onClick={e => e.stopPropagation()}
-              className="w-full max-w-md bg-card border border-border rounded-[1.5rem] p-5 shadow-2xl">
+              className="w-full max-w-md bg-card border border-border rounded-[1.25rem] p-5 shadow-2xl">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-base font-bold">Délai de rappel</h3>
                 <button onClick={() => setShowDelayPicker(false)} className="w-8 h-8 rounded-full bg-muted/30 flex items-center justify-center">
@@ -291,7 +291,7 @@ export function SettingsScreen({
   const PrivacySection = () => (
     <motion.div {...fadeSlide} className="space-y-6">
       <SectionHeader icon={Shield} title="Confidentialité" color="#10b981" />
-      <div className="glass-card-enhanced rounded-[1.5rem] p-5 space-y-4">
+      <div className="glass-card-enhanced rounded-[1.25rem] p-5 space-y-4">
         <SettingRow icon={EyeOff} label="Mode privé" description="Masquer les montants des autres"
           action={<Toggle enabled={privacyMode} onToggle={onTogglePrivacy} />} />
         <div className="h-px bg-muted/30" />
@@ -313,7 +313,7 @@ export function SettingsScreen({
             onClick={() => setShowClearConfirm(false)}>
             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
               onClick={e => e.stopPropagation()}
-              className="w-full max-w-sm bg-card border border-border rounded-[1.5rem] p-6 shadow-2xl">
+              className="w-full max-w-sm bg-card border border-border rounded-[1.25rem] p-6 shadow-2xl">
               <div className="w-14 h-14 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto mb-4">
                 <AlertTriangle size={24} className="text-red-400" />
               </div>

@@ -126,7 +126,7 @@ export function HomeTab({
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="bg-card/50 backdrop-blur-sm border border-border rounded-2xl p-4"
+        className="glass-card-enhanced rounded-[1.25rem] p-4"
       >
         <div className="flex items-center justify-between mb-3">
           <div>
@@ -176,7 +176,7 @@ export function HomeTab({
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15 }}
-          className="bg-card/50 backdrop-blur-sm border border-border rounded-2xl p-4"
+          className="glass-card-enhanced rounded-[1.25rem] p-4"
         >
           <h3 className="text-sm font-semibold mb-3">Détail des comptes</h3>
           
@@ -244,7 +244,7 @@ export function HomeTab({
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="bg-card/50 backdrop-blur-sm border border-border rounded-2xl p-4"
+          className="glass-card-enhanced rounded-[1.25rem] p-4"
         >
           <p className="text-[11px] text-muted-foreground mb-1 font-medium uppercase tracking-wide">Total dépensé</p>
           <p className="text-xl font-bold">{formatCurrency(totalSpent)}</p>
@@ -253,7 +253,7 @@ export function HomeTab({
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.25 }}
-          className="bg-card/50 backdrop-blur-sm border border-border rounded-2xl p-4"
+          className="glass-card-enhanced rounded-[1.25rem] p-4"
         >
           <p className="text-[11px] text-muted-foreground mb-1 font-medium uppercase tracking-wide">Dépenses</p>
           <p className="text-xl font-bold">{expenseCount}</p>
@@ -348,7 +348,7 @@ export function HomeTab({
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.04 }}
-                  className="bg-card/50 backdrop-blur-sm border border-border rounded-2xl p-4 flex items-center gap-3"
+                  className="glass-card-enhanced rounded-[1.25rem] p-4 flex items-center gap-3"
                 >
                   <div className="w-11 h-11 rounded-2xl bg-secondary/50 flex items-center justify-center text-lg">
                     {exp.categoryEmoji}
@@ -379,6 +379,8 @@ export function HomeTab({
         confirmLabel="Enregistrer"
         type="number"
       />
+
+      <div className="h-8" />
     </>
   );
 }

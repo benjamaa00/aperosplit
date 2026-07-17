@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { AvatarImg } from "./AvatarImg";
+import { formatCurrency } from "../utils/currency";
 
 interface Member {
   id: string;
@@ -70,7 +71,7 @@ function SettingsTab({ groupName, requireApproval, onUpdateSettings, onResetAllD
       <h3 className="text-sm font-semibold text-muted-foreground">Paramètres du groupe</h3>
 
       {/* Group Name */}
-      <div className="glass-card-enhanced rounded-2xl p-4 space-y-3">
+      <div className="glass-card-enhanced rounded-[1.25rem] p-4 space-y-3">
         <label className="text-xs font-semibold text-muted-foreground">Nom du groupe</label>
         <input type="text" value={name} onChange={e => setName(e.target.value)}
           className="w-full px-4 py-3 rounded-xl bg-background/50 border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
@@ -82,7 +83,7 @@ function SettingsTab({ groupName, requireApproval, onUpdateSettings, onResetAllD
       </div>
 
       {/* Approval Toggle */}
-      <div className="glass-card-enhanced rounded-2xl p-4">
+      <div className="glass-card-enhanced rounded-[1.25rem] p-4">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm font-semibold">Approbation requise</p>
@@ -122,7 +123,7 @@ function SettingsTab({ groupName, requireApproval, onUpdateSettings, onResetAllD
             onClick={() => setShowResetConfirm(false)}>
             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
               onClick={e => e.stopPropagation()}
-              className="glass-card-enhanced rounded-[2rem] p-6 w-full max-w-sm shadow-2xl">
+              className="glass-card-enhanced rounded-[1.25rem] p-6 w-full max-w-sm shadow-2xl">
               <div className="w-14 h-14 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto mb-4">
                 <AlertTriangle size={24} className="text-red-400" />
               </div>
@@ -191,7 +192,7 @@ export function MemberManagement({
     } else { handleCopyInvite(); }
   };
 
-  const fmt = (amount: number) => new Intl.NumberFormat("fr-MA", { style: "currency", currency: "MAD", minimumFractionDigits: 2 }).format(amount);
+  const fmt = formatCurrency;
 
   const selectedMember = useMemo(() => members.find(m => m.id === selectedMemberId), [members, selectedMemberId]);
 
@@ -232,7 +233,7 @@ export function MemberManagement({
         </div>
 
         {/* Member Header */}
-        <div className="glass-card-enhanced rounded-[2rem] p-6 text-center relative overflow-hidden">
+        <div className="glass-card-enhanced rounded-[1.25rem] p-6 text-center relative overflow-hidden">
           <div className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-white/60 to-transparent" />
           <motion.div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border-2 border-primary/30 mx-auto shadow-xl shadow-primary/10"
             whileHover={{ scale: 1.05, rotate: [0, -3, 3, 0] }}>
@@ -251,19 +252,19 @@ export function MemberManagement({
 
         {/* Stats */}
         <div className="grid grid-cols-2 gap-3">
-          <div className="glass-card-enhanced rounded-2xl p-4 text-center">
+          <div className="glass-card-enhanced rounded-[1.25rem] p-4 text-center">
             <p className="text-xl font-bold">{memberStats?.expenseCount || 0}</p>
             <p className="text-[10px] text-muted-foreground mt-1">Dépenses créées</p>
           </div>
-          <div className="glass-card-enhanced rounded-2xl p-4 text-center">
+          <div className="glass-card-enhanced rounded-[1.25rem] p-4 text-center">
             <p className="text-xl font-bold text-primary">{fmt(memberStats?.totalPaid || 0)}</p>
             <p className="text-[10px] text-muted-foreground mt-1">Total payé</p>
           </div>
-          <div className="glass-card-enhanced rounded-2xl p-4 text-center">
+          <div className="glass-card-enhanced rounded-[1.25rem] p-4 text-center">
             <p className="text-xl font-bold">{memberStats?.involvedCount || 0}</p>
             <p className="text-[10px] text-muted-foreground mt-1">Participations</p>
           </div>
-          <div className="glass-card-enhanced rounded-2xl p-4 text-center">
+          <div className="glass-card-enhanced rounded-[1.25rem] p-4 text-center">
             <p className="text-xl font-bold text-orange-400">{fmt(memberStats?.totalOwed || 0)}</p>
             <p className="text-[10px] text-muted-foreground mt-1">Part à payer</p>
           </div>
@@ -278,7 +279,7 @@ export function MemberManagement({
             <div className="space-y-2">
               {memberRecentExpenses.map((e, i) => (
                 <motion.div key={e.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}
-                  className="glass-card-enhanced rounded-2xl p-4 flex items-center gap-3">
+                  className="glass-card-enhanced rounded-[1.25rem] p-4 flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-muted/30 flex items-center justify-center text-lg">{e.categoryEmoji}</div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{e.description}</p>
@@ -371,7 +372,7 @@ export function MemberManagement({
                 <div className="space-y-2">
                   {filtered.map((member, i) => (
                     <motion.div key={member.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}>
-                      <div className="glass-card-enhanced rounded-2xl p-4 flex items-center gap-3 relative">
+                      <div className="glass-card-enhanced rounded-[1.25rem] p-4 flex items-center gap-3 relative">
                         <motion.div whileHover={{ scale: 1.1 }}
                           className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary/15 to-primary/5 flex items-center justify-center border border-primary/20 shadow-md shadow-primary/5">
                           <AvatarImg avatar={member.avatar} size="text-2xl" />
@@ -439,7 +440,7 @@ export function MemberManagement({
                 ) : (
                   pendingRequests.map((req, i) => (
                     <motion.div key={req.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
-                      className="glass-card-enhanced rounded-2xl p-4 flex items-center gap-3">
+                      className="glass-card-enhanced rounded-[1.25rem] p-4 flex items-center gap-3">
                       <AvatarImg avatar={req.memberAvatar} size="text-2xl" />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold">{req.memberName}</p>
@@ -483,7 +484,7 @@ export function MemberManagement({
             onClick={() => setShowConfirmExpel(null)}>
             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
               onClick={e => e.stopPropagation()}
-              className="glass-card-enhanced rounded-[2rem] p-6 w-full max-w-sm shadow-2xl">
+              className="glass-card-enhanced rounded-[1.25rem] p-6 w-full max-w-sm shadow-2xl">
               <div className="w-14 h-14 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto mb-4">
                 <AlertTriangle size={24} className="text-red-400" />
               </div>
@@ -515,7 +516,7 @@ export function MemberManagement({
             onClick={() => setShowInvite(false)}>
             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
               onClick={e => e.stopPropagation()}
-              className="glass-card-enhanced rounded-[2rem] p-6 w-full max-w-sm shadow-2xl">
+              className="glass-card-enhanced rounded-[1.25rem] p-6 w-full max-w-sm shadow-2xl">
               <div className="w-14 h-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center mx-auto mb-4">
                 <UserPlus size={24} className="text-primary" />
               </div>

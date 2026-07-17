@@ -92,14 +92,14 @@ export default function AppearanceScreen({ onBack }: AppearanceScreenProps) {
     <motion.button
       whileTap={{ scale: 0.95 }}
       onClick={onToggle}
-      className={`w-[52px] h-[30px] rounded-full transition-colors duration-300 relative flex-shrink-0 ${
+      className={`w-[52px] h-8 rounded-full transition-colors duration-300 relative flex-shrink-0 ${
         enabled ? "bg-primary" : "bg-secondary"
       }`}
     >
       <motion.div
-        animate={{ x: enabled ? 23 : 3 }}
+        animate={{ x: enabled ? 22 : 3 }}
         transition={spring}
-        className="absolute top-[3px] w-[24px] h-[24px] rounded-full bg-white shadow-md"
+        className="absolute top-1 w-6 h-6 rounded-full bg-white shadow-md"
       />
     </motion.button>
   );
@@ -143,9 +143,9 @@ export default function AppearanceScreen({ onBack }: AppearanceScreenProps) {
   );
 
   const SectionCard = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
-    <motion.div layout transition={smooth} className={`glass-card-enhanced rounded-[1.25rem] p-4 ${className}`}>
+    <div className={`glass-card-enhanced rounded-[1.25rem] p-4 ${className}`}>
       {children}
-    </motion.div>
+    </div>
   );
 
   return (
@@ -157,18 +157,18 @@ export default function AppearanceScreen({ onBack }: AppearanceScreenProps) {
       className="h-[100dvh] overflow-y-auto overflow-x-hidden scrollbar-hide"
       style={{ WebkitOverflowScrolling: "touch" }}
     >
-      <div className="max-w-md mx-auto px-4 pt-10 pb-24 space-y-3.5">
+      <div className="max-w-md mx-auto px-5 pt-12 space-y-5">
 
         {/* ── Header ──────────────────────────────────────────── */}
-        <div className="flex items-center gap-2.5 mb-1">
+        <div className="flex items-center gap-3 mb-1">
           <motion.button
             whileTap={{ scale: 0.88 }}
             onClick={onBack}
-            className="w-9 h-9 rounded-xl bg-card/40 border border-border/50 flex items-center justify-center"
+            className="w-10 h-10 rounded-2xl bg-card/30 border border-border flex items-center justify-center"
           >
-            <ArrowLeft size={18} />
+            <ArrowLeft size={20} />
           </motion.button>
-          <h1 className="text-[22px] font-bold tracking-tight flex-1">Apparence</h1>
+          <h1 className="text-2xl font-bold tracking-tight flex-1">Apparence</h1>
           <motion.button
             whileTap={{ scale: 0.88 }}
             onClick={() => setPreviewMode(!previewMode)}
@@ -544,7 +544,7 @@ export default function AppearanceScreen({ onBack }: AppearanceScreenProps) {
         {/* ── Aperçu en direct ────────────────────────────────── */}
         <SectionCard>
           <SectionHeader icon={Eye} title="Aperçu en direct" />
-          <motion.div layout transition={spring} className="rounded-[16px] overflow-hidden border border-border/40 shadow-lg"
+          <motion.div transition={spring} className="rounded-[16px] overflow-hidden border border-border/40 shadow-lg"
             style={{ borderRadius: `${borderRadius}rem` }}>
             {/* Header */}
             <div className="px-4 py-3 flex items-center justify-between" 
@@ -625,7 +625,7 @@ export default function AppearanceScreen({ onBack }: AppearanceScreenProps) {
           )}
         </AnimatePresence>
 
-        <div className="h-4" />
+        <div className="h-8" />
       </div>
     </motion.div>
   );

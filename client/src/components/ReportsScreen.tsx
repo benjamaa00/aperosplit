@@ -10,6 +10,7 @@ import {
   LineChart, Line, ResponsiveContainer, Tooltip as RechartsTooltip,
 } from "recharts";
 import { AvatarImg } from "./AvatarImg";
+import { formatCurrency } from "../utils/currency";
 
 interface Expense {
   id: string;
@@ -57,7 +58,7 @@ export function ReportsScreen({ expenses, members, pendingPayments, completedPay
   const [period, setPeriod] = useState<Period>("month");
   const [view, setView] = useState<ReportView>("summary");
 
-  const fmt = (amount: number) => new Intl.NumberFormat("fr-MA", { style: "currency", currency: "MAD", minimumFractionDigits: 2 }).format(amount);
+  const fmt = formatCurrency;
 
   const periodStart = useMemo(() => {
     const d = new Date();
@@ -207,11 +208,11 @@ export function ReportsScreen({ expenses, members, pendingPayments, completedPay
           <motion.div key="summary" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-4">
             {/* Top Stats */}
             <div className="grid grid-cols-2 gap-3">
-              <div className="glass-card-enhanced rounded-[1.5rem] p-4">
+              <div className="glass-card-enhanced rounded-[1.25rem] p-4">
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">Total dépensé</p>
                 <p className="text-xl font-bold mt-1">{fmt(total)}</p>
               </div>
-              <div className="glass-card-enhanced rounded-[1.5rem] p-4">
+              <div className="glass-card-enhanced rounded-[1.25rem] p-4">
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">Moyenne</p>
                 <p className="text-xl font-bold mt-1">{fmt(avg)}</p>
               </div>
@@ -234,7 +235,7 @@ export function ReportsScreen({ expenses, members, pendingPayments, completedPay
 
             {/* Top Category */}
             {topCategory && (
-              <div className="glass-card-enhanced rounded-[1.5rem] p-5 flex items-center gap-4">
+              <div className="glass-card-enhanced rounded-[1.25rem] p-5 flex items-center gap-4">
                 <span className="text-3xl">{topCategory.emoji}</span>
                 <div className="flex-1">
                   <p className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">Top catégorie</p>
@@ -249,7 +250,7 @@ export function ReportsScreen({ expenses, members, pendingPayments, completedPay
 
             {/* Top Spender */}
             {topSpender && topSpender.total > 0 && (
-              <div className="glass-card-enhanced rounded-[1.5rem] p-5 flex items-center gap-4">
+              <div className="glass-card-enhanced rounded-[1.25rem] p-5 flex items-center gap-4">
                 <AvatarImg avatar={topSpender.avatar} size="text-3xl" />
                 <div className="flex-1">
                   <p className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">Top dépensier</p>
@@ -261,7 +262,7 @@ export function ReportsScreen({ expenses, members, pendingPayments, completedPay
 
             {/* Category Pie */}
             {categoryData.length > 0 && (
-              <div className="glass-card-enhanced rounded-[1.5rem] p-5">
+              <div className="glass-card-enhanced rounded-[1.25rem] p-5">
                 <h3 className="text-sm font-semibold mb-4">Répartition par catégorie</h3>
                 <div className="h-48">
                   <ResponsiveContainer width="100%" height="100%">
@@ -292,7 +293,7 @@ export function ReportsScreen({ expenses, members, pendingPayments, completedPay
         {view === "comparison" && (
           <motion.div key="comparison" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-4">
             {/* Bar Chart */}
-            <div className="glass-card-enhanced rounded-[1.5rem] p-5">
+            <div className="glass-card-enhanced rounded-[1.25rem] p-5">
               <h3 className="text-sm font-semibold mb-4">Dépenses par membre</h3>
               <div className="h-52">
                 <ResponsiveContainer width="100%" height="100%">
@@ -311,7 +312,7 @@ export function ReportsScreen({ expenses, members, pendingPayments, completedPay
             </div>
 
             {/* Member List */}
-            <div className="glass-card-enhanced rounded-[1.5rem] overflow-hidden">
+            <div className="glass-card-enhanced rounded-[1.25rem] overflow-hidden">
               {memberData.map((m, i) => (
                 <div key={m.name} className={`flex items-center gap-3 p-4 ${i > 0 ? "border-t border-border" : ""}`}>
                   <AvatarImg avatar={m.avatar} size="text-xl" />
@@ -337,7 +338,7 @@ export function ReportsScreen({ expenses, members, pendingPayments, completedPay
         {/* Monthly View */}
         {view === "monthly" && (
           <motion.div key="monthly" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-4">
-            <div className="glass-card-enhanced rounded-[1.5rem] p-5">
+            <div className="glass-card-enhanced rounded-[1.25rem] p-5">
               <h3 className="text-sm font-semibold mb-4">Historique mensuel</h3>
               <div className="h-52">
                 <ResponsiveContainer width="100%" height="100%">
@@ -354,7 +355,7 @@ export function ReportsScreen({ expenses, members, pendingPayments, completedPay
             </div>
 
             {/* Monthly List */}
-            <div className="glass-card-enhanced rounded-[1.5rem] overflow-hidden">
+            <div className="glass-card-enhanced rounded-[1.25rem] overflow-hidden">
               {monthlyHistory.map((m, i) => (
                 <div key={m.month} className={`flex items-center gap-3 p-4 ${i > 0 ? "border-t border-border" : ""}`}>
                   <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
@@ -370,7 +371,7 @@ export function ReportsScreen({ expenses, members, pendingPayments, completedPay
 
             {/* Budget */}
             {monthlyBudget > 0 && (
-              <div className="glass-card-enhanced rounded-[1.5rem] p-5">
+              <div className="glass-card-enhanced rounded-[1.25rem] p-5">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Budget vs Réel</p>
                 <div className="space-y-3">
                   {monthlyHistory.slice(-6).map(m => {

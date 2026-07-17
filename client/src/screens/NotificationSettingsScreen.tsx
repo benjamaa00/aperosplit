@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { ChevronRight } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
+import { fadeUp } from "../constants";
 
 export function NotificationSettingsScreen({ settings, onBack, onSave }: {
   settings?: { pushEnabled: boolean; emailEnabled: boolean; reminderFrequency: string; quietHoursStart?: string; quietHoursEnd?: string };
@@ -21,14 +22,14 @@ export function NotificationSettingsScreen({ settings, onBack, onSave }: {
   );
 
   return (
-    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-md mx-auto px-5 pt-12 space-y-5">
+    <motion.div {...fadeUp} className="max-w-md mx-auto px-5 pt-12 space-y-5">
       <div className="flex items-center gap-3">
         <motion.button whileTap={{ scale: 0.9 }} onClick={onBack}
           className="w-10 h-10 rounded-2xl bg-card/30 border border-border flex items-center justify-center">
-          <ChevronRight size={20} className="rotate-180" />
+          <ArrowLeft size={20} />
         </motion.button>
         <div className="flex-1">
-          <h1 className="text-3xl font-bold tracking-tight">Notifications</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Notifications</h1>
           <p className="text-sm text-muted-foreground">Paramètres des alertes</p>
         </div>
         <motion.button whileTap={{ scale: 0.95 }} onClick={() => onSave({ pushEnabled, emailEnabled, reminderFrequency })}
@@ -38,7 +39,7 @@ export function NotificationSettingsScreen({ settings, onBack, onSave }: {
       </div>
 
       {/* Push & Email */}
-      <div className="glass-card-enhanced rounded-[1.5rem] p-5 space-y-4">
+      <div className="glass-card-enhanced rounded-[1.25rem] p-5 space-y-4">
         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Canaux</p>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -64,7 +65,7 @@ export function NotificationSettingsScreen({ settings, onBack, onSave }: {
       </div>
 
       {/* Reminder Frequency */}
-      <div className="glass-card-enhanced rounded-[1.5rem] p-5 space-y-3">
+      <div className="glass-card-enhanced rounded-[1.25rem] p-5 space-y-3">
         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Fréquence des rappels</p>
         {[
           { id: "24h", label: "Quotidien", desc: "Tous les jours" },
@@ -83,6 +84,8 @@ export function NotificationSettingsScreen({ settings, onBack, onSave }: {
           </button>
         ))}
       </div>
+
+      <div className="h-8" />
     </motion.div>
   );
 }

@@ -126,11 +126,11 @@ export function StatsTab({ expenses, members, currentMemberId, pendingPayments, 
   const disputedCount = pendingPayments.filter(p => p.status === "disputed").length;
 
   return (
-    <motion.div {...fadeUp} className="relative max-w-md mx-auto px-5 pt-12 space-y-5 overflow-hidden">
+    <motion.div {...fadeUp} className="max-w-md mx-auto px-5 pt-12 space-y-5">
       <div className="pointer-events-none absolute -top-20 -right-24 h-64 w-64 rounded-full bg-primary/20 blur-3xl" />
       <div className="pointer-events-none absolute top-64 -left-28 h-56 w-56 rounded-full bg-violet-500/10 blur-3xl" />
 
-      <motion.header initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} className="glass-card-enhanced relative overflow-hidden rounded-[2rem] p-6">
+      <motion.header initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} className="glass-card-enhanced relative overflow-hidden rounded-[1.25rem] p-6">
         <div className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-white/60 to-transparent" />
         <div className="relative flex items-start justify-between gap-4">
           <div>
@@ -138,7 +138,7 @@ export function StatsTab({ expenses, members, currentMemberId, pendingPayments, 
               <BarChart3 size={12} />
               Tableau de bord
             </div>
-            <h1 className="text-3xl font-bold tracking-[-0.04em]">Statistiques</h1>
+            <h1 className="text-2xl font-bold tracking-tight">Statistiques</h1>
             <p className="mt-1 text-sm text-muted-foreground">Analyse complète de vos dépenses</p>
           </div>
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-gradient-to-br from-primary to-violet-500 text-white shadow-lg shadow-primary/25">
@@ -148,7 +148,7 @@ export function StatsTab({ expenses, members, currentMemberId, pendingPayments, 
       </motion.header>
 
       {/* Period Selector */}
-      <div className="flex gap-2 bg-card/50 backdrop-blur-sm border border-border rounded-2xl p-1.5">
+      <div className="flex gap-2 bg-card/30 border border-border rounded-2xl p-1">
         {([["week", "Semaine"], ["month", "Mois"], ["year", "Année"], ["all", "Tout"]] as [Period, string][]).map(([key, label]) => (
           <button key={key} onClick={() => setPeriod(key)}
             className={`flex-1 py-2.5 rounded-xl text-xs font-semibold transition-all ${period === key ? "bg-primary text-primary-foreground shadow-lg shadow-primary/30" : "text-muted-foreground hover:text-foreground"}`}>
@@ -177,7 +177,7 @@ export function StatsTab({ expenses, members, currentMemberId, pendingPayments, 
         <>
           {/* Main Stats Cards */}
           <div className="grid grid-cols-2 gap-3">
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="glass-card-enhanced rounded-[1.5rem] p-4">
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="glass-card-enhanced rounded-[1.25rem] p-4">
               <p className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">Total</p>
               <p className="text-xl font-bold mt-1">{formatCurrency(memberCurrentTotal)}</p>
               {trend !== 0 && (
@@ -187,7 +187,7 @@ export function StatsTab({ expenses, members, currentMemberId, pendingPayments, 
                 </p>
               )}
             </motion.div>
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.05 }} className="glass-card-enhanced rounded-[1.5rem] p-4">
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.05 }} className="glass-card-enhanced rounded-[1.25rem] p-4">
               <p className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">Moyenne/personne</p>
               <p className="text-xl font-bold mt-1">{formatCurrency(averagePerPerson)}</p>
               <p className="text-[10px] text-muted-foreground mt-1">{memberExpenses.length} dépenses</p>
@@ -196,7 +196,7 @@ export function StatsTab({ expenses, members, currentMemberId, pendingPayments, 
 
           {/* Budget Tracker */}
           {monthlyBudget > 0 && !selectedMember && (
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="glass-card-enhanced rounded-[1.5rem] p-5">
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="glass-card-enhanced rounded-[1.25rem] p-5">
               <div className="flex items-center justify-between mb-3">
                 <p className="text-sm font-semibold">Budget mensuel</p>
                 <p className="text-sm font-bold">{formatCurrency(currentMonthTotal)} / {formatCurrency(monthlyBudget)}</p>
@@ -234,7 +234,7 @@ export function StatsTab({ expenses, members, currentMemberId, pendingPayments, 
           {/* Top Category */}
           {topCategory && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
-              className="glass-card-enhanced relative overflow-hidden rounded-[1.75rem] border-primary/20 p-5">
+              className="glass-card-enhanced relative overflow-hidden rounded-[1.25rem] border-primary/20 p-5">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <span className="text-3xl">{topCategory.emoji}</span>
@@ -254,7 +254,7 @@ export function StatsTab({ expenses, members, currentMemberId, pendingPayments, 
           {/* Biggest Spender */}
           {biggestSpender && biggestSpender.total > 0 && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }}
-              className="glass-card-enhanced rounded-[1.5rem] p-4 flex items-center gap-4">
+              className="glass-card-enhanced rounded-[1.25rem] p-4 flex items-center gap-4">
               <AvatarImg avatar={biggestSpender.avatar} size="text-3xl" />
               <div className="flex-1">
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">Plus gros dépensier</p>
@@ -266,7 +266,7 @@ export function StatsTab({ expenses, members, currentMemberId, pendingPayments, 
 
           {/* Pie Chart - By Category */}
           {categoryData.length > 0 && (
-            <div className="glass-card-enhanced relative overflow-hidden rounded-[1.75rem] p-5">
+            <div className="glass-card-enhanced relative overflow-hidden rounded-[1.25rem] p-5">
               <h3 className="text-sm font-semibold mb-4">Répartition par catégorie</h3>
               <div className="h-52">
                 <ResponsiveContainer width="100%" height="100%">
@@ -293,7 +293,7 @@ export function StatsTab({ expenses, members, currentMemberId, pendingPayments, 
           )}
 
           {/* Bar Chart - By Member */}
-          <div className="glass-card-enhanced relative overflow-hidden rounded-[1.75rem] p-5">
+          <div className="glass-card-enhanced relative overflow-hidden rounded-[1.25rem] p-5">
             <h3 className="text-sm font-semibold mb-4">Dépenses par membre</h3>
             <div className="h-48">
               <ResponsiveContainer width="100%" height="100%">
@@ -313,7 +313,7 @@ export function StatsTab({ expenses, members, currentMemberId, pendingPayments, 
 
           {/* Trend Line */}
           {trendData.length > 1 && (
-            <div className="glass-card-enhanced relative overflow-hidden rounded-[1.75rem] p-5">
+            <div className="glass-card-enhanced relative overflow-hidden rounded-[1.25rem] p-5">
               <h3 className="text-sm font-semibold mb-4">Évolution quotidienne</h3>
               <div className="h-44">
                 <ResponsiveContainer width="100%" height="100%">
@@ -333,7 +333,7 @@ export function StatsTab({ expenses, members, currentMemberId, pendingPayments, 
 
           {/* Monthly Breakdown */}
           {monthlyData.length > 1 && (
-            <div className="glass-card-enhanced relative overflow-hidden rounded-[1.75rem] p-5">
+            <div className="glass-card-enhanced relative overflow-hidden rounded-[1.25rem] p-5">
               <h3 className="text-sm font-semibold mb-4">Historique mensuel</h3>
               <div className="h-44">
                 <ResponsiveContainer width="100%" height="100%">
@@ -351,6 +351,8 @@ export function StatsTab({ expenses, members, currentMemberId, pendingPayments, 
           )}
         </>
       )}
+
+      <div className="h-8" />
     </motion.div>
   );
 }

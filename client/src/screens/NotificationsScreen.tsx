@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { ChevronRight } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { Notification } from "../types";
+import { fadeUp } from "../constants";
 
 export function NotificationsScreen({ notifications, currentMemberId, onBack, onMarkRead, onMarkAllRead }: {
   notifications: Notification[];
@@ -29,14 +30,14 @@ export function NotificationsScreen({ notifications, currentMemberId, onBack, on
   };
 
   return (
-    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-md mx-auto px-5 pt-12 space-y-5">
+    <motion.div {...fadeUp} className="max-w-md mx-auto px-5 pt-12 space-y-5">
       <div className="flex items-center gap-3">
         <motion.button whileTap={{ scale: 0.9 }} onClick={onBack}
           className="w-10 h-10 rounded-2xl bg-card/30 border border-border flex items-center justify-center">
-          <ChevronRight size={20} className="rotate-180" />
+          <ArrowLeft size={20} />
         </motion.button>
         <div className="flex-1">
-          <h1 className="text-3xl font-bold tracking-tight">Notifications</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Notifications</h1>
           <p className="text-sm text-muted-foreground">{unread} non lues</p>
         </div>
         {unread > 0 && (
@@ -93,6 +94,8 @@ export function NotificationsScreen({ notifications, currentMemberId, onBack, on
           ))}
         </div>
       )}
+
+      <div className="h-8" />
     </motion.div>
   );
 }

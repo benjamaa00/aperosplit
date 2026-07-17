@@ -212,7 +212,7 @@ export function ProfileTab({
         <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3 px-1">Paramètres</p>
 
         {/* Devise */}
-        <div className="bg-card/50 backdrop-blur-sm border border-border rounded-2xl overflow-hidden shadow-lg shadow-primary/5 mb-3">
+        <div className="glass-card-enhanced rounded-[1.25rem] overflow-hidden mb-3">
           <SettingRow
             icon={<DollarSign size={20} className="text-primary" />}
             iconBg="bg-primary/10"
@@ -239,7 +239,7 @@ export function ProfileTab({
         </div>
 
         {/* Budget */}
-        <div className="bg-card/50 backdrop-blur-sm border border-border rounded-2xl overflow-hidden shadow-lg shadow-primary/5 mb-3">
+        <div className="glass-card-enhanced rounded-[1.25rem] overflow-hidden mb-3">
           <SettingRow
             icon={<DollarSign size={20} className="text-emerald-500" />}
             iconBg="bg-emerald-500/10"
@@ -317,7 +317,7 @@ export function ProfileTab({
         </div>
 
         {/* Notifications */}
-        <div className="bg-card/50 backdrop-blur-sm border border-border rounded-2xl overflow-hidden shadow-lg shadow-primary/5 mb-3">
+        <div className="glass-card-enhanced rounded-[1.25rem] overflow-hidden mb-3">
           <div className="p-4 pb-2 flex items-center gap-2">
             <Bell size={14} className="text-muted-foreground" />
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Notifications</p>
@@ -362,7 +362,7 @@ export function ProfileTab({
         </div>
 
         {/* Sécurité & Confidentialité */}
-        <div className="bg-card/50 backdrop-blur-sm border border-border rounded-2xl overflow-hidden shadow-lg shadow-primary/5 mb-3">
+        <div className="glass-card-enhanced rounded-[1.25rem] overflow-hidden mb-3">
           <div className="p-4 pb-2 flex items-center gap-2">
             <Shield size={14} className="text-muted-foreground" />
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Sécurité</p>
@@ -386,7 +386,7 @@ export function ProfileTab({
         </div>
 
         {/* Apparence */}
-        <div className="bg-card/50 backdrop-blur-sm border border-border rounded-2xl overflow-hidden shadow-lg shadow-primary/5">
+        <div className="glass-card-enhanced rounded-[1.25rem] overflow-hidden">
           <div className="p-4 pb-2 flex items-center gap-2">
             <Moon size={14} className="text-muted-foreground" />
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Apparence</p>
@@ -584,7 +584,7 @@ export function ProfileTab({
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="bg-card/50 backdrop-blur-sm border border-border rounded-2xl overflow-hidden shadow-lg shadow-primary/5"
+        className="glass-card-enhanced rounded-[1.25rem] overflow-hidden"
       >
         <div className="p-4 pb-2 flex items-center justify-between">
           <div>
@@ -716,7 +716,7 @@ export function ProfileTab({
         icon="trash"
       />
 
-      <div className="h-4" />
+      <div className="h-8" />
     </motion.div>
   );
 }
