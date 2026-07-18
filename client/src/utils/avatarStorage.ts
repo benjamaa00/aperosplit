@@ -28,7 +28,10 @@ export function resolveAvatar(avatar: string): string {
     const store = getAvatarStore();
     return store[memberId] || "👤";
   }
-  return avatar;
+  if (avatar.startsWith("data:")) {
+    return avatar;
+  }
+  return avatar || "👤";
 }
 
 export function removePhotoAvatar(memberId: string) {

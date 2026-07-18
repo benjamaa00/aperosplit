@@ -39,7 +39,10 @@ import { InviteScreen } from "./components/InviteScreen";
 const isNetlify = import.meta.env.VITE_NETLIFY === "true";
 
 function prepareAvatar(memberId: string, avatar: string): string {
-  if (avatar.startsWith("data:")) return storePhotoAvatar(memberId, avatar);
+  if (avatar.startsWith("data:")) {
+    storePhotoAvatar(memberId, avatar);
+    return avatar;
+  }
   return avatar;
 }
 
