@@ -242,6 +242,10 @@ export function initializeDatabase(): Promise<void> {
       try {
         await pool!.query(`ALTER TABLE group_members ALTER COLUMN avatar TYPE TEXT`);
       } catch {}
+      // Add comment column to payments if missing
+      try {
+        await pool!.query(`ALTER TABLE payments ADD COLUMN IF NOT EXISTS comment TEXT`);
+      } catch {}
     } catch (error) {
       console.error("[DB] Database initialization failed, switching to JSON storage:", error);
       useJsonStorage = true;
@@ -441,7 +445,8 @@ export async function addPendingPayment(payment: any) {
   if (existing.rows[0]?.id) return existing.rows[0].id as string;
   await db.query(
     `INSERT INTO payments (id, group_id, from_id, from_name, to_id, to_name, amount, status, expense_id, date)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+     ON CONFLICT (id) DO UPDATE SET notification_count = payments.notification_count + 1`,
     [payment.id, payment.groupId, payment.fromId, payment.fromName, payment.toId, payment.toName, payment.amount, payment.status, payment.expenseId ?? null, payment.date],
   );
   return payment.id as string;

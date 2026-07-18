@@ -342,7 +342,7 @@ export default function App() {
     haptic("success");
     const toName = members.find((m) => m.id === toId)?.name || "";
     const payment: PendingPayment = {
-      id: Date.now().toString(), fromId: currentMemberId, fromName: members.find((m) => m.id === currentMemberId)?.name || "",
+      id: `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, fromId: currentMemberId, fromName: members.find((m) => m.id === currentMemberId)?.name || "",
       toId, toName, amount, status: "pending",
       createdAt: Date.now(), notificationSent: false, notificationCount: 0, expenseId, requestNote: note,
     };
