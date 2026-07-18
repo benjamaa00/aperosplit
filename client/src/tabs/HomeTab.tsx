@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { TrendingUp, TrendingDown } from "lucide-react";
+import { TrendingUp, TrendingDown, Receipt } from "lucide-react";
 import { PaymentRequestCard } from "../components/PaymentRequestCard";
 import type { Member, Expense, PendingPayment } from "../types";
 import { formatCurrency, formatDate } from "../utils/currency";
@@ -77,7 +77,7 @@ export function HomeTab({
 
   return (
     <>
-    <motion.div {...fadeUp} className="max-w-md mx-auto px-5 pt-16 space-y-6">
+    <motion.div {...fadeUp} className="max-w-md mx-auto px-5 pt-16 space-y-5">
       {/* Greeting */}
       <div>
         <p className="text-muted-foreground text-sm font-medium">Bonjour,</p>
@@ -151,7 +151,7 @@ export function HomeTab({
             animate={{ width: `${budgetPercentage}%` }}
             transition={{ duration: 0.5, ease: "easeOut" }}
             className={`h-full rounded-full ${
-              budgetPercentage > 90 ? "bg-red-500" : budgetPercentage > 70 ? "bg-yellow-500" : "bg-primary"
+              budgetPercentage > 90 ? "bg-destructive" : budgetPercentage > 70 ? "bg-amber-500" : "bg-primary"
             }`}
           />
         </div>
@@ -163,7 +163,7 @@ export function HomeTab({
               : `${formatCurrency(Math.abs(budgetRemaining))} dépassé`}
           </span>
           <span className={`font-medium ${
-            budgetPercentage > 90 ? "text-red-500" : budgetPercentage > 70 ? "text-yellow-500" : "text-primary"
+            budgetPercentage > 90 ? "text-destructive" : budgetPercentage > 70 ? "text-amber-500" : "text-primary"
           }`}>
             {budgetPercentage.toFixed(0)}%
           </span>
@@ -195,7 +195,7 @@ export function HomeTab({
                           <p className="text-xs text-muted-foreground">{debt.reason}</p>
                         </div>
                       </div>
-                      <p className="font-semibold text-red-400">{formatCurrency(debt.amount)}</p>
+                      <p className="font-semibold text-destructive">{formatCurrency(debt.amount)}</p>
                     </div>
                   );
                 })}
@@ -223,7 +223,7 @@ export function HomeTab({
                           <p className="text-xs text-muted-foreground">{debt.reason}</p>
                         </div>
                       </div>
-                      <p className="font-semibold text-green-400">{formatCurrency(debt.amount)}</p>
+                      <p className="font-semibold text-emerald-400">{formatCurrency(debt.amount)}</p>
                     </div>
                   );
                 })}
@@ -264,7 +264,7 @@ export function HomeTab({
       {pendingPayments.length > 0 && (
         <div>
           <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-orange-400 animate-pulse" />
+            <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
             Remboursements
           </h3>
           <div className="space-y-2">
@@ -291,7 +291,7 @@ export function HomeTab({
       {completedPayments.length > 0 && (
         <div>
           <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-green-400" />
+            <div className="w-2 h-2 rounded-full bg-emerald-400" />
             Historique des remboursements
           </h3>
           <div className="space-y-2">
@@ -304,7 +304,7 @@ export function HomeTab({
                   key={p.id}
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
-                  className="bg-card/30 backdrop-blur-sm border border-border rounded-2xl p-3 flex items-center justify-between opacity-70"
+                  className="bg-card/30 hover:bg-card/60 transition-colors duration-200 backdrop-blur-sm border border-border rounded-2xl p-3 flex items-center justify-between opacity-70"
                 >
                   <div className="flex items-center gap-3">
                     <AvatarImg avatar={from?.avatar ?? ""} size="text-xl" />
@@ -317,7 +317,7 @@ export function HomeTab({
                       </p>
                     </div>
                   </div>
-                  <p className="text-sm font-bold text-green-400">{formatCurrency(p.amount)}</p>
+                  <p className="text-sm font-bold text-emerald-400">{formatCurrency(p.amount)}</p>
                 </motion.div>
               );
             })}
@@ -336,7 +336,7 @@ export function HomeTab({
         <div className="space-y-2">
           {recentExpenses.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground text-sm">
-              <div className="text-4xl mb-3">💸</div>
+              <Receipt size={36} className="text-muted-foreground/30 mb-3" />
               Aucune dépense pour le moment
             </div>
           ) : (
@@ -348,7 +348,7 @@ export function HomeTab({
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.04 }}
-                  className="glass-card-enhanced rounded-[1.25rem] p-4 flex items-center gap-3"
+                  className="glass-card-enhanced hover:bg-card/60 transition-colors duration-200 rounded-[1.25rem] p-4 flex items-center gap-3"
                 >
                   <div className="w-11 h-11 rounded-2xl bg-secondary/50 flex items-center justify-center text-lg">
                     {exp.categoryEmoji}

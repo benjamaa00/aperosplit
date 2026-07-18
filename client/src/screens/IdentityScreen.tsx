@@ -84,7 +84,7 @@ export function IdentityScreen({ members, onSelect, onReset }: { members: Member
             haptic("heavy");
             setShowResetConfirm(true);
           }}
-          className="mt-8 flex items-center gap-2 text-xs text-muted-foreground hover:text-red-400 transition-colors relative z-10"
+          className="mt-8 flex items-center gap-2 text-xs text-muted-foreground hover:text-destructive transition-colors relative z-10"
         >
           <RotateCcw size={14} />
           Réinitialiser le groupe

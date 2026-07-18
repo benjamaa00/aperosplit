@@ -1,15 +1,16 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Fingerprint, Moon, Sun, Sparkles, Copy, Share2, X, DollarSign, Bell, Shield, Clock, Loader2, QrCode, ChevronRight } from "lucide-react";
+import { Fingerprint, Moon, Sun, Sparkles, Copy, Share2, X, DollarSign, Bell, BarChart3, Users, Settings, Shield, Trash2, Clock, Loader2, QrCode, ChevronRight } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useThemeContext } from "../contexts/ThemeContext";
 import { trpc } from "../lib/trpc";
 import { toast } from "sonner";
 import type { Member } from "../types";
-import { fadeUp, spring } from "../constants";
+import { fadeUp } from "../constants";
 import { useHaptic } from "../hooks/useHaptic";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { AvatarImg } from "../components/AvatarImg";
+import { Toggle } from "../components/Toggle";
 
 export function ProfileTab({
   currentMember,
@@ -127,22 +128,6 @@ export function ProfileTab({
     { code: "EUR", symbol: "€", label: "Euro" },
     { code: "USD", symbol: "$", label: "Dollar américain" },
   ];
-
-  const ToggleSwitch = ({ enabled, onToggle, disabled }: { enabled: boolean; onToggle: () => void; disabled?: boolean }) => (
-    <motion.button
-      whileTap={{ scale: 0.95 }}
-      onClick={() => { if (!disabled) { haptic("medium"); onToggle(); } }}
-      className={`w-[52px] h-8 rounded-full transition-all duration-300 relative ${
-        enabled ? "bg-primary shadow-lg shadow-primary/30" : "bg-secondary"
-      } ${disabled ? "opacity-40 cursor-not-allowed" : ""}`}
-    >
-      <motion.div
-        animate={{ x: enabled ? 22 : 3 }}
-        transition={spring}
-        className="absolute top-1 w-6 h-6 rounded-full bg-white shadow-md"
-      />
-    </motion.button>
-  );
 
   const SettingRow = ({ icon, iconBg, title, subtitle, children }: {
     icon: React.ReactNode;
@@ -328,7 +313,7 @@ export function ProfileTab({
             title="Notifications push"
             subtitle="Recevoir les alertes sur cet appareil"
           >
-            <ToggleSwitch enabled={pushNotifications} onToggle={onTogglePushNotifications} />
+            <Toggle enabled={pushNotifications} onToggle={onTogglePushNotifications} />
           </SettingRow>
           <SettingRow
             icon={<Clock size={20} className="text-orange-500" />}
@@ -336,7 +321,7 @@ export function ProfileTab({
             title="Rappels automatiques"
             subtitle="Relancer les membres en retard"
           >
-            <ToggleSwitch enabled={autoReminders} onToggle={onToggleReminders} />
+            <Toggle enabled={autoReminders} onToggle={onToggleReminders} />
           </SettingRow>
           {autoReminders && (
             <div className="px-4 pb-4">
@@ -373,7 +358,7 @@ export function ProfileTab({
             title="Face ID / Touch ID"
             subtitle={biometricAvailable ? "Verrouillage biométrique" : "Non disponible"}
           >
-            <ToggleSwitch enabled={biometricEnabled} onToggle={onToggleBiometric} disabled={!biometricAvailable} />
+            <Toggle enabled={biometricEnabled} onToggle={onToggleBiometric} disabled={!biometricAvailable} />
           </SettingRow>
           <SettingRow
             icon={<Shield size={20} className="text-purple-500" />}
@@ -381,7 +366,7 @@ export function ProfileTab({
             title="Mode privé"
             subtitle="Masquer les montants dans l'app"
           >
-            <ToggleSwitch enabled={privacyMode} onToggle={onTogglePrivacy} />
+            <Toggle enabled={privacyMode} onToggle={onTogglePrivacy} />
           </SettingRow>
         </div>
 
@@ -397,7 +382,7 @@ export function ProfileTab({
             title="Mode sombre"
             subtitle={theme === "dark" ? "Thème sombre activé" : "Thème clair activé"}
           >
-            <ToggleSwitch enabled={theme === "dark"} onToggle={() => { haptic("medium"); toggleTheme(); }} />
+            <Toggle enabled={theme === "dark"} onToggle={() => { haptic("medium"); toggleTheme(); }} />
           </SettingRow>
           {onOpenAppearance && (
             <motion.button
@@ -428,10 +413,11 @@ export function ProfileTab({
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.15 }}
             whileTap={{ scale: 0.97 }}
+            whileHover={{ scale: 1.03 }}
             onClick={() => { haptic("light"); onOpenNotifications(); }}
             className="p-4 rounded-2xl bg-card border border-border flex flex-col items-center gap-2 relative"
           >
-            <span className="text-2xl">🔔</span>
+            <Bell size={20} />
             <span className="text-xs font-medium">Notifications</span>
             {unreadCount && unreadCount > 0 ? (
               <span className="absolute top-2 right-2 w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
@@ -446,10 +432,11 @@ export function ProfileTab({
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.17 }}
             whileTap={{ scale: 0.97 }}
+            whileHover={{ scale: 1.03 }}
             onClick={() => { haptic("light"); onOpenReports(); }}
             className="p-4 rounded-2xl bg-card border border-border flex flex-col items-center gap-2"
           >
-            <span className="text-2xl">📊</span>
+            <BarChart3 size={20} />
             <span className="text-xs font-medium">Rapports</span>
           </motion.button>
         )}
@@ -459,10 +446,11 @@ export function ProfileTab({
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.19 }}
             whileTap={{ scale: 0.97 }}
+            whileHover={{ scale: 1.03 }}
             onClick={() => { haptic("light"); onOpenGroupSettings(); }}
             className="p-4 rounded-2xl bg-card border border-border flex flex-col items-center gap-2"
           >
-            <span className="text-2xl">👥</span>
+            <Users size={20} />
             <span className="text-xs font-medium">Groupe</span>
           </motion.button>
         )}
@@ -472,10 +460,11 @@ export function ProfileTab({
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.21 }}
             whileTap={{ scale: 0.97 }}
+            whileHover={{ scale: 1.03 }}
             onClick={() => { haptic("light"); onOpenMembers(); }}
             className="p-4 rounded-2xl bg-card border border-border flex flex-col items-center gap-2"
           >
-            <span className="text-2xl">⚙️</span>
+            <Settings size={20} />
             <span className="text-xs font-medium">Membres</span>
           </motion.button>
         )}
@@ -599,7 +588,7 @@ export function ProfileTab({
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.25 + i * 0.05 }}
             whileHover={{ backgroundColor: "hsl(var(--card)/70)" }}
-            className="px-4 py-3.5 flex items-center gap-3 border-t border-border cursor-pointer"
+            className="px-4 py-3.5 flex items-center gap-3 border-t border-border cursor-pointer hover:bg-card/60 transition-colors duration-200"
           >
             <motion.span 
               className="text-2xl"
@@ -700,7 +689,7 @@ export function ProfileTab({
             onClick={() => { haptic("heavy"); setShowResetConfirm(true); }}
             className="w-full bg-red-500/20 text-red-400 font-semibold py-3.5 rounded-2xl border border-red-500/20 press-scale shadow-lg shadow-red-500/10 flex items-center justify-center gap-2"
           >
-            🗑️ Réinitialiser toutes les données
+            <Trash2 size={14} /> Réinitialiser toutes les données
           </motion.button>
         </motion.div>
       )}

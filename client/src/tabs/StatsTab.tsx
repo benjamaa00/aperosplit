@@ -170,7 +170,7 @@ export function StatsTab({ expenses, members, currentMemberId, pendingPayments, 
 
       {memberExpenses.length === 0 ? (
         <div className="text-center py-16 text-muted-foreground text-sm">
-          <div className="text-5xl mb-4">📊</div>
+          <div className="mb-4"><BarChart3 size={40} className="text-muted-foreground/30" /></div>
           <p>Aucune dépense pour cette période</p>
         </div>
       ) : (
@@ -181,7 +181,7 @@ export function StatsTab({ expenses, members, currentMemberId, pendingPayments, 
               <p className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">Total</p>
               <p className="text-xl font-bold mt-1">{formatCurrency(memberCurrentTotal)}</p>
               {trend !== 0 && (
-                <p className={`text-[10px] font-semibold mt-1 flex items-center gap-1 ${trend > 0 ? "text-red-400" : "text-green-400"}`}>
+                <p className={`text-[10px] font-semibold mt-1 flex items-center gap-1 ${trend > 0 ? "text-destructive" : "text-emerald-400"}`}>
                   {trend > 0 ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
                   {Math.abs(trend).toFixed(0)}% vs période préc.
                 </p>
@@ -204,11 +204,11 @@ export function StatsTab({ expenses, members, currentMemberId, pendingPayments, 
               <div className="h-3 bg-muted rounded-full overflow-hidden">
                 <motion.div initial={{ width: 0 }} animate={{ width: `${Math.min(budgetUsed, 100)}%` }}
                   transition={{ duration: 1, ease: "easeOut" }}
-                  className={`h-full rounded-full ${budgetUsed > 100 ? "bg-red-500" : budgetUsed > 80 ? "bg-yellow-500" : "bg-primary"}`} />
+                  className={`h-full rounded-full ${budgetUsed > 100 ? "bg-destructive" : budgetUsed > 80 ? "bg-amber-500" : "bg-primary"}`} />
               </div>
               <div className="flex justify-between mt-2">
                 <p className="text-[10px] text-muted-foreground">{budgetUsed.toFixed(0)}% utilisé</p>
-                <p className={`text-[10px] font-semibold ${budgetUsed > 100 ? "text-red-400" : "text-muted-foreground"}`}>
+                <p className={`text-[10px] font-semibold ${budgetUsed > 100 ? "text-destructive" : "text-muted-foreground"}`}>
                   {budgetUsed > 100 ? `Dépassé de ${formatCurrency(currentMonthTotal - monthlyBudget)}` : `Reste ${formatCurrency(monthlyBudget - currentMonthTotal)}`}
                 </p>
               </div>
@@ -222,11 +222,11 @@ export function StatsTab({ expenses, members, currentMemberId, pendingPayments, 
               <p className="text-[10px] text-muted-foreground">Paiements</p>
             </div>
             <div className="glass-card-enhanced rounded-2xl p-3 text-center">
-              <p className="text-lg font-bold text-green-400">{completedCount}</p>
+              <p className="text-lg font-bold text-emerald-400">{completedCount}</p>
               <p className="text-[10px] text-muted-foreground">Confirmés</p>
             </div>
             <div className="glass-card-enhanced rounded-2xl p-3 text-center">
-              <p className="text-lg font-bold text-orange-400">{pendingCount}</p>
+              <p className="text-lg font-bold text-amber-400">{pendingCount}</p>
               <p className="text-[10px] text-muted-foreground">En attente</p>
             </div>
           </div>

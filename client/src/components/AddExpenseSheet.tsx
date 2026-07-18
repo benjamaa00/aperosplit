@@ -1,3 +1,4 @@
+import { Toggle } from "./Toggle";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Check, ChevronLeft } from "lucide-react";
@@ -221,17 +222,7 @@ function AddExpenseSheet({
               <p className="text-sm font-semibold">Dépense récurrente</p>
               <p className="text-xs text-muted-foreground">Se répète automatiquement</p>
             </div>
-            <button
-              onClick={() => setIsRecurring(!isRecurring)}
-              className={`w-[52px] h-8 rounded-full transition-all duration-300 relative ${
-                isRecurring ? "bg-primary" : "bg-muted"
-              }`}
-            >
-              <motion.div
-                animate={{ x: isRecurring ? 22 : 2 }}
-                className="absolute top-1 w-6 h-6 rounded-full bg-white shadow"
-              />
-            </button>
+            <Toggle enabled={isRecurring} onToggle={() => setIsRecurring(!isRecurring)} />
           </div>
           {isRecurring && (
             <div className="space-y-2">

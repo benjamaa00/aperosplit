@@ -1,3 +1,4 @@
+import { Toggle } from "./Toggle";
 import { useState, useMemo, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -87,22 +88,6 @@ export default function AppearanceScreen({ onBack }: AppearanceScreenProps) {
     classic: { label: "Classiques", icon: "🎨" },
     premium: { label: "Premium", icon: "✨" },
   };
-
-  const Toggle = ({ enabled, onToggle }: { enabled: boolean; onToggle: () => void }) => (
-    <motion.button
-      whileTap={{ scale: 0.95 }}
-      onClick={onToggle}
-      className={`w-[52px] h-8 rounded-full transition-colors duration-300 relative flex-shrink-0 ${
-        enabled ? "bg-primary" : "bg-secondary"
-      }`}
-    >
-      <motion.div
-        animate={{ x: enabled ? 22 : 3 }}
-        transition={spring}
-        className="absolute top-1 w-6 h-6 rounded-full bg-white shadow-md"
-      />
-    </motion.button>
-  );
 
   const SectionHeader = ({ icon: Icon, title, badge }: { icon: any; title: string; badge?: string }) => (
     <div className="flex items-center gap-2.5 mb-3">
@@ -230,7 +215,7 @@ export default function AppearanceScreen({ onBack }: AppearanceScreenProps) {
                 onClick={() => setPalette(p.id)}
                 className="flex flex-col items-center gap-1.5"
               >
-                <div className={`relative w-9 h-9 rounded-full transition-all duration-200 ${
+                <motion.div layout whileHover={{ scale: 1.03 }} className={`relative w-9 h-9 rounded-full transition-all duration-200 ${
                   palette === p.id
                     ? "scale-110"
                     : "hover:scale-105"
@@ -253,7 +238,7 @@ export default function AppearanceScreen({ onBack }: AppearanceScreenProps) {
                       </motion.div>
                     )}
                   </AnimatePresence>
-                </div>
+                </motion.div>
                 <span className="text-[8px] font-medium text-muted-foreground">{p.label}</span>
               </motion.button>
             ))}
@@ -277,6 +262,7 @@ export default function AppearanceScreen({ onBack }: AppearanceScreenProps) {
                     <motion.button
                       key={t.id}
                       whileTap={{ scale: 0.92 }}
+                      whileHover={{ scale: 1.03 }}
                       onClick={() => setThemeId(t.id)}
                       className="flex flex-col items-center gap-1.5 shrink-0 scroll-snap-start"
                     >
@@ -359,6 +345,7 @@ export default function AppearanceScreen({ onBack }: AppearanceScreenProps) {
               <motion.button
                 key={g.id}
                 whileTap={{ scale: 0.88 }}
+                whileHover={{ scale: 1.03 }}
                 onClick={() => setGradientBgId(g.id)}
                 className={`relative w-full aspect-square rounded-[14px] border-[2.5px] overflow-hidden transition-all duration-200 ${
                   gradientBgId === g.id ? "border-primary shadow-lg shadow-primary/25 scale-105" : "border-border/60"
@@ -413,6 +400,7 @@ export default function AppearanceScreen({ onBack }: AppearanceScreenProps) {
               <motion.button
                 key={bg.id}
                 whileTap={{ scale: 0.88 }}
+                whileHover={{ scale: 1.03 }}
                 onClick={() => setBackgroundId(bg.id)}
                 className={`relative w-full aspect-square rounded-[14px] border-[2.5px] overflow-hidden transition-all duration-200 ${
                   backgroundId === bg.id ? "border-primary shadow-lg shadow-primary/25 scale-105" : "border-border/60"
@@ -435,7 +423,7 @@ export default function AppearanceScreen({ onBack }: AppearanceScreenProps) {
                   )}
                 </AnimatePresence>
                 {bg.isAnimated && backgroundId !== bg.id && (
-                  <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+                  <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                 )}
                 <span className="absolute bottom-0 inset-x-0 text-[7px] font-bold text-white/90 bg-black/30 backdrop-blur-sm py-[2px] text-center truncate px-[2px]">
                   {bg.name}
@@ -604,8 +592,8 @@ export default function AppearanceScreen({ onBack }: AppearanceScreenProps) {
                 transition={spring} onClick={(e) => e.stopPropagation()}
                 className="bg-card border border-border rounded-[1.25rem] p-6 w-full max-w-sm shadow-xl">
                 <div className="text-center mb-4">
-                  <div className="w-12 h-12 rounded-full bg-orange-500/10 flex items-center justify-center mx-auto mb-3">
-                    <RotateCcw size={20} className="text-orange-400" />
+                  <div className="w-12 h-12 rounded-full bg-amber-500/10 flex items-center justify-center mx-auto mb-3">
+                    <RotateCcw size={20} className="text-amber-400" />
                   </div>
                   <h3 className="text-lg font-bold mb-1">Réinitialiser ?</h3>
                   <p className="text-sm text-muted-foreground">Toutes vos préférences d'apparence seront remises par défaut.</p>
@@ -616,7 +604,7 @@ export default function AppearanceScreen({ onBack }: AppearanceScreenProps) {
                     Annuler
                   </motion.button>
                   <motion.button whileTap={{ scale: 0.95 }} onClick={() => { resetPreferences(); setShowResetConfirm(false); }}
-                    className="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-orange-500/10 text-orange-400 border border-orange-500/20 hover:bg-orange-500/20 transition-colors">
+                    className="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20 transition-colors">
                     Réinitialiser
                   </motion.button>
                 </div>

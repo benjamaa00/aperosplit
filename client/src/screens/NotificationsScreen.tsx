@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Bell } from "lucide-react";
 import { Notification } from "../types";
 import { fadeUp } from "../constants";
 
@@ -63,18 +63,18 @@ export function NotificationsScreen({ notifications, currentMemberId, onBack, on
       {filtered.length === 0 ? (
         <div className="text-center py-20">
           <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="w-24 h-24 mx-auto mb-5 rounded-full bg-muted/30 flex items-center justify-center">
-            <span className="text-5xl">🔔</span>
+            <Bell size={40} className="text-muted-foreground/30" />
           </motion.div>
           <p className="text-muted-foreground text-sm">
             {filter === "unread" ? "Tout est lu !" : "Aucune notification"}
           </p>
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-5">
           {filtered.map((notif, i) => (
             <motion.div key={notif.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}
               onClick={() => !notif.read && onMarkRead(notif.id)}
-              className={`glass-card-enhanced rounded-2xl p-4 flex items-start gap-3 transition-all cursor-pointer ${!notif.read ? "border-primary/20 bg-primary/5" : ""}`}>
+              className={`glass-card-enhanced rounded-2xl p-4 flex items-start gap-3 hover:bg-primary/5 transition-colors duration-200 cursor-pointer ${!notif.read ? "border-primary/20 bg-primary/5" : ""}`}>
               <div className="w-10 h-10 rounded-xl bg-muted/30 flex items-center justify-center text-xl shrink-0">
                 {getIcon(notif.type)}
               </div>

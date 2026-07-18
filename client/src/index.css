@@ -40,6 +40,26 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --color-success: var(--color-success);
+  --color-success-muted: var(--color-success-muted);
+  --color-success-dim: var(--color-success-dim);
+  --color-warning: var(--color-warning);
+  --color-warning-muted: var(--color-warning-muted);
+  --color-warning-dim: var(--color-warning-dim);
+  --color-danger: var(--color-danger);
+  --color-danger-muted: var(--color-danger-muted);
+  --color-danger-dim: var(--color-danger-dim);
+  --color-info: var(--color-info);
+  --color-info-muted: var(--color-info-muted);
+  --color-info-dim: var(--color-info-dim);
+  --color-purple: var(--color-purple);
+  --color-purple-muted: var(--color-purple-muted);
+  --color-orange: var(--color-orange);
+  --color-orange-muted: var(--color-orange-muted);
+  --color-cyan: var(--color-cyan);
+  --color-cyan-muted: var(--color-cyan-muted);
+  --color-amber: var(--color-amber);
+  --color-amber-muted: var(--color-amber-muted);
   --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
 }
 
@@ -149,8 +169,26 @@
   --card-gap: 0.75rem;
   --card-font-size: 1rem;
   --icon-scale: 1;
-  --success: #2ecc71;
-  --warning: #f39c12;
+  --color-success: oklch(0.723 0.219 149.579);
+  --color-success-muted: oklch(0.723 0.219 149.579 / 10%);
+  --color-success-dim: oklch(0.723 0.219 149.579 / 40%);
+  --color-warning: oklch(0.705 0.213 47.604);
+  --color-warning-muted: oklch(0.705 0.213 47.604 / 10%);
+  --color-warning-dim: oklch(0.705 0.213 47.604 / 40%);
+  --color-danger: oklch(0.704 0.191 22.216);
+  --color-danger-muted: oklch(0.704 0.191 22.216 / 10%);
+  --color-danger-dim: oklch(0.704 0.191 22.216 / 40%);
+  --color-info: oklch(0.637 0.237 259.815);
+  --color-info-muted: oklch(0.637 0.237 259.815 / 10%);
+  --color-info-dim: oklch(0.637 0.237 259.815 / 40%);
+  --color-purple: oklch(0.609 0.226 292.717);
+  --color-purple-muted: oklch(0.609 0.226 292.717 / 10%);
+  --color-orange: oklch(0.705 0.213 47.604);
+  --color-orange-muted: oklch(0.705 0.213 47.604 / 10%);
+  --color-cyan: oklch(0.754 0.181 196.075);
+  --color-cyan-muted: oklch(0.754 0.181 196.075 / 10%);
+  --color-amber: oklch(0.769 0.188 70.08);
+  --color-amber-muted: oklch(0.769 0.188 70.08 / 10%);
 }
 
 @layer components {
@@ -239,7 +277,7 @@
     position: fixed;
     inset: 0;
     background-image: var(--app-bg-pattern, none);
-    background-size: dots === "dots" ? "20px 20px" : "auto";
+    background-size: auto;
     pointer-events: none;
     z-index: 0;
   }
@@ -288,7 +326,7 @@
     transition: all calc(300ms * var(--animation-multiplier, 1)) cubic-bezier(0.23, 1, 0.32, 1);
   }
   .button-glow:hover {
-    box-shadow: 0 0 20px oklch(0.546 0.245 262.881 / 30%);
+    box-shadow: 0 0 20px color-mix(in oklch, var(--primary) 30%, transparent);
   }
 
   /* Micro-interaction: Scale on focus */
@@ -368,11 +406,11 @@
 
   /* High contrast for accessibility */
   .text-high-contrast {
-    color: oklch(0.145 0 0);
+    color: var(--foreground);
   }
 
   .dark .text-high-contrast {
-    color: oklch(0.985 0 0);
+    color: var(--foreground);
   }
 
   /* Spring animation */
@@ -442,6 +480,14 @@
   }
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
+  }
+
+  .scrollbar-hidden::-webkit-scrollbar {
+    display: none;
+  }
+  .scrollbar-hidden {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
 
   /* Smooth overscroll behavior */

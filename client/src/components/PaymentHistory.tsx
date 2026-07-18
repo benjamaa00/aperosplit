@@ -1,8 +1,24 @@
 import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Filter, X, Clock, Search, Receipt, ArrowUpRight, ArrowDownLeft, Check, AlertTriangle, RefreshCw, Pause, Send, ChevronDown } from "lucide-react";
+import { Filter, X, Clock, Search, Receipt, ArrowUpRight, ArrowDownLeft, Check, AlertTriangle, RefreshCw, Pause, Send, ChevronDown, Inbox } from "lucide-react";
 import { AvatarImg } from "./AvatarImg";
 import { formatCurrency } from "../utils/currency";
+import { getStatusStyle, getStatusDot, getStatusPill, getStatusLabel } from "../utils/statusColors";
+
+function getStatusIcon(status: string): React.ReactNode {
+  switch (status) {
+    case "pending": return <Clock size={11} />;
+    case "late": return <RefreshCw size={11} />;
+    case "accepted":
+    case "completed":
+    case "paid": return <Check size={11} />;
+    case "refused": return <X size={11} />;
+    case "disputed": return <AlertTriangle size={11} />;
+    case "resent": return <Send size={11} />;
+    case "in_progress": return <Pause size={11} />;
+    default: return <Clock size={11} />;
+  }
+}
 
 interface PaymentHistoryProps {
   payments: Array<{
@@ -127,72 +143,6 @@ export function PaymentHistory({ payments, expenses, members, currentMemberId, c
     { key: "received", label: "Reçus" },
   ];
 
-  const statusConfig: Record<string, { bg: string; dot: string; icon: React.ReactNode; label: string; pill: string }> = {
-    pending: {
-      bg: "text-amber-400",
-      dot: "bg-amber-400",
-      icon: <Clock size={11} />,
-      label: "En attente",
-      pill: "bg-amber-500/10 text-amber-400 border border-amber-500/20",
-    },
-    late: {
-      bg: "text-orange-400",
-      dot: "bg-orange-400",
-      icon: <RefreshCw size={11} />,
-      label: "En retard",
-      pill: "bg-orange-500/10 text-orange-400 border border-orange-500/20",
-    },
-    accepted: {
-      bg: "text-green-400",
-      dot: "bg-green-400",
-      icon: <Check size={11} />,
-      label: "Accepté",
-      pill: "bg-green-500/10 text-green-400 border border-green-500/20",
-    },
-    refused: {
-      bg: "text-red-400",
-      dot: "bg-red-400",
-      icon: <X size={11} />,
-      label: "Refusé",
-      pill: "bg-red-500/10 text-red-400 border border-red-500/20",
-    },
-    disputed: {
-      bg: "text-purple-400",
-      dot: "bg-purple-400",
-      icon: <AlertTriangle size={11} />,
-      label: "Litige",
-      pill: "bg-purple-500/10 text-purple-400 border border-purple-500/20",
-    },
-    paid: {
-      bg: "text-blue-400",
-      dot: "bg-blue-400",
-      icon: <Check size={11} />,
-      label: "Payé",
-      pill: "bg-blue-500/10 text-blue-400 border border-blue-500/20",
-    },
-    completed: {
-      bg: "text-green-400",
-      dot: "bg-green-400",
-      icon: <Check size={11} />,
-      label: "Complété",
-      pill: "bg-green-500/10 text-green-400 border border-green-500/20",
-    },
-    resent: {
-      bg: "text-cyan-400",
-      dot: "bg-cyan-400",
-      icon: <Send size={11} />,
-      label: "Renvoyé",
-      pill: "bg-cyan-500/10 text-cyan-400 border border-cyan-500/20",
-    },
-    in_progress: {
-      bg: "text-sky-400",
-      dot: "bg-sky-400",
-      icon: <Pause size={11} />,
-      label: "En cours",
-      pill: "bg-sky-500/10 text-sky-400 border border-sky-500/20",
-    },
-  };
-
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="max-w-md mx-auto px-5 pt-12 space-y-4">
       <div className="flex items-center justify-between">
@@ -205,20 +155,20 @@ export function PaymentHistory({ payments, expenses, members, currentMemberId, c
       <div className="grid grid-cols-3 gap-2">
         <div className="bg-card/50 rounded-2xl p-3 text-center">
           <div className="flex items-center justify-center mb-1">
-            <div className="w-7 h-7 rounded-full bg-green-500/10 flex items-center justify-center">
-              <ArrowDownLeft size={14} className="text-green-400" />
+            <div className="w-7 h-7 rounded-full bg-emerald-500/10 flex items-center justify-center">
+              <ArrowDownLeft size={14} className="text-emerald-400" />
             </div>
           </div>
-          <p className="text-sm font-bold tabular-nums text-green-400">{formatCurrency(totalReceived, currency)}</p>
+          <p className="text-sm font-bold tabular-nums text-emerald-400">{formatCurrency(totalReceived, currency)}</p>
           <p className="text-[10px] text-muted-foreground">Reçu</p>
         </div>
         <div className="bg-card/50 rounded-2xl p-3 text-center">
           <div className="flex items-center justify-center mb-1">
-            <div className="w-7 h-7 rounded-full bg-orange-500/10 flex items-center justify-center">
-              <ArrowUpRight size={14} className="text-orange-400" />
+            <div className="w-7 h-7 rounded-full bg-amber-500/10 flex items-center justify-center">
+              <ArrowUpRight size={14} className="text-amber-400" />
             </div>
           </div>
-          <p className="text-sm font-bold tabular-nums text-orange-400">{formatCurrency(totalSent, currency)}</p>
+          <p className="text-sm font-bold tabular-nums text-amber-400">{formatCurrency(totalSent, currency)}</p>
           <p className="text-[10px] text-muted-foreground">Envoyé</p>
         </div>
         <div className="bg-card/50 rounded-2xl p-3 text-center">
@@ -266,7 +216,7 @@ export function PaymentHistory({ payments, expenses, members, currentMemberId, c
 
       {grouped.length === 0 ? (
         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="text-center py-16">
-          <div className="text-5xl mb-4">📭</div>
+          <div className="mb-4 flex justify-center"><Inbox size={40} className="text-muted-foreground/30" /></div>
           <p className="text-muted-foreground text-sm font-medium">Aucune activité</p>
         </motion.div>
       ) : (
@@ -278,18 +228,16 @@ export function PaymentHistory({ payments, expenses, members, currentMemberId, c
                 {items.map((p, idx) => {
                   const from = getMember(p.fromId);
                   const to = getMember(p.toId);
-                  const config = statusConfig[p.status] || statusConfig.pending;
-
                   return (
                     <motion.div
                       key={p.id}
                       initial={{ opacity: 0, y: 8 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ type: "spring", stiffness: 300, damping: 30, delay: idx * 0.03 }}
-                      className="glass-card-enhanced rounded-[1.25rem] p-3.5"
+                      className="glass-card-enhanced rounded-[1.25rem] p-3.5 hover:bg-card/60 transition-colors duration-200"
                     >
                       <div className="flex items-center gap-3">
-                        <div className={`w-1 h-10 rounded-full shrink-0 ${config.dot}`} />
+                        <div className={`w-1 h-10 rounded-full shrink-0 ${getStatusDot(p.status)}`} />
 
                         <div className="flex items-center gap-2 shrink-0">
                           {from?.avatar ? (
@@ -316,9 +264,9 @@ export function PaymentHistory({ payments, expenses, members, currentMemberId, c
                             <p className="text-sm font-medium truncate">{p.toName}</p>
                           </div>
                           <div className="flex items-center gap-2 mt-1">
-                            <span className={`inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full ${config.pill}`}>
-                              {config.icon}
-                              {config.label}
+                            <span className={`inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full ${getStatusPill(p.status)}`}>
+                              {getStatusIcon(p.status)}
+                              {getStatusLabel(p.status)}
                             </span>
                             <span className="text-[10px] text-muted-foreground">{relativeTime(p.createdAt || Date.now())}</span>
                           </div>

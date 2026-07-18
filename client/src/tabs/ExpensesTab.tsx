@@ -174,11 +174,8 @@ export function ExpensesTab({
     <>
       <motion.div
         {...fadeUp}
-        className="max-w-md mx-auto px-5 pt-16 space-y-4 overflow-y-auto pb-32"
-        style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+        className="max-w-md mx-auto px-5 pt-16 space-y-5 overflow-y-auto pb-32 scrollbar-hidden"
       >
-        <style>{`.scrollbar-hidden::-webkit-scrollbar{display:none}`}</style>
-
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold tracking-tight">Dépenses</h1>
           <motion.button
@@ -207,7 +204,7 @@ export function ExpensesTab({
         <div className="space-y-3">
           {filtered.length === 0 ? (
             <div className="text-center py-16 text-muted-foreground text-sm">
-              <div className="text-4xl mb-3">🔍</div>
+              <div className="mb-3"><Search size={36} className="text-muted-foreground/30" /></div>
               Aucune dépense trouvée
             </div>
           ) : (
@@ -253,7 +250,7 @@ export function ExpensesTab({
                     stiffness: 300,
                     damping: 24,
                   }}
-                  className="glass-card-enhanced rounded-[1.25rem] p-4"
+                  className="glass-card-enhanced rounded-[1.25rem] p-4 hover:bg-card/60 transition-colors duration-200"
                 >
                   <div className="flex items-start gap-3 mb-3">
                     <div className="w-12 h-12 rounded-2xl bg-secondary/50 flex items-center justify-center text-xl shrink-0">
@@ -364,13 +361,13 @@ export function ExpensesTab({
                   <div className="flex items-center justify-between pt-3 border-t border-border">
                     <div className="flex items-center gap-2">
                       {isPayer && (
-                        <span className="text-[10px] text-green-400 bg-green-500/10 px-2.5 py-1 rounded-full font-medium">
+                        <span className="text-[10px] text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full font-medium">
                           Vous avez payé
                         </span>
                       )}
                       {exp.participants.includes(currentMemberId) &&
                         !isPayer && (
-                          <span className="text-[10px] text-orange-400 bg-orange-500/10 px-2.5 py-1 rounded-full font-medium">
+                          <span className="text-[10px] text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-full font-medium">
                             Vous devez{" "}
                             {formatCurrency(userShare)}
                           </span>
@@ -381,6 +378,7 @@ export function ExpensesTab({
                         otherParticipants.length > 1 && (
                           <motion.button
                             whileTap={{ scale: 0.95 }}
+                            whileHover={{ scale: 1.03 }}
                             onClick={() =>
                               openGroupModal(exp)
                             }
@@ -394,6 +392,7 @@ export function ExpensesTab({
                         otherParticipants.length > 1 && (
                           <motion.button
                             whileTap={{ scale: 0.95 }}
+                            whileHover={{ scale: 1.03 }}
                             onClick={() =>
                               openIndividualModal(exp)
                             }
@@ -404,22 +403,24 @@ export function ExpensesTab({
                           </motion.button>
                         )}
                       {isReimbursementCase && (
-                        <motion.button
-                          whileTap={{ scale: 0.95 }}
-                          onClick={() =>
-                            openReimbursementModal(exp)
-                          }
-                          className="bg-primary text-primary-foreground px-3 py-1.5 rounded-full text-[11px] font-semibold flex items-center gap-1 shadow-sm"
-                        >
-                          <Send size={12} />
-                          Demander remboursement
-                        </motion.button>
+                          <motion.button
+                            whileTap={{ scale: 0.95 }}
+                            whileHover={{ scale: 1.03 }}
+                            onClick={() =>
+                              openReimbursementModal(exp)
+                            }
+                            className="bg-primary text-primary-foreground px-3 py-1.5 rounded-full text-[11px] font-semibold flex items-center gap-1 shadow-sm"
+                          >
+                            <Send size={12} />
+                            Demander remboursement
+                          </motion.button>
                       )}
                       {(isPayer ||
                         getMember(currentMemberId)
                           ?.role === "admin") && (
                         <motion.button
                           whileTap={{ scale: 0.85 }}
+                          whileHover={{ scale: 1.03 }}
                           onClick={() => onDelete(exp.id)}
                           className="w-7 h-7 rounded-full bg-red-500/10 text-red-400 flex items-center justify-center"
                         >

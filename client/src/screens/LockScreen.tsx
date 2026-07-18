@@ -102,7 +102,7 @@ export function LockScreen({ member, onUnlock, onSkip, onSwitchIdentity }: { mem
                 exit={{ scale: 0, opacity: 0 }}
                 className="absolute inset-0 flex items-center justify-center"
               >
-                <div className="w-20 h-20 rounded-full bg-green-500 flex items-center justify-center shadow-lg shadow-green-500/50">
+                <div className="w-20 h-20 rounded-full bg-emerald-500 flex items-center justify-center shadow-lg shadow-emerald-500/50">
                   <Check size={40} className="text-white" />
                 </div>
               </motion.div>
@@ -137,8 +137,8 @@ export function LockScreen({ member, onUnlock, onSkip, onSwitchIdentity }: { mem
             initial={{ opacity: 0, y: 5 }}
             animate={{ opacity: 1, y: 0 }}
             className={`text-sm font-medium mb-10 ${
-              authStatus === "success" ? "text-green-400" : 
-              authStatus === "error" ? "text-red-400" : 
+              authStatus === "success" ? "text-emerald-400" : 
+              authStatus === "error" ? "text-destructive" : 
               "text-muted-foreground"
             }`}
           >
@@ -155,7 +155,7 @@ export function LockScreen({ member, onUnlock, onSkip, onSwitchIdentity }: { mem
           whileHover={{ scale: 1.05 }}
           onClick={handleUnlock}
           disabled={authenticating}
-          className="relative w-24 h-24 rounded-full bg-gradient-to-br from-primary/30 to-primary/10 border-2 border-primary/40 flex items-center justify-center mx-auto mb-8 shadow-2xl shadow-primary/30 backdrop-blur-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
+          className="relative w-24 h-24 rounded-full bg-gradient-to-br from-primary/30 to-primary/10 border-2 border-primary/40 flex items-center justify-center mx-auto mb-8 shadow-2xl shadow-primary/30 backdrop-blur-sm disabled:opacity-50 disabled:cursor-not-allowed hover:border-primary/60 hover:shadow-primary/40 transition-all duration-300"
         >
           {/* Button glow */}
           <motion.div

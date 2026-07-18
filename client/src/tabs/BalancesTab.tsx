@@ -121,7 +121,7 @@ export function BalancesTab({
   return (
     <motion.div
       {...fadeUp}
-      className="max-w-md mx-auto px-5 pt-16 space-y-4"
+      className="max-w-md mx-auto px-5 pt-16 space-y-5"
     >
       <h1 className="text-2xl font-bold tracking-tight">Soldes</h1>
 
@@ -162,9 +162,9 @@ export function BalancesTab({
                   <p
                     className={`text-xs font-medium ${
                       isPositive
-                        ? "text-green-500"
+                        ? "text-emerald-400"
                         : isNegative
-                        ? "text-red-500"
+                        ? "text-destructive"
                         : "text-muted-foreground"
                     }`}
                   >
@@ -175,9 +175,9 @@ export function BalancesTab({
                   <p
                     className={`text-lg font-bold tabular-nums ${
                       isPositive
-                        ? "text-green-400"
+                        ? "text-emerald-400"
                         : isNegative
-                        ? "text-red-400"
+                        ? "text-destructive"
                         : "text-muted-foreground"
                     }`}
                   >
@@ -216,17 +216,18 @@ export function BalancesTab({
                     transition={{ type: "spring", stiffness: 300, damping: 30 }}
                     className="overflow-hidden"
                   >
-                    <div className="glass-card-enhanced rounded-[1.25rem] p-4 mt-2 space-y-4 border border-border">
+                    <div className="glass-card-enhanced rounded-[1.25rem] p-4 mt-2 space-y-5 border border-border">
                       <div className="flex items-center justify-between">
                         <h3 className="text-sm font-semibold">
                           Détail pour {member.name}
                         </h3>
-                        <button
+                        <motion.button
+                          whileTap={{ scale: 0.9 }}
                           onClick={() => setSelectedMember(null)}
                           className="text-muted-foreground hover:text-foreground transition-colors"
                         >
                           <X size={16} />
-                        </button>
+                        </motion.button>
                       </div>
 
                       <div className="grid grid-cols-2 gap-3">
@@ -260,7 +261,7 @@ export function BalancesTab({
                               return (
                                 <div
                                   key={idx}
-                                  className="flex items-center justify-between text-sm bg-background/30 rounded-xl p-3"
+                                  className="flex items-center justify-between text-sm bg-background/30 rounded-xl p-3 hover:bg-card/50 transition-colors duration-200"
                                 >
                                   <div className="flex items-center gap-2 min-w-0 flex-1">
                                     <AvatarImg avatar={to?.avatar ?? ""} size="text-base" />
@@ -272,7 +273,7 @@ export function BalancesTab({
                                     </div>
                                   </div>
                                   <div className="flex items-center gap-2 ml-2">
-                                    <p className="font-semibold text-red-400 tabular-nums text-sm">
+                                    <p className="font-semibold text-destructive tabular-nums text-sm">
                                       {formatCurrency(debt.amount)}
                                     </p>
                                     {canDemand && (
@@ -313,7 +314,7 @@ export function BalancesTab({
                               return (
                                 <div
                                   key={idx}
-                                  className="flex items-center justify-between text-sm bg-background/30 rounded-xl p-3"
+                                  className="flex items-center justify-between text-sm bg-background/30 rounded-xl p-3 hover:bg-card/50 transition-colors duration-200"
                                 >
                                   <div className="flex items-center gap-2 min-w-0 flex-1">
                                     <AvatarImg avatar={from?.avatar ?? ""} size="text-base" />
@@ -324,7 +325,7 @@ export function BalancesTab({
                                       </p>
                                     </div>
                                   </div>
-                                  <p className="font-semibold text-green-400 tabular-nums text-sm ml-2">
+                                  <p className="font-semibold text-emerald-400 tabular-nums text-sm ml-2">
                                     {formatCurrency(debt.amount)}
                                   </p>
                                 </div>

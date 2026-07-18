@@ -8,6 +8,7 @@ import {
 import {
   useThemeContext, COLOR_PALETTE_OPTIONS, GRADIENT_OPTIONS, BACKGROUND_OPTIONS,
 } from "@/contexts/ThemeContext";
+import { Toggle } from "./Toggle";
 
 const spring = { type: "spring" as const, stiffness: 300, damping: 30 };
 
@@ -51,10 +52,10 @@ export function SettingsScreen({
 
   const fadeSlide = { initial: { opacity: 0, x: 30 }, animate: { opacity: 1, x: 0 }, exit: { opacity: 0, x: -30 } };
 
-  const SectionHeader = ({ icon: Icon, title, color }: { icon: any; title: string; color?: string }) => (
+  const SectionHeader = ({ icon: Icon, title, colorClass }: { icon: any; title: string; colorClass?: string }) => (
     <div className="flex items-center gap-3 mb-4">
-      <div className="w-10 h-10 rounded-2xl flex items-center justify-center border border-border" style={{ backgroundColor: color ? `${color}15` : "hsl(var(--primary) / 10%)" }}>
-        <Icon size={20} style={{ color: color || "hsl(var(--primary))" }} />
+      <div className="w-10 h-10 rounded-2xl flex items-center justify-center border border-border bg-primary/10">
+        <Icon size={20} className={colorClass || "text-primary"} />
       </div>
       <h2 className="text-lg font-bold tracking-tight">{title}</h2>
     </div>
@@ -62,7 +63,7 @@ export function SettingsScreen({
 
   const SettingRow = ({ icon: Icon, label, description, action, onClick }: { icon: any; label: string; description?: string; action?: React.ReactNode; onClick?: () => void }) => (
     <motion.button whileTap={{ scale: 0.98 }} onClick={onClick}
-      className="w-full flex items-center gap-3 p-4 rounded-2xl bg-card/30 border border-border active:bg-card/50 transition-colors text-left">
+      className="w-full flex items-center gap-3 p-4 rounded-2xl bg-card/30 border border-border hover:bg-card/50 active:bg-card/50 transition-colors text-left">
       <div className="w-9 h-9 rounded-xl bg-muted/30 flex items-center justify-center shrink-0">
         <Icon size={18} className="text-muted-foreground" />
       </div>
@@ -74,17 +75,9 @@ export function SettingsScreen({
     </motion.button>
   );
 
-  const Toggle = ({ enabled, onToggle }: { enabled: boolean; onToggle: () => void }) => (
-    <motion.button whileTap={{ scale: 0.95 }} onClick={onToggle}
-      className={`w-[52px] h-8 rounded-full transition-all duration-300 relative ${enabled ? "bg-primary shadow-lg shadow-primary/30" : "bg-secondary"}`}>
-      <motion.div animate={{ x: enabled ? 22 : 3 }} transition={spring}
-        className="absolute top-1 w-6 h-6 rounded-full bg-white shadow-md" />
-    </motion.button>
-  );
-
   const AppearanceSection = () => (
     <motion.div {...fadeSlide} className="space-y-6">
-      <SectionHeader icon={Palette} title="Apparence" color="#a78bfa" />
+      <SectionHeader icon={Palette} title="Apparence" colorClass="text-purple-400" />
 
       <div className="glass-card-enhanced rounded-[1.25rem] p-5 space-y-4">
         <div className="flex items-center justify-between">
@@ -204,7 +197,7 @@ export function SettingsScreen({
     const [budgetInput, setBudgetInput] = useState(monthlyBudget.toString());
     return (
       <motion.div {...fadeSlide} className="space-y-6">
-        <SectionHeader icon={DollarSign} title="Budget & Devise" color="#fbbf24" />
+        <SectionHeader icon={DollarSign} title="Budget & Devise" colorClass="text-amber-400" />
         <div className="glass-card-enhanced rounded-[1.25rem] p-5 space-y-4">
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Budget mensuel du groupe</p>
           <div className="relative">
@@ -244,7 +237,7 @@ export function SettingsScreen({
 
   const NotificationsSection = () => (
     <motion.div {...fadeSlide} className="space-y-6">
-      <SectionHeader icon={Bell} title="Notifications" color="#f472b6" />
+      <SectionHeader icon={Bell} title="Notifications" colorClass="text-pink-400" />
       <div className="glass-card-enhanced rounded-[1.25rem] p-5 space-y-4">
         <SettingRow icon={Bell} label="Notifications push" description="Recevoir des alertes même hors de l'app"
           action={<Toggle enabled={pushNotifications} onToggle={onTogglePushNotifications} />} />
@@ -290,7 +283,7 @@ export function SettingsScreen({
 
   const PrivacySection = () => (
     <motion.div {...fadeSlide} className="space-y-6">
-      <SectionHeader icon={Shield} title="Confidentialité" color="#10b981" />
+      <SectionHeader icon={Shield} title="Confidentialité" colorClass="text-emerald-400" />
       <div className="glass-card-enhanced rounded-[1.25rem] p-5 space-y-4">
         <SettingRow icon={EyeOff} label="Mode privé" description="Masquer les montants des autres"
           action={<Toggle enabled={privacyMode} onToggle={onTogglePrivacy} />} />
@@ -314,8 +307,8 @@ export function SettingsScreen({
             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
               onClick={e => e.stopPropagation()}
               className="w-full max-w-sm bg-card border border-border rounded-[1.25rem] p-6 shadow-2xl">
-              <div className="w-14 h-14 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto mb-4">
-                <AlertTriangle size={24} className="text-red-400" />
+              <div className="w-14 h-14 rounded-2xl bg-destructive/10 border border-destructive/20 flex items-center justify-center mx-auto mb-4">
+                <AlertTriangle size={24} className="text-destructive" />
               </div>
               <h3 className="text-lg font-bold text-center">Effacer les données ?</h3>
               <p className="text-sm text-muted-foreground text-center mt-2">
@@ -327,7 +320,7 @@ export function SettingsScreen({
                   Annuler
                 </motion.button>
                 <motion.button whileTap={{ scale: 0.97 }} onClick={onClearData}
-                  className="flex-1 py-3 rounded-2xl bg-red-500 text-white text-sm font-semibold">
+                  className="flex-1 py-3 rounded-2xl bg-destructive text-white text-sm font-semibold hover:opacity-90 transition-opacity">
                   Effacer
                 </motion.button>
               </div>

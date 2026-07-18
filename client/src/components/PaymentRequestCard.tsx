@@ -14,6 +14,7 @@ import {
 import { AvatarImg } from "./AvatarImg";
 import { TextAreaPrompt } from "./TextAreaPrompt";
 import { formatCurrency } from "../utils/currency";
+import { getStatusBorderHex, getStatusPill, getStatusLabel } from "../utils/statusColors";
 import { trpc } from "../lib/trpc";
 import { GROUP_ID } from "../constants";
 
@@ -63,42 +64,6 @@ interface PaymentRequestCardProps {
   onMarkAsPaid: (id: string) => void;
   cancelPaymentRequest?: (id: string) => void;
 }
-
-const BORDER_COLORS: Record<string, string> = {
-  pending: "border-l-amber-500",
-  late: "border-l-orange-500",
-  refused: "border-l-red-500",
-  accepted: "border-l-emerald-500",
-  disputed: "border-l-purple-500",
-  paid: "border-l-blue-500",
-  completed: "border-l-green-500",
-  in_progress: "border-l-blue-400",
-  resent: "border-l-amber-400",
-};
-
-const STATUS_BADGE_STYLES: Record<string, string> = {
-  pending: "bg-amber-500/10 text-amber-400 border border-amber-500/20",
-  late: "bg-orange-500/10 text-orange-400 border border-orange-500/30",
-  refused: "bg-red-500/10 text-red-400 border border-red-500/20",
-  accepted: "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20",
-  disputed: "bg-purple-500/10 text-purple-400 border border-purple-500/20",
-  paid: "bg-blue-500/10 text-blue-400 border border-blue-500/20",
-  completed: "bg-green-500/10 text-green-400 border border-green-500/20",
-  in_progress: "bg-blue-400/10 text-blue-300 border border-blue-400/20",
-  resent: "bg-amber-400/10 text-amber-300 border border-amber-400/20",
-};
-
-const STATUS_LABELS: Record<string, string> = {
-  pending: "En attente",
-  late: "En retard",
-  refused: "Refusé",
-  accepted: "Accepté",
-  disputed: "Litige",
-  paid: "Payé",
-  completed: "Terminé",
-  in_progress: "En cours",
-  resent: "Renvoyé",
-};
 
 function formatRelativeTime(createdAt?: number): string {
   if (!createdAt) return "";
@@ -176,23 +141,7 @@ export function PaymentRequestCard({
         animate={{ opacity: 1, x: 0 }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
         className="bg-card/80 backdrop-blur-md border border-border/60 rounded-[1.25rem] p-4 border-l-4 shadow-sm"
-        style={{
-          borderLeftColor: BORDER_COLORS[payment.status]?.includes("amber")
-            ? "#f59e0b"
-            : BORDER_COLORS[payment.status]?.includes("orange")
-            ? "#f97316"
-            : BORDER_COLORS[payment.status]?.includes("red")
-            ? "#ef4444"
-            : BORDER_COLORS[payment.status]?.includes("emerald")
-            ? "#10b981"
-            : BORDER_COLORS[payment.status]?.includes("purple")
-            ? "#a855f7"
-            : BORDER_COLORS[payment.status]?.includes("blue")
-            ? "#3b82f6"
-            : BORDER_COLORS[payment.status]?.includes("green")
-            ? "#22c55e"
-            : "#6b7280",
-        }}
+        style={{ borderLeftColor: getStatusBorderHex(payment.status) }}
       >
         <div className="flex items-center gap-3 mb-3">
           <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -224,11 +173,11 @@ export function PaymentRequestCard({
           <div className="text-right flex-shrink-0">
             <span
               className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold ${
-                STATUS_BADGE_STYLES[payment.status] ?? STATUS_BADGE_STYLES.pending
+                getStatusPill(payment.status)
               } ${payment.status === "late" ? "animate-pulse" : ""}`}
             >
               {payment.status === "late" && <Clock size={10} />}
-              {STATUS_LABELS[payment.status] ?? "Inconnu"}
+              {getStatusLabel(payment.status)}
             </span>
           </div>
         </div>

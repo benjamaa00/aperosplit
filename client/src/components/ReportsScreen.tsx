@@ -182,7 +182,7 @@ export function ReportsScreen({ expenses, members, pendingPayments, completedPay
       <div className="flex gap-2 bg-card/30 border border-border rounded-2xl p-1">
         {([["week", "7j"], ["month", "1 mois"], ["year", "1 an"], ["all", "Tout"]] as [Period, string][]).map(([key, label]) => (
           <button key={key} onClick={() => setPeriod(key)}
-            className={`flex-1 py-2.5 rounded-xl text-xs font-semibold transition-all ${period === key ? "bg-primary text-primary-foreground shadow-lg shadow-primary/30" : "text-muted-foreground"}`}>
+            className={`flex-1 py-2.5 rounded-xl text-xs font-semibold transition-all ${period === key ? "bg-primary text-primary-foreground shadow-lg shadow-primary/30" : "text-muted-foreground hover:text-foreground"}`}>
             {label}
           </button>
         ))}
@@ -205,7 +205,7 @@ export function ReportsScreen({ expenses, members, pendingPayments, completedPay
       <AnimatePresence mode="wait">
         {/* Summary View */}
         {view === "summary" && (
-          <motion.div key="summary" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-4">
+          <motion.div key="summary" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-5">
             {/* Top Stats */}
             <div className="grid grid-cols-2 gap-3">
               <div className="glass-card-enhanced rounded-[1.25rem] p-4">
@@ -224,11 +224,11 @@ export function ReportsScreen({ expenses, members, pendingPayments, completedPay
                 <p className="text-[10px] text-muted-foreground">Dépenses</p>
               </div>
               <div className="glass-card-enhanced rounded-2xl p-3 text-center">
-                <p className="text-lg font-bold text-green-400">{completedPayments.length}</p>
+                <p className="text-lg font-bold text-emerald-400">{completedPayments.length}</p>
                 <p className="text-[10px] text-muted-foreground">Payés</p>
               </div>
               <div className="glass-card-enhanced rounded-2xl p-3 text-center">
-                <p className="text-lg font-bold text-orange-400">{pendingPayments.filter(p => p.status === "pending").length}</p>
+                <p className="text-lg font-bold text-amber-400">{pendingPayments.filter(p => p.status === "pending").length}</p>
                 <p className="text-[10px] text-muted-foreground">En attente</p>
               </div>
             </div>
@@ -291,7 +291,7 @@ export function ReportsScreen({ expenses, members, pendingPayments, completedPay
 
         {/* Comparison View */}
         {view === "comparison" && (
-          <motion.div key="comparison" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-4">
+          <motion.div key="comparison" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-5">
             {/* Bar Chart */}
             <div className="glass-card-enhanced rounded-[1.25rem] p-5">
               <h3 className="text-sm font-semibold mb-4">Dépenses par membre</h3>
@@ -314,7 +314,7 @@ export function ReportsScreen({ expenses, members, pendingPayments, completedPay
             {/* Member List */}
             <div className="glass-card-enhanced rounded-[1.25rem] overflow-hidden">
               {memberData.map((m, i) => (
-                <div key={m.name} className={`flex items-center gap-3 p-4 ${i > 0 ? "border-t border-border" : ""}`}>
+                <div key={m.name} className={`flex items-center gap-3 p-4 hover:bg-card/50 transition-colors duration-200 ${i > 0 ? "border-t border-border" : ""}`}>
                   <AvatarImg avatar={m.avatar} size="text-xl" />
                   <div className="flex-1">
                     <p className="text-sm font-semibold">{m.name}</p>
@@ -337,7 +337,7 @@ export function ReportsScreen({ expenses, members, pendingPayments, completedPay
 
         {/* Monthly View */}
         {view === "monthly" && (
-          <motion.div key="monthly" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-4">
+          <motion.div key="monthly" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-5">
             <div className="glass-card-enhanced rounded-[1.25rem] p-5">
               <h3 className="text-sm font-semibold mb-4">Historique mensuel</h3>
               <div className="h-52">
@@ -373,18 +373,18 @@ export function ReportsScreen({ expenses, members, pendingPayments, completedPay
             {monthlyBudget > 0 && (
               <div className="glass-card-enhanced rounded-[1.25rem] p-5">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Budget vs Réel</p>
-                <div className="space-y-3">
+                <div className="space-y-5">
                   {monthlyHistory.slice(-6).map(m => {
                     const pct = Math.min((m.total / monthlyBudget) * 100, 100);
                     return (
                       <div key={m.month}>
                         <div className="flex justify-between text-xs mb-1">
                           <span className="font-medium capitalize">{m.month}</span>
-                          <span className={m.total > monthlyBudget ? "text-red-400 font-semibold" : "text-muted-foreground"}>{fmt(m.total)}</span>
+                          <span className={m.total > monthlyBudget ? "text-destructive font-semibold" : "text-muted-foreground"}>{fmt(m.total)}</span>
                         </div>
                         <div className="h-2 bg-muted rounded-full overflow-hidden">
                           <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.8, ease: "easeOut" }}
-                            className={`h-full rounded-full ${m.total > monthlyBudget ? "bg-red-500" : m.total > monthlyBudget * 0.8 ? "bg-yellow-500" : "bg-primary"}`} />
+                            className={`h-full rounded-full ${m.total > monthlyBudget ? "bg-destructive" : m.total > monthlyBudget * 0.8 ? "bg-amber-500" : "bg-primary"}`} />
                         </div>
                       </div>
                     );

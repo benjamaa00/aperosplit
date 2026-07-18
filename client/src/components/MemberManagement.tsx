@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { AvatarImg } from "./AvatarImg";
+import { Toggle } from "./Toggle";
 import { formatCurrency } from "../utils/currency";
 
 interface Member {
@@ -54,8 +55,6 @@ interface MemberManagementProps {
   groupRequireApproval?: boolean;
 }
 
-const spring = { type: "spring" as const, stiffness: 300, damping: 30 };
-
 function SettingsTab({ groupName, requireApproval, onUpdateSettings, onResetAllData }: {
   groupName: string;
   requireApproval: boolean;
@@ -89,18 +88,13 @@ function SettingsTab({ groupName, requireApproval, onUpdateSettings, onResetAllD
             <p className="text-sm font-semibold">Approbation requise</p>
             <p className="text-[11px] text-muted-foreground mt-0.5">Les nouveaux membres doivent être approuvés</p>
           </div>
-          <motion.button whileTap={{ scale: 0.95 }}
-            onClick={() => { setApproval(!approval); onUpdateSettings?.({ requireApproval: !approval }); }}
-            className={`w-[52px] h-8 rounded-full transition-all duration-300 relative ${approval ? "bg-primary shadow-lg shadow-primary/30" : "bg-secondary"}`}>
-            <motion.div animate={{ x: approval ? 22 : 3 }} transition={spring}
-              className="absolute top-1 w-6 h-6 rounded-full bg-white shadow-md" />
-          </motion.button>
+          <Toggle enabled={approval} onToggle={() => { setApproval(!approval); onUpdateSettings?.({ requireApproval: !approval }); }} />
         </div>
       </div>
 
       {/* Danger Zone */}
       <div className="rounded-2xl border border-red-500/20 overflow-hidden">
-        <div className="px-4 py-3 bg-red-500/5 border-b border-red-500/10">
+        <div className="px-4 py-3 bg-red-500/10 border-b border-red-500/10">
           <p className="text-xs font-semibold text-red-400">Zone dangereuse</p>
         </div>
         <div className="p-4">
@@ -372,12 +366,12 @@ export function MemberManagement({
                 <div className="space-y-2">
                   {filtered.map((member, i) => (
                     <motion.div key={member.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}>
-                      <div className="glass-card-enhanced rounded-[1.25rem] p-4 flex items-center gap-3 relative">
+                      <div className="glass-card-enhanced rounded-[1.25rem] p-4 flex items-center gap-3 relative hover:bg-card/60 transition-colors duration-200">
                         <motion.div whileHover={{ scale: 1.1 }}
                           className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary/15 to-primary/5 flex items-center justify-center border border-primary/20 shadow-md shadow-primary/5">
                           <AvatarImg avatar={member.avatar} size="text-2xl" />
                         </motion.div>
-                        <div className="flex-1 min-w-0" onClick={() => { setSelectedMemberId(member.id); setTab("memberDetail"); }}>
+                        <div className="flex-1 min-w-0 cursor-pointer" onClick={() => { setSelectedMemberId(member.id); setTab("memberDetail"); }}>
                           <div className="flex items-center gap-2">
                             <p className="text-sm font-semibold truncate">{member.name}</p>
                             {isAdmin(member.id) && <Crown size={12} className="text-amber-400 shrink-0" />}
@@ -449,11 +443,11 @@ export function MemberManagement({
                         </p>
                       </div>
                       <div className="flex gap-1.5">
-                        <motion.button whileTap={{ scale: 0.9 }} onClick={() => onApproveMember?.(req.memberId)}
+                        <motion.button whileTap={{ scale: 0.9 }} whileHover={{ scale: 1.05 }} onClick={() => onApproveMember?.(req.memberId)}
                           className="w-9 h-9 rounded-xl bg-green-500/10 text-green-400 flex items-center justify-center border border-green-500/20">
                           <Check size={16} />
                         </motion.button>
-                        <motion.button whileTap={{ scale: 0.9 }} onClick={() => onRefuseMember?.(req.memberId)}
+                        <motion.button whileTap={{ scale: 0.9 }} whileHover={{ scale: 1.05 }} onClick={() => onRefuseMember?.(req.memberId)}
                           className="w-9 h-9 rounded-xl bg-red-500/10 text-red-400 flex items-center justify-center border border-red-500/20">
                           <X size={16} />
                         </motion.button>
