@@ -34,6 +34,14 @@ export function resolveAvatar(avatar: string): string {
   return avatar || "👤";
 }
 
+export function migrateAvatar(memberId: string, avatar: string): string {
+  if (avatar && avatar.startsWith("data:")) {
+    storePhotoAvatar(memberId, avatar);
+    return `photo:${memberId}`;
+  }
+  return avatar;
+}
+
 export function removePhotoAvatar(memberId: string) {
   const store = getAvatarStore();
   delete store[memberId];

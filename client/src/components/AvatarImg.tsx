@@ -16,5 +16,9 @@ export function AvatarImg({ avatar, size = "text-3xl" }: { avatar: string; size?
     );
   }
 
+  if (imgError && resolved.startsWith("data:")) {
+    return <span className={`${size} w-[1em] h-[1em] rounded-full bg-primary/20 text-primary inline-flex items-center justify-center align-middle text-[0.6em] font-semibold`}>?</span>;
+  }
+
   return <span className={size}>{resolved || "👤"}</span>;
 }

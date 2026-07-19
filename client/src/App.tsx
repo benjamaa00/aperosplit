@@ -41,7 +41,7 @@ const isNetlify = import.meta.env.VITE_NETLIFY === "true";
 function prepareAvatar(memberId: string, avatar: string): string {
   if (avatar.startsWith("data:")) {
     storePhotoAvatar(memberId, avatar);
-    return avatar;
+    return `photo:${memberId}`;
   }
   return avatar;
 }
@@ -173,7 +173,16 @@ export default function App() {
       const stored = localStorage.getItem("equilibra_data");
       if (stored) {
         const data = JSON.parse(stored);
-        if (data.members) setMembers(data.members);
+        if (data.members) {
+          const migrated = data.members.map((m: any) => {
+            if (m.avatar && m.avatar.startsWith("data:")) {
+              storePhotoAvatar(m.id, m.avatar);
+              return { ...m, avatar: `photo:${m.id}` };
+            }
+            return m;
+          });
+          setMembers(migrated);
+        }
         if (data.expenses) setExpenses(data.expenses);
         if (data.pendingPayments) setPendingPayments(data.pendingPayments);
         if (data.currentMemberId) setCurrentMemberId(data.currentMemberId);
@@ -191,7 +200,14 @@ export default function App() {
     if (!groupData) return;
     syncingFromServer.current = true;
     if (groupData.members && groupData.members.length > 0) {
-      setMembers(groupData.members.map((m: any) => ({ id: m.id, name: m.name, avatar: m.avatar, role: m.role, status: m.status })));
+      setMembers(groupData.members.map((m: any) => {
+        let avatar = m.avatar;
+        if (avatar && avatar.startsWith("data:")) {
+          storePhotoAvatar(m.id, avatar);
+          avatar = `photo:${m.id}`;
+        }
+        return { id: m.id, name: m.name, avatar, role: m.role, status: m.status };
+      }));
     }
     if (groupData.expenses) setExpenses(groupData.expenses);
     if (groupData.pending) setPendingPayments(groupData.pending);
