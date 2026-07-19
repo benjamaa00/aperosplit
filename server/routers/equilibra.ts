@@ -301,11 +301,11 @@ export const equilibraRouter = router({
     }),
 
   confirmReceipt: groupProcedure
-    .input(z.object({ paymentId: z.string(), toId: z.string() }))
+    .input(z.object({ paymentId: z.string(), toId: z.string(), fromId: z.string() }))
     .mutation(async ({ input }) => {
       const success = await confirmReceipt(input.paymentId);
       if (success) {
-        await addNotification(input.toId, GROUP_ID, "receipt_confirmed",
+        await addNotification(input.fromId, GROUP_ID, "receipt_confirmed",
           "Paiement confirmé",
           "Le destinataire a confirmé avoir reçu le paiement",
           { paymentId: input.paymentId }

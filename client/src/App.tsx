@@ -322,6 +322,11 @@ export default function App() {
   }, []);
 
   const selectIdentity = useCallback((id: string) => {
+    const member = members.find((m) => m.id === id);
+    if (member?.status === "pending") {
+      toast.info("En attente d'approbation");
+      return;
+    }
     const stored = localStorage.getItem("equilibra_locked_member");
     if (stored && stored !== id) {
       const lockedMember = members.find((m) => m.id === stored);
@@ -442,18 +447,19 @@ export default function App() {
       toast.success(`Paiement de ${formatCurrency(payment.amount)} confirmé comme reçu`);
     }
     if (!isNetlify && payment) {
-      confirmReceiptMutation.mutateAsync({ paymentId: id, toId: payment.toId })
+      confirmReceiptMutation.mutateAsync({ paymentId: id, toId: payment.toId, fromId: payment.fromId })
         .then(() => refetch())
         .catch(() => {});
     }
   }, [haptic, pendingPayments, confirmReceiptMutation, refetch, isNetlify]);
 
   const reportNotReceived = useCallback((id: string, comment?: string) => {
+    if (!comment) return;
     haptic("medium");
     const payment = pendingPayments.find((p) => p.id === id);
     setPendingPayments((prev) => prev.map((p) => p.id === id ? { ...p, status: "disputed" as const, disputeNote: comment } : p));
     if (payment) toast.error(`Litige ouvert pour ${formatCurrency(payment.amount)}`);
-    if (!isNetlify && payment && comment) {
+    if (!isNetlify && payment) {
       reportNotReceivedMutation.mutateAsync({ paymentId: id, note: comment, toId: payment.toId })
         .then(() => refetch())
         .catch(() => {});

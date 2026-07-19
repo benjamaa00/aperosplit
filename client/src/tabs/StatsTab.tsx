@@ -246,7 +246,7 @@ export function StatsTab({ expenses, members, currentMemberId, pendingPayments, 
                 </div>
                 <div className="text-right">
                   <p className="text-lg font-bold text-primary">{formatCurrency(topCategory.value, currency)}</p>
-                  <p className="text-[10px] text-muted-foreground">{((topCategory.value / memberCurrentTotal) * 100).toFixed(0)}% du total</p>
+                   <p className="text-[10px] text-muted-foreground">{((topCategory.value / (memberCurrentTotal || 1)) * 100).toFixed(0)}% du total</p>
                 </div>
               </div>
             </motion.div>
@@ -286,7 +286,7 @@ export function StatsTab({ expenses, members, currentMemberId, pendingPayments, 
                     <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: pieColors[i % pieColors.length] }} />
                     <span className="text-xs text-muted-foreground flex-1 truncate">{cat.emoji} {cat.name}</span>
                     <span className="text-xs font-semibold">{formatCurrency(cat.value, currency)}</span>
-                    <span className="text-[10px] text-muted-foreground w-10 text-right">{((cat.value / memberCurrentTotal) * 100).toFixed(0)}%</span>
+                    <span className="text-[10px] text-muted-foreground w-10 text-right">{((cat.value / (memberCurrentTotal || 1)) * 100).toFixed(0)}%</span>
                   </div>
                 ))}
               </div>

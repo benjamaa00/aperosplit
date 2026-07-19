@@ -490,7 +490,7 @@ export async function refusePayment(paymentId: string, comment?: string) {
     updateStorage("pendingPayments", pendingPayments);
     return true;
   }
-  return (await db.query(`UPDATE payments SET status = 'refused', responded_at = NOW(), comment = $2 WHERE id = $1 AND status = 'pending'`, [paymentId, comment || null])).rowCount === 1;
+  return (await db.query(`UPDATE payments SET status = 'refused', responded_at = NOW(), comment = $2 WHERE id = $1 AND status IN ('pending', 'late')`, [paymentId, comment || null])).rowCount === 1;
 }
 
 export async function addHistoryEntry(entry: any) {
@@ -829,7 +829,7 @@ export async function resendPaymentRequest(paymentId: string) {
   const db = await ready();
   if (!db) return false;
   return (await db.query(
-    `UPDATE payments SET status = 'pending', attempt_count = attempt_count + 1, responded_at = NULL WHERE id = $1 AND status IN ('pending', 'refused', 'late')`,
+    `UPDATE payments SET attempt_count = attempt_count + 1, responded_at = NULL WHERE id = $1 AND status IN ('pending', 'refused', 'late')`,
     [paymentId]
   )).rowCount === 1;
 }

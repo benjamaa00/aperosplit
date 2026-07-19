@@ -52,7 +52,7 @@ export function IdentityScreen({ members, onSelect, onReset }: { members: Member
       </motion.div>
 
       <div className="grid grid-cols-2 gap-4 w-full max-w-xs relative z-10">
-        {members.map((member, i) => (
+        {members.filter(m => m.status === "active").map((member, i) => (
           <motion.button
             key={member.id}
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
@@ -72,6 +72,19 @@ export function IdentityScreen({ members, onSelect, onReset }: { members: Member
             </motion.span>
             <span className="text-sm font-semibold">{member.name}</span>
           </motion.button>
+        ))}
+        {members.filter(m => m.status === "pending").map((member, i) => (
+          <motion.div
+            key={member.id}
+            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            animate={{ opacity: 0.5, scale: 1, y: 0 }}
+            transition={{ delay: 0.2 + (members.filter(m => m.status === "active").length + i) * 0.08, ...spring }}
+            className="flex flex-col items-center gap-3 p-6 rounded-3xl bg-card/50 border border-border opacity-50 cursor-not-allowed"
+          >
+            <AvatarImg avatar={member.avatar} size="text-4xl" />
+            <span className="text-sm font-semibold">{member.name}</span>
+            <span className="text-[10px] text-muted-foreground">En attente d'approbation</span>
+          </motion.div>
         ))}
       </div>
 
