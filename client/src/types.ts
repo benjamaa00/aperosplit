@@ -68,5 +68,5 @@ export interface GroupCategory {
   isDefault: boolean;
 }
 
-export type Screen = "identity" | "lock" | "main" | "register" | "invite" | "access" | "groups" | "groupSettings" | "members" | "notifications" | "notificationSettings" | "reports" | "settings" | "appearance";
+export type Screen = "identity" | "lock" | "main" | "register" | "invite" | "access" | "groups" | "groupSettings" | "members" | "notifications" | "notificationSettings" | "reports" | "settings" | "appearance" | "editProfile";
 export type Tab = "home" | "expenses" | "balances" | "stats" | "history" | "profile";

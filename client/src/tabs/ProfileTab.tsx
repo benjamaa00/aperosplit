@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Fingerprint, Moon, Sun, Sparkles, Copy, Share2, X, DollarSign, Bell, BarChart3, Users, Settings, Shield, Trash2, Clock, Loader2, QrCode, ChevronRight } from "lucide-react";
+import { Fingerprint, Moon, Sun, Sparkles, Copy, Share2, X, DollarSign, Bell, BarChart3, Users, Settings, Shield, Trash2, Clock, Loader2, QrCode, ChevronRight, Pencil } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useThemeContext } from "../contexts/ThemeContext";
 import { trpc } from "../lib/trpc";
@@ -42,6 +42,7 @@ export function ProfileTab({
   privacyMode,
   onTogglePrivacy,
   onOpenAppearance,
+  onOpenEditProfile,
 }: {
   currentMember: Member;
   members: Member[];
@@ -72,6 +73,7 @@ export function ProfileTab({
   privacyMode: boolean;
   onTogglePrivacy: () => void;
   onOpenAppearance?: () => void;
+  onOpenEditProfile?: () => void;
 }) {
   const { theme, toggleTheme } = useThemeContext();
   const shareUrl = window.location.origin;
@@ -158,30 +160,39 @@ export function ProfileTab({
         animate={{ opacity: 1, scale: 1 }}
         className="text-center py-6"
       >
-        <motion.div 
+        <motion.button
+          whileTap={{ scale: 0.97 }}
+          onClick={() => { haptic("light"); onOpenEditProfile?.(); }}
           className="relative inline-block"
-          whileHover={{ scale: 1.05, rotate: [0, -5, 5, 0] }}
-          transition={{ duration: 0.5 }}
         >
-          <div className="w-24 h-24 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border-2 border-primary/30 shadow-2xl shadow-primary/20 backdrop-blur-sm mb-4">
-            <AvatarImg avatar={currentMember.avatar} size="text-6xl" />
-          </div>
           <motion.div
-            animate={{ scale: [1, 1.1, 1] }}
-            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute inset-0 rounded-full bg-primary/10 blur-xl -z-10"
-          />
-          {currentMember.role === "admin" && (
+            className="relative inline-block"
+            whileHover={{ scale: 1.05, rotate: [0, -5, 5, 0] }}
+            transition={{ duration: 0.5 }}
+          >
+            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border-2 border-primary/30 shadow-2xl shadow-primary/20 backdrop-blur-sm mb-4">
+              <AvatarImg avatar={currentMember.avatar} size="text-6xl" />
+            </div>
             <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg shadow-primary/30 border-2 border-background"
-            >
-              <Sparkles size={14} className="text-white" />
-            </motion.div>
-          )}
-        </motion.div>
-        <h1 className="text-2xl font-bold tracking-tight">{currentMember.name}</h1>
+              animate={{ scale: [1, 1.1, 1] }}
+              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+              className="absolute inset-0 rounded-full bg-primary/10 blur-xl -z-10"
+            />
+            {currentMember.role === "admin" && (
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg shadow-primary/30 border-2 border-background"
+              >
+                <Sparkles size={14} className="text-white" />
+              </motion.div>
+            )}
+          </motion.div>
+          <div className="flex items-center justify-center gap-1.5 mt-1">
+            <h1 className="text-2xl font-bold tracking-tight">{currentMember.name}</h1>
+            <Pencil size={14} className="text-muted-foreground" />
+          </div>
+        </motion.button>
         <div className="flex items-center justify-center gap-2 mt-1">
           <span className="text-sm text-muted-foreground">Membre du groupe</span>
           <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold border ${currentMember.role === "admin" ? "bg-primary/10 text-primary border-primary/20" : "bg-secondary text-muted-foreground border-border"}`}>{currentMember.role === "admin" ? "Admin" : "Membre"}</span>

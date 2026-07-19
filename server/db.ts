@@ -530,6 +530,12 @@ export async function updateMemberBiometric(memberId: string, enabled: boolean) 
   return (await db.query(`UPDATE group_members SET biometric_enabled = $2 WHERE id = $1`, [memberId, enabled])).rowCount === 1;
 }
 
+export async function updateMemberProfile(memberId: string, name: string, avatar: string) {
+  const db = await ready();
+  if (!db) return false;
+  return (await db.query(`UPDATE group_members SET name = $2, avatar = $3 WHERE id = $1`, [memberId, name, avatar])).rowCount === 1;
+}
+
 export async function clearAllData() {
   const db = await ready();
   if (!db) {

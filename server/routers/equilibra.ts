@@ -14,7 +14,7 @@ import {
   refusePayment,
   addHistoryEntry,
   updateGroupShareUrl,
-  updateMemberBiometric,
+  updateMemberBiometric as dbUpdateMemberBiometric,
   createGroup,
   listGroupsForMember,
   joinGroupByPin,
@@ -44,6 +44,7 @@ import {
   leaveGroup,
   addPaymentComment as dbAddPaymentComment,
   getPaymentComments as dbGetPaymentComments,
+  updateMemberProfile as dbUpdateMemberProfile,
 } from "../db";
 
 const GROUP_ID = "equilibra-fixed-group";
@@ -373,7 +374,14 @@ export const equilibraRouter = router({
   updateMemberBiometric: groupProcedure
     .input(z.object({ memberId: z.string(), credentialId: z.string().optional(), enabled: z.boolean() }))
     .mutation(async ({ input }) => {
-      const success = await updateMemberBiometric(input.memberId, input.enabled);
+      const success = await dbUpdateMemberBiometric(input.memberId, input.enabled);
+      return { success };
+    }),
+
+  updateMemberProfile: groupProcedure
+    .input(z.object({ memberId: z.string().min(1).max(128), name: z.string().trim().min(1).max(80), avatar: z.string().min(1).max(50000) }))
+    .mutation(async ({ input }) => {
+      const success = await dbUpdateMemberProfile(input.memberId, input.name, input.avatar);
       return { success };
     }),
 
