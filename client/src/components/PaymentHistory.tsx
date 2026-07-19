@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Filter, X, Clock, Search, Receipt, ArrowUpRight, ArrowDownLeft, Check, AlertTriangle, RefreshCw, Pause, Send, ChevronDown, Inbox } from "lucide-react";
 import { AvatarImg } from "./AvatarImg";
 import { formatCurrency } from "../utils/currency";
-import { getStatusStyle, getStatusDot, getStatusPill, getStatusLabel } from "../utils/statusColors";
+import { getStatusDot, getStatusPill, getStatusLabel } from "../utils/statusColors";
 
 function getStatusIcon(status: string): React.ReactNode {
   switch (status) {

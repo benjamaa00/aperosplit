@@ -266,7 +266,7 @@ export function ExpensesTab({
                     </div>
                     <div className="text-right shrink-0">
                       <p className="text-base font-bold">
-                        {formatCurrency(exp.amount)}
+                        {formatCurrency(exp.amount, currency)}
                       </p>
                     </div>
                   </div>
@@ -316,7 +316,7 @@ export function ExpensesTab({
                         Part par personne
                       </span>
                       <span className="font-semibold">
-                        {formatCurrency(perPerson)}
+                        {formatCurrency(perPerson, currency)}
                       </span>
                     </div>
                     {exp.participants.includes(currentMemberId) &&
@@ -326,7 +326,7 @@ export function ExpensesTab({
                             Votre part
                           </span>
                           <span className="font-bold text-primary">
-                            {formatCurrency(userShare)}
+                            {formatCurrency(userShare, currency)}
                           </span>
                         </div>
                       )}
@@ -369,7 +369,7 @@ export function ExpensesTab({
                         !isPayer && (
                           <span className="text-[10px] text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-full font-medium">
                             Vous devez{" "}
-                            {formatCurrency(userShare)}
+                            {formatCurrency(userShare, currency)}
                           </span>
                         )}
                     </div>
@@ -625,7 +625,7 @@ export function ExpensesTab({
                         {member?.name}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {formatCurrency(modal.perPerson)}
+                        {formatCurrency(modal.perPerson, currency)}
                       </p>
                     </div>
                     {selected && (
@@ -735,7 +735,7 @@ export function ExpensesTab({
                 </p>
               </div>
               <p className="text-base font-bold text-primary">
-                {formatCurrency(modal.perPerson)}
+                {formatCurrency(modal.perPerson, currency)}
               </p>
             </div>
 

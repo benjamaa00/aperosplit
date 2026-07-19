@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { AlertTriangle, Trash2, RotateCcw, LogOut, X } from "lucide-react";
 
@@ -75,7 +74,7 @@ export function ConfirmDialog({
             exit={{ scale: 0.9, opacity: 0, y: 20 }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
             onClick={(e) => e.stopPropagation()}
-            className="bg-card border border-border rounded-3xl p-6 w-full max-w-sm shadow-2xl"
+            className="relative bg-card border border-border rounded-3xl p-6 w-full max-w-sm shadow-2xl"
           >
             {/* Close button */}
             <button

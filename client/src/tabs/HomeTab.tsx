@@ -101,7 +101,7 @@ export function HomeTab({
         <div className="absolute bottom-0 left-0 w-32 h-32 bg-muted/30 rounded-full translate-y-10 -translate-x-10 blur-lg" />
         <div className="relative z-10">
           <p className="text-sm opacity-80 mb-1 font-medium">Votre solde</p>
-          <p className="text-4xl font-bold tracking-tight">{formatCurrency(balance)}</p>
+          <p className="text-4xl font-bold tracking-tight">{formatCurrency(balance, currency)}</p>
           <div className="flex items-center gap-1.5 mt-3">
             {balance > 0 ? <TrendingUp size={14} /> : balance < 0 ? <TrendingDown size={14} /> : null}
             <p className="text-xs opacity-80">
@@ -111,11 +111,11 @@ export function HomeTab({
           <div className="mt-4 pt-4 border-t border-white/20 grid grid-cols-2 gap-4">
             <div>
               <p className="text-[10px] opacity-70 uppercase tracking-wide">Vous avez payé</p>
-              <p className="text-lg font-semibold">{formatCurrency(breakdown.totalPaid)}</p>
+              <p className="text-lg font-semibold">{formatCurrency(breakdown.totalPaid, currency)}</p>
             </div>
             <div>
               <p className="text-[10px] opacity-70 uppercase tracking-wide">Votre part</p>
-              <p className="text-lg font-semibold">{formatCurrency(breakdown.totalShare)}</p>
+              <p className="text-lg font-semibold">{formatCurrency(breakdown.totalShare, currency)}</p>
             </div>
           </div>
         </div>
@@ -132,7 +132,7 @@ export function HomeTab({
           <div>
             <h3 className="text-sm font-semibold">Budget mensuel</h3>
             <p className="text-xs text-muted-foreground">
-              {formatCurrency(currentMonthSpending)} / {formatCurrency(monthlyBudget)}
+              {formatCurrency(currentMonthSpending, currency)} / {formatCurrency(monthlyBudget, currency)}
             </p>
           </div>
           <motion.button
@@ -159,8 +159,8 @@ export function HomeTab({
         <div className="flex items-center justify-between text-xs">
           <span className="text-muted-foreground">
             {budgetRemaining >= 0 
-              ? `${formatCurrency(budgetRemaining)} restants` 
-              : `${formatCurrency(Math.abs(budgetRemaining))} dépassé`}
+              ? `${formatCurrency(budgetRemaining, currency)} restants` 
+              : `${formatCurrency(Math.abs(budgetRemaining), currency)} dépassé`}
           </span>
           <span className={`font-medium ${
             budgetPercentage > 90 ? "text-destructive" : budgetPercentage > 70 ? "text-amber-500" : "text-primary"
@@ -195,7 +195,7 @@ export function HomeTab({
                           <p className="text-xs text-muted-foreground">{debt.reason}</p>
                         </div>
                       </div>
-                      <p className="font-semibold text-destructive">{formatCurrency(debt.amount)}</p>
+                      <p className="font-semibold text-destructive">{formatCurrency(debt.amount, currency)}</p>
                     </div>
                   );
                 })}
@@ -223,7 +223,7 @@ export function HomeTab({
                           <p className="text-xs text-muted-foreground">{debt.reason}</p>
                         </div>
                       </div>
-                      <p className="font-semibold text-emerald-400">{formatCurrency(debt.amount)}</p>
+                      <p className="font-semibold text-emerald-400">{formatCurrency(debt.amount, currency)}</p>
                     </div>
                   );
                 })}
@@ -247,7 +247,7 @@ export function HomeTab({
           className="glass-card-enhanced rounded-[1.25rem] p-4"
         >
           <p className="text-[11px] text-muted-foreground mb-1 font-medium uppercase tracking-wide">Total dépensé</p>
-          <p className="text-xl font-bold">{formatCurrency(totalSpent)}</p>
+          <p className="text-xl font-bold">{formatCurrency(totalSpent, currency)}</p>
         </motion.div>
         <motion.div
           initial={{ opacity: 0, y: 10 }}
@@ -317,7 +317,7 @@ export function HomeTab({
                       </p>
                     </div>
                   </div>
-                  <p className="text-sm font-bold text-emerald-400">{formatCurrency(p.amount)}</p>
+                  <p className="text-sm font-bold text-emerald-400">{formatCurrency(p.amount, currency)}</p>
                 </motion.div>
               );
             })}
@@ -357,7 +357,7 @@ export function HomeTab({
                     <p className="text-sm font-medium truncate">{exp.description}</p>
                     <p className="text-xs text-muted-foreground">{payer?.name} • {formatDate(exp.date)}</p>
                   </div>
-                  <p className="text-sm font-bold">{formatCurrency(exp.amount)}</p>
+                  <p className="text-sm font-bold">{formatCurrency(exp.amount, currency)}</p>
                 </motion.div>
               );
             })

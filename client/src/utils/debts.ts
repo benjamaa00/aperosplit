@@ -52,7 +52,10 @@ export function calculateMemberBreakdown(
   const owedBy: Array<{ from: string; amount: number; reason: string }> = [];
 
   expenses.forEach((exp) => {
-    const memberShare = exp.participants.includes(memberId) ? exp.amount / exp.participants.length : 0;
+    const len = exp.participants.length;
+    if (len === 0) return;
+
+    const memberShare = exp.participants.includes(memberId) ? exp.amount / len : 0;
     totalShare += memberShare;
 
     if (exp.payerId === memberId) {
@@ -60,7 +63,7 @@ export function calculateMemberBreakdown(
     }
 
     if (exp.payerId !== memberId && exp.participants.includes(memberId)) {
-      const amount = exp.amount / exp.participants.length;
+      const amount = exp.amount / len;
       owesTo.push({
         to: exp.payerId,
         amount,
@@ -71,7 +74,7 @@ export function calculateMemberBreakdown(
     if (exp.payerId === memberId) {
       exp.participants.forEach((participantId) => {
         if (participantId !== memberId) {
-          const amount = exp.amount / exp.participants.length;
+          const amount = exp.amount / len;
           owedBy.push({
             from: participantId,
             amount,

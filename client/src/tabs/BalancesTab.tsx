@@ -10,11 +10,12 @@ import { AvatarImg } from "../components/AvatarImg";
 interface RequestSheetProps {
   member: Member;
   amount: number;
+  currency: string;
   onClose: () => void;
   onConfirm: (note: string) => void;
 }
 
-function RequestSheet({ member, amount, onClose, onConfirm }: RequestSheetProps) {
+function RequestSheet({ member, amount, currency, onClose, onConfirm }: RequestSheetProps) {
   const [note, setNote] = useState("");
 
   return (
@@ -52,7 +53,7 @@ function RequestSheet({ member, amount, onClose, onConfirm }: RequestSheetProps)
             <div className="flex-1 min-w-0">
               <p className="font-semibold text-sm truncate">{member.name}</p>
               <p className="text-2xl font-bold tabular-nums text-primary">
-                {formatCurrency(amount)}
+                {formatCurrency(amount, currency)}
               </p>
             </div>
           </div>
@@ -182,7 +183,7 @@ export function BalancesTab({
                     }`}
                   >
                     {isPositive ? "+" : ""}
-                    {formatCurrency(memberBalance)}
+                    {formatCurrency(memberBalance, currency)}
                   </p>
                   {showDemandButton && (
                     <motion.button
@@ -236,7 +237,7 @@ export function BalancesTab({
                             A payé
                           </p>
                           <p className="text-lg font-bold tabular-nums">
-                            {formatCurrency(selectedBreakdown.totalPaid)}
+                            {formatCurrency(selectedBreakdown.totalPaid, currency)}
                           </p>
                         </div>
                         <div className="bg-background/50 rounded-xl p-3 text-center">
@@ -244,7 +245,7 @@ export function BalancesTab({
                             Sa part
                           </p>
                           <p className="text-lg font-bold tabular-nums">
-                            {formatCurrency(selectedBreakdown.totalShare)}
+                            {formatCurrency(selectedBreakdown.totalShare, currency)}
                           </p>
                         </div>
                       </div>
@@ -258,15 +259,16 @@ export function BalancesTab({
                             {selectedBreakdown.owesTo.slice(0, 5).map((debt, idx) => {
                               const to = members.find((m) => m.id === debt.to);
                               const canDemand = debt.to === currentMemberId;
+                              if (!to) return null;
                               return (
                                 <div
                                   key={idx}
                                   className="flex items-center justify-between text-sm bg-background/30 rounded-xl p-3 hover:bg-card/50 transition-colors duration-200"
                                 >
                                   <div className="flex items-center gap-2 min-w-0 flex-1">
-                                    <AvatarImg avatar={to?.avatar ?? ""} size="text-base" />
+                                    <AvatarImg avatar={to.avatar} size="text-base" />
                                     <div className="min-w-0">
-                                      <p className="font-medium truncate">{to?.name}</p>
+                                      <p className="font-medium truncate">{to.name}</p>
                                       <p className="text-[10px] text-muted-foreground truncate">
                                         {debt.reason}
                                       </p>
@@ -274,14 +276,14 @@ export function BalancesTab({
                                   </div>
                                   <div className="flex items-center gap-2 ml-2">
                                     <p className="font-semibold text-destructive tabular-nums text-sm">
-                                      {formatCurrency(debt.amount)}
+                                      {formatCurrency(debt.amount, currency)}
                                     </p>
                                     {canDemand && (
                                       <motion.button
                                         whileTap={{ scale: 0.95 }}
                                         onClick={() => {
                                           setRequestSheet({
-                                            member: to!,
+                                            member: to,
                                             amount: debt.amount,
                                           });
                                         }}
@@ -325,8 +327,8 @@ export function BalancesTab({
                                       </p>
                                     </div>
                                   </div>
-                                  <p className="font-semibold text-emerald-400 tabular-nums text-sm ml-2">
-                                    {formatCurrency(debt.amount)}
+                                    <p className="font-semibold text-emerald-400 tabular-nums text-sm ml-2">
+                                      {formatCurrency(debt.amount, currency)}
                                   </p>
                                 </div>
                               );
@@ -359,10 +361,11 @@ export function BalancesTab({
             les comptes
           </p>
           <div className="space-y-2">
-            {suggestedTransactions.map((t, i) => {
+                    {suggestedTransactions.map((t, i) => {
               const from = members.find((m) => m.id === t.from);
               const to = members.find((m) => m.id === t.to);
               const isForMe = t.to === currentMemberId;
+              if (!from || !to) return null;
               return (
                 <motion.div
                   key={i}
@@ -378,23 +381,23 @@ export function BalancesTab({
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <AvatarImg avatar={from?.avatar ?? ""} size="text-xl" />
+                      <AvatarImg avatar={from.avatar} size="text-xl" />
                       <ArrowUpRight size={16} className="text-primary" />
-                      <AvatarImg avatar={to?.avatar ?? ""} size="text-xl" />
+                      <AvatarImg avatar={to.avatar} size="text-xl" />
                     </div>
                     <p className="text-base font-bold tabular-nums">
-                      {formatCurrency(t.amount)}
+                      {formatCurrency(t.amount, currency)}
                     </p>
                   </div>
                   <p className="text-xs text-muted-foreground mt-2">
-                    {from?.name} doit {formatCurrency(t.amount)} à {to?.name}
+                    {from.name} doit {formatCurrency(t.amount, currency)} à {to.name}
                   </p>
                   {isForMe && (
                     <motion.button
                       whileTap={{ scale: 0.95 }}
                       onClick={() => {
                         setRequestSheet({
-                          member: from!,
+                          member: from,
                           amount: t.amount,
                         });
                       }}
@@ -415,6 +418,7 @@ export function BalancesTab({
           <RequestSheet
             member={requestSheet.member}
             amount={requestSheet.amount}
+            currency={currency}
             onClose={() => setRequestSheet(null)}
             onConfirm={(note) => {
               onRequestPayment(requestSheet.member.id, requestSheet.amount, note || undefined);

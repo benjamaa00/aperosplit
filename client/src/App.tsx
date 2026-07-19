@@ -5,11 +5,11 @@ import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 
 import type { Member, Expense, PendingPayment, Notification, Screen, Tab } from "./types";
-import { CATEGORIES, GROUP_ID, spring, fadeUp } from "./constants";
-import { formatCurrency, formatDate } from "./utils/currency";
+import { GROUP_ID } from "./constants";
+import { formatCurrency } from "./utils/currency";
 import { simplifyDebts } from "./utils/debts";
 import { checkBiometricAvailable, registerBiometric, authenticateBiometric } from "./utils/biometric";
-import { storePhotoAvatar, resolveAvatar } from "./utils/avatarStorage";
+import { storePhotoAvatar } from "./utils/avatarStorage";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { useNotifications } from "./hooks/useNotifications";
 import { useHaptic } from "./hooks/useHaptic";
@@ -42,7 +42,7 @@ const isNetlify = import.meta.env.VITE_NETLIFY === "true";
 function prepareAvatar(memberId: string, avatar: string): string {
   if (avatar.startsWith("data:")) {
     storePhotoAvatar(memberId, avatar);
-    return `photo:${memberId}`;
+    return avatar;
   }
   return avatar;
 }
@@ -610,7 +610,7 @@ export default function App() {
           {activeTab === "expenses" && <ExpensesTab key="expenses" expenses={expenses} members={members} currentMemberId={currentMemberId} onDelete={deleteExpense} onAdd={() => setShowAddExpense(true)} onRequestPayment={requestPayment} onRequestGroupPayment={requestGroupPayment} currency={currency} pendingPayments={pendingPayments} completedPayments={completedPayments} />}
           {activeTab === "balances" && <BalancesTab key="balances" members={members} balances={balances} suggestedTransactions={suggestedTransactions} currentMemberId={currentMemberId} onRequestPayment={(toId, amount, note) => requestPayment(toId, amount, undefined, note)} expenses={expenses} currency={currency} />}
           {activeTab === "history" && <PaymentHistory key="history" payments={[...completedPayments, ...pendingPayments].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))} expenses={expenses} members={members} currentMemberId={currentMemberId} currency={currency} />}
-          {activeTab === "stats" && <StatsTab key="stats" expenses={expenses} members={members} currentMemberId={currentMemberId} pendingPayments={pendingPayments} completedPayments={completedPayments} monthlyBudget={monthlyBudget} />}
+          {activeTab === "stats" && <StatsTab key="stats" expenses={expenses} members={members} currentMemberId={currentMemberId} pendingPayments={pendingPayments} completedPayments={completedPayments} monthlyBudget={monthlyBudget} currency={currency} />}
           {activeTab === "profile" && <ProfileTab key="profile" currentMember={currentMember} members={members} biometricEnabled={!!biometricEnabled[currentMemberId]} biometricAvailable={biometricAvailable} onToggleBiometric={toggleBiometric} onLogout={() => { setCurrentMemberId(""); setScreen("identity"); }} onRemoveMember={removeMember} isLocked={!!localStorage.getItem("equilibra_locked_member")} unreadCount={unreadCount} onOpenNotifications={() => setScreen("notifications")} onOpenReports={() => setScreen("reports")} onOpenGroupSettings={() => setScreen("groupSettings")} onOpenMembers={() => setScreen("members")} onOpenAppearance={() => setScreen("appearance")} onOpenEditProfile={() => setScreen("editProfile")} onResetAllData={async () => { try { await resetAllDataMutation.mutateAsync(); setMembers([]); setExpenses([]); setPendingPayments([]); setCompletedPayments([]); setScreen("identity"); toast.success("Toutes les données ont été réinitialisées"); } catch { toast.error("Erreur lors de la réinitialisation"); } }} onLeaveGroup={leaveGroup} currency={currency} onSetCurrency={updateCurrency} monthlyBudget={monthlyBudget} onSetBudget={updateBudget} pushNotifications={pushNotifications} onTogglePushNotifications={() => setPushNotifications(!pushNotifications)} autoReminders={autoReminders} onToggleReminders={() => setAutoReminders(!autoReminders)} reminderDelay={reminderDelay} onSetReminderDelay={(d: number) => setReminderDelay(d)} privacyMode={privacyMode} onTogglePrivacy={() => setPrivacyMode(!privacyMode)} />}
         </AnimatePresence>
 

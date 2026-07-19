@@ -8,13 +8,14 @@ import { formatCurrency } from "../utils/currency";
 import { fadeUp } from "../constants";
 import { AvatarImg } from "../components/AvatarImg";
 
-export function StatsTab({ expenses, members, currentMemberId, pendingPayments, completedPayments, monthlyBudget }: {
+export function StatsTab({ expenses, members, currentMemberId, pendingPayments, completedPayments, monthlyBudget, currency }: {
   expenses: Expense[];
   members: Member[];
   currentMemberId: string;
   pendingPayments: PendingPayment[];
   completedPayments: PendingPayment[];
   monthlyBudget: number;
+  currency: string;
 }) {
   type Period = "week" | "month" | "year" | "all";
   const [period, setPeriod] = useState<Period>("month");
@@ -179,7 +180,7 @@ export function StatsTab({ expenses, members, currentMemberId, pendingPayments, 
           <div className="grid grid-cols-2 gap-3">
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="glass-card-enhanced rounded-[1.25rem] p-4">
               <p className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">Total</p>
-              <p className="text-xl font-bold mt-1">{formatCurrency(memberCurrentTotal)}</p>
+              <p className="text-xl font-bold mt-1">{formatCurrency(memberCurrentTotal, currency)}</p>
               {trend !== 0 && (
                 <p className={`text-[10px] font-semibold mt-1 flex items-center gap-1 ${trend > 0 ? "text-destructive" : "text-emerald-400"}`}>
                   {trend > 0 ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
@@ -189,7 +190,7 @@ export function StatsTab({ expenses, members, currentMemberId, pendingPayments, 
             </motion.div>
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.05 }} className="glass-card-enhanced rounded-[1.25rem] p-4">
               <p className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">Moyenne/personne</p>
-              <p className="text-xl font-bold mt-1">{formatCurrency(averagePerPerson)}</p>
+              <p className="text-xl font-bold mt-1">{formatCurrency(averagePerPerson, currency)}</p>
               <p className="text-[10px] text-muted-foreground mt-1">{memberExpenses.length} dépenses</p>
             </motion.div>
           </div>
@@ -199,7 +200,7 @@ export function StatsTab({ expenses, members, currentMemberId, pendingPayments, 
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="glass-card-enhanced rounded-[1.25rem] p-5">
               <div className="flex items-center justify-between mb-3">
                 <p className="text-sm font-semibold">Budget mensuel</p>
-                <p className="text-sm font-bold">{formatCurrency(currentMonthTotal)} / {formatCurrency(monthlyBudget)}</p>
+                <p className="text-sm font-bold">{formatCurrency(currentMonthTotal, currency)} / {formatCurrency(monthlyBudget, currency)}</p>
               </div>
               <div className="h-3 bg-muted rounded-full overflow-hidden">
                 <motion.div initial={{ width: 0 }} animate={{ width: `${Math.min(budgetUsed, 100)}%` }}
@@ -209,7 +210,7 @@ export function StatsTab({ expenses, members, currentMemberId, pendingPayments, 
               <div className="flex justify-between mt-2">
                 <p className="text-[10px] text-muted-foreground">{budgetUsed.toFixed(0)}% utilisé</p>
                 <p className={`text-[10px] font-semibold ${budgetUsed > 100 ? "text-destructive" : "text-muted-foreground"}`}>
-                  {budgetUsed > 100 ? `Dépassé de ${formatCurrency(currentMonthTotal - monthlyBudget)}` : `Reste ${formatCurrency(monthlyBudget - currentMonthTotal)}`}
+                  {budgetUsed > 100 ? `Dépassé de ${formatCurrency(currentMonthTotal - monthlyBudget, currency)}` : `Reste ${formatCurrency(monthlyBudget - currentMonthTotal, currency)}`}
                 </p>
               </div>
             </motion.div>
@@ -244,7 +245,7 @@ export function StatsTab({ expenses, members, currentMemberId, pendingPayments, 
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-lg font-bold text-primary">{formatCurrency(topCategory.value)}</p>
+                  <p className="text-lg font-bold text-primary">{formatCurrency(topCategory.value, currency)}</p>
                   <p className="text-[10px] text-muted-foreground">{((topCategory.value / memberCurrentTotal) * 100).toFixed(0)}% du total</p>
                 </div>
               </div>
@@ -260,7 +261,7 @@ export function StatsTab({ expenses, members, currentMemberId, pendingPayments, 
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">Plus gros dépensier</p>
                 <p className="text-sm font-bold">{biggestSpender.name}</p>
               </div>
-              <p className="text-lg font-bold">{formatCurrency(biggestSpender.total)}</p>
+              <p className="text-lg font-bold">{formatCurrency(biggestSpender.total, currency)}</p>
             </motion.div>
           )}
 
@@ -275,7 +276,7 @@ export function StatsTab({ expenses, members, currentMemberId, pendingPayments, 
                       {categoryData.map((_, i) => <Cell key={`c-${i}`} fill={pieColors[i % pieColors.length]} />)}
                     </Pie>
                     <RechartsTooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12, fontSize: 12 }}
-                      formatter={(value: number) => [formatCurrency(value), "Montant"]} />
+                      formatter={(value: number) => [formatCurrency(value, currency), "Montant"]} />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
@@ -284,7 +285,7 @@ export function StatsTab({ expenses, members, currentMemberId, pendingPayments, 
                   <div key={cat.name} className="flex items-center gap-3">
                     <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: pieColors[i % pieColors.length] }} />
                     <span className="text-xs text-muted-foreground flex-1 truncate">{cat.emoji} {cat.name}</span>
-                    <span className="text-xs font-semibold">{formatCurrency(cat.value)}</span>
+                    <span className="text-xs font-semibold">{formatCurrency(cat.value, currency)}</span>
                     <span className="text-[10px] text-muted-foreground w-10 text-right">{((cat.value / memberCurrentTotal) * 100).toFixed(0)}%</span>
                   </div>
                 ))}
@@ -302,7 +303,7 @@ export function StatsTab({ expenses, members, currentMemberId, pendingPayments, 
                   <XAxis dataKey="name" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
                   <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
                   <RechartsTooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12, fontSize: 12 }}
-                    formatter={(value: number) => [formatCurrency(value), "Dépensé"]} />
+                    formatter={(value: number) => [formatCurrency(value, currency), "Dépensé"]} />
                   <Bar dataKey="total" radius={[6, 6, 0, 0]}>
                     {memberBarData.map((_, i) => <Cell key={`m-${i}`} fill={pieColors[i % pieColors.length]} />)}
                   </Bar>
@@ -322,7 +323,7 @@ export function StatsTab({ expenses, members, currentMemberId, pendingPayments, 
                     <XAxis dataKey="date" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
                     <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
                     <RechartsTooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12, fontSize: 12 }}
-                      formatter={(value: number) => [formatCurrency(value), "Total"]} />
+                      formatter={(value: number) => [formatCurrency(value, currency), "Total"]} />
                     <Line type="monotone" dataKey="total" stroke="hsl(var(--primary))" strokeWidth={2.5}
                       dot={{ fill: "hsl(var(--primary))", strokeWidth: 0, r: 3 }} activeDot={{ r: 5, fill: "hsl(var(--primary))" }} />
                   </LineChart>
@@ -342,7 +343,7 @@ export function StatsTab({ expenses, members, currentMemberId, pendingPayments, 
                     <XAxis dataKey="month" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
                     <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
                     <RechartsTooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12, fontSize: 12 }}
-                      formatter={(value: number) => [formatCurrency(value), "Total"]} />
+                      formatter={(value: number) => [formatCurrency(value, currency), "Total"]} />
                     <Bar dataKey="total" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
