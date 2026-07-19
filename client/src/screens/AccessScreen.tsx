@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Shield } from "lucide-react";
 import { toast } from "sonner";
@@ -9,12 +9,15 @@ export function AccessScreen({ onSubmit }: { onSubmit: (code: string) => void })
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
   const haptic = useHaptic();
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => { return () => { if (timerRef.current) clearTimeout(timerRef.current); }; }, []);
 
   const handleSubmit = () => {
     if (code.trim()) {
       setLoading(true);
       haptic("success");
-      setTimeout(() => {
+      timerRef.current = setTimeout(() => {
         onSubmit(code.trim());
         setLoading(false);
       }, 300);

@@ -121,7 +121,7 @@ export function ReportsScreen({ expenses, members, pendingPayments, completedPay
       `Moyenne par dépense: ${fmt(avg)}`,
       "",
       "─── PAR CATÉGORIE ───",
-      ...categoryData.map(c => `  ${c.emoji} ${c.name}: ${fmt(c.value)} (${((c.value / total) * 100).toFixed(0)}%)`),
+      ...categoryData.map(c => `  ${c.emoji} ${c.name}: ${fmt(c.value)} (${total > 0 ? ((c.value / total) * 100).toFixed(0) : "0"}%)`),
       "",
       "─── PAR MEMBRE ───",
       ...memberData.map(m => `  ${m.name}: ${fmt(m.total)}`),
@@ -243,7 +243,7 @@ export function ReportsScreen({ expenses, members, pendingPayments, completedPay
                 </div>
                 <div className="text-right">
                   <p className="text-sm font-bold text-primary">{fmt(topCategory.value)}</p>
-                  <p className="text-[10px] text-muted-foreground">{((topCategory.value / total) * 100).toFixed(0)}%</p>
+                  <p className="text-[10px] text-muted-foreground">{total > 0 ? ((topCategory.value / total) * 100).toFixed(0) : "0"}%</p>
                 </div>
               </div>
             )}

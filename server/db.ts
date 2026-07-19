@@ -404,9 +404,9 @@ export async function addExpense(expense: any) {
     return true;
   }
   await db.query(
-    `INSERT INTO expenses (id, group_id, description, amount, category, payer_id, participants, photo_url, category_emoji, is_recurring, recurrence_interval, date)
-     VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,$8,$9,$10,$11,$12)`,
-    [expense.id, expense.groupId, expense.description, expense.amount, expense.category, expense.payerId, JSON.stringify(expense.participants), expense.photoUrl, expense.categoryEmoji || null, expense.isRecurring || false, expense.recurrenceInterval || null, expense.date],
+    `INSERT INTO expenses (id, group_id, description, amount, category, payer_id, participants, photo_url, category_emoji, is_recurring, recurrence_interval, recurrence_end_date, date)
+     VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,$8,$9,$10,$11,$12,$13)`,
+    [expense.id, expense.groupId, expense.description, expense.amount, expense.category, expense.payerId, JSON.stringify(expense.participants), expense.photoUrl, expense.categoryEmoji || null, expense.isRecurring || false, expense.recurrenceInterval || null, expense.recurrenceEndDate || null, expense.date],
   );
   return true;
 }
@@ -510,9 +510,13 @@ export async function addHistoryEntry(entry: any) {
 }
 
 export async function updateGroupShareUrl(groupId: string, shareUrl: string) {
-  const members = JSON.parse(shareUrl);
-  if (!Array.isArray(members)) return false;
-  return addMembers(groupId, members);
+  try {
+    const members = JSON.parse(shareUrl);
+    if (!Array.isArray(members)) return false;
+    return addMembers(groupId, members);
+  } catch {
+    return false;
+  }
 }
 
 export async function updateMemberBiometric(memberId: string, enabled: boolean) {
@@ -922,7 +926,7 @@ export async function exportExpensesCSV(groupId: string) {
   );
   const header = "Description,Montant,Categorie,Payeur,Participants,Date\n";
   const rows = result.rows.map((r: any) =>
-    `"${r.description}",${r.amount},"${r.category}","${r.payerId}","${JSON.stringify(r.participants)}","${r.date}"`
+    `"${String(r.description).replace(/"/g, '""')}",${r.amount},"${r.category}","${r.payerId}","${JSON.stringify(r.participants)}","${r.date}"`
   ).join("\n");
   return header + rows;
 }
@@ -937,13 +941,13 @@ export async function resetAllGroupData(groupId: string) {
     return true;
   }
   await db.query(`DELETE FROM expenses WHERE group_id = $1`, [groupId]);
+  await db.query(`DELETE FROM payment_comments WHERE payment_id IN (SELECT id FROM payments WHERE group_id = $1)`, [groupId]);
   await db.query(`DELETE FROM payments WHERE group_id = $1`, [groupId]);
   await db.query(`DELETE FROM activity_history WHERE group_id = $1`, [groupId]);
   await db.query(`DELETE FROM notifications WHERE group_id = $1`, [groupId]);
   await db.query(`DELETE FROM notification_settings WHERE group_id = $1`, [groupId]);
   await db.query(`DELETE FROM expense_categories WHERE group_id = $1 AND is_default = FALSE`, [groupId]);
   await db.query(`DELETE FROM group_invites WHERE group_id = $1`, [groupId]);
-  await db.query(`DELETE FROM group_members WHERE group_id = $1`, [groupId]);
   await db.query(`UPDATE groups SET share_url = NULL WHERE id = $1`, [groupId]);
   return true;
 }

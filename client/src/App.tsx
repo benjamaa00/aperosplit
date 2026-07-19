@@ -202,13 +202,19 @@ export default function App() {
 
   useEffect(() => {
     try {
-      localStorage.setItem("equilibra_data", JSON.stringify({ members, expenses, pendingPayments, currentMemberId, biometricEnabled }));
+      localStorage.setItem("equilibra_data", JSON.stringify({ members, expenses, pendingPayments, currentMemberId, biometricEnabled, completedPayments }));
     } catch {}
-  }, [members, expenses, pendingPayments, currentMemberId, biometricEnabled]);
+  }, [members, expenses, pendingPayments, currentMemberId, biometricEnabled, completedPayments]);
 
   useEffect(() => {
-    try { localStorage.setItem("equilibra_completed_payments", JSON.stringify(completedPayments)); } catch {}
-  }, [completedPayments]);
+    try {
+      localStorage.setItem("equilibra_auto_reminders", String(autoReminders));
+      localStorage.setItem("equilibra_privacy_mode", String(privacyMode));
+      localStorage.setItem("equilibra_offline_mode", String(offlineMode));
+      localStorage.setItem("equilibra_push_notifications", String(pushNotifications));
+      localStorage.setItem("equilibra_reminder_delay", String(reminderDelay));
+    } catch {}
+  }, [autoReminders, privacyMode, offlineMode, pushNotifications, reminderDelay]);
 
   useEffect(() => {
     if (isNetlify || groupData) return;
@@ -265,6 +271,7 @@ export default function App() {
     const b: Record<string, number> = {};
     members.forEach((m) => { b[m.id] = 0; });
     expenses.forEach((e) => {
+      if (!e.participants.length) return;
       const share = e.amount / e.participants.length;
       e.participants.forEach((pid) => { if (b[pid] !== undefined) b[pid] -= share; });
       if (b[e.payerId] !== undefined) b[e.payerId] += e.amount;
@@ -483,12 +490,27 @@ export default function App() {
 
   const leaveGroup = useCallback(async () => {
     if (currentMember?.role === "admin") { toast.error("L'admin ne peut pas quitter. Transférez d'abord le rôle admin."); return; }
+    const prevMembers = members;
+    const prevExpenses = expenses;
+    const prevCurrentMemberId = currentMemberId;
+    const prevScreen = screen;
     setMembers(prev => prev.filter(m => m.id !== currentMemberId));
     setExpenses(prev => prev.filter(e => e.payerId !== currentMemberId));
     setCurrentMemberId("");
     setScreen("identity");
-    if (!isNetlify) { await leaveMemberMutation.mutateAsync({ memberId: currentMemberId }); await refetch(); }
-  }, [currentMember, currentMemberId, leaveMemberMutation, refetch, isNetlify]);
+    if (!isNetlify) {
+      try {
+        await leaveMemberMutation.mutateAsync({ memberId: currentMemberId });
+        await refetch();
+      } catch {
+        setMembers(prevMembers);
+        setExpenses(prevExpenses);
+        setCurrentMemberId(prevCurrentMemberId);
+        setScreen(prevScreen);
+        toast.error("Erreur lors de la sortie du groupe");
+      }
+    }
+  }, [currentMember, currentMemberId, leaveMemberMutation, refetch, isNetlify, members, expenses, screen]);
 
   // ─── Screen Routing ────────────────────────────────────────
   const themed = (content: React.ReactNode) => <ThemeProvider memberId={currentMemberId}>{content}</ThemeProvider>;

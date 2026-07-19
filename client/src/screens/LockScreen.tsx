@@ -19,11 +19,14 @@ export function LockScreen({ member, onUnlock, onSkip, onSwitchIdentity }: { mem
     // Success is determined by screen change to main (handled by parent)
     // If we're still on lock screen after a delay, it failed
     setTimeout(() => {
-      if (authenticating) {
-        haptic("error");
-        setAuthStatus("error");
-        setAuthenticating(false);
-      }
+      setAuthenticating(prev => {
+        if (prev) {
+          haptic("error");
+          setAuthStatus("error");
+          return false;
+        }
+        return false;
+      });
     }, 3000);
   };
 

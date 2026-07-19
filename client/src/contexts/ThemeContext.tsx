@@ -231,9 +231,6 @@ function applyThemeToDom(prefs: ThemePreferences) {
   if (isDark) root.classList.add("dark");
   else root.classList.remove("dark");
 
-  if (isDark) root.classList.add("dark");
-  else root.classList.remove("dark");
-
   const themeDef = THEMES.find(t => t.id === prefs.themeId);
   if (themeDef) {
     const colors: ThemeColors = isDark ? themeDef.dark : themeDef.light;
@@ -377,10 +374,13 @@ export function ThemeProvider({ children, memberId }: { children: React.ReactNod
   const setPrefs = useCallback((partial: Partial<ThemePreferences>) => {
     setPrefsState(prev => {
       const next = { ...prev, ...partial };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
       return next;
     });
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
+  }, [prefs]);
 
   useEffect(() => {
     applyThemeToDom(prefs);

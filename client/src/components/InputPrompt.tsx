@@ -31,7 +31,8 @@ export function InputPrompt({
   useEffect(() => {
     if (open) {
       setValue(defaultValue);
-      setTimeout(() => inputRef.current?.focus(), 100);
+      const timer = setTimeout(() => inputRef.current?.focus(), 100);
+      return () => clearTimeout(timer);
     }
   }, [open, defaultValue]);
 

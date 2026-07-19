@@ -6,8 +6,8 @@ export function simplifyDebts(balances: Record<string, number>): Array<{ from: s
   const creditors: Array<{ id: string; amount: number }> = [];
 
   Object.entries(balances).forEach(([id, balance]) => {
-    if (balance < -0.01) debtors.push({ id, amount: -balance });
-    else if (balance > 0.01) creditors.push({ id, amount: balance });
+    if (balance < -0.001) debtors.push({ id, amount: -balance });
+    else if (balance > 0.001) creditors.push({ id, amount: balance });
   });
 
   debtors.sort((a, b) => b.amount - a.amount);
@@ -18,7 +18,7 @@ export function simplifyDebts(balances: Record<string, number>): Array<{ from: s
 
   while (i < debtors.length && j < creditors.length) {
     const amount = Math.min(debtors[i].amount, creditors[j].amount);
-    if (amount > 0.01) {
+    if (amount > 0.001) {
       transactions.push({
         from: debtors[i].id,
         to: creditors[j].id,
@@ -28,8 +28,8 @@ export function simplifyDebts(balances: Record<string, number>): Array<{ from: s
     }
     debtors[i].amount -= amount;
     creditors[j].amount -= amount;
-    if (debtors[i].amount < 0.01) i++;
-    if (creditors[j].amount < 0.01) j++;
+    if (debtors[i].amount < 0.001) i++;
+    if (creditors[j].amount < 0.001) j++;
   }
 
   return transactions;

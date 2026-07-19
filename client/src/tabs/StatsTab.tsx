@@ -113,7 +113,7 @@ export function StatsTab({ expenses, members, currentMemberId, pendingPayments, 
 
   const averagePerPerson = members.length > 0 ? memberCurrentTotal / members.length : 0;
   const topCategory = categoryData[0] || null;
-  const biggestSpender = memberBarData.sort((a, b) => b.total - a.total)[0] || null;
+  const biggestSpender = [...memberBarData].sort((a, b) => b.total - a.total)[0] || null;
   const budgetUsed = monthlyBudget > 0 ? (currentTotal / monthlyBudget) * 100 : 0;
   const currentMonthTotal = expenses.filter(e => {
     const d = new Date(e.date);
