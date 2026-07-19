@@ -144,11 +144,12 @@ export function ReportsScreen({ expenses, members, pendingPayments, completedPay
   };
 
   const handleExportCSV = () => {
+    const quote = (s: string) => `"${s.replace(/"/g, '""')}"`;
     const header = "Date,Description,Catégorie,Montant,Payer,Participants";
     const rows = filtered.map(e => {
       const payer = members.find(m => m.id === e.payerId);
       const parts = e.participants.map(id => members.find(m => m.id === id)?.name || id).join("+");
-      return `${new Date(e.date).toISOString()},${e.description},${e.category},${e.amount},${payer?.name || e.payerId},${parts}`;
+      return `${quote(new Date(e.date).toISOString())},${quote(e.description)},${quote(e.category)},${quote(String(e.amount))},${quote(payer?.name || e.payerId)},${quote(parts)}`;
     });
     const csv = [header, ...rows].join("\n");
     const blob = new Blob([csv], { type: "text/csv" });

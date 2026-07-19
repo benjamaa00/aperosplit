@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Fingerprint, Check } from "lucide-react";
 import { Member } from "../types";
@@ -10,15 +10,24 @@ export function LockScreen({ member, onUnlock, onSkip, onSwitchIdentity }: { mem
   const [authenticating, setAuthenticating] = useState(false);
   const [authStatus, setAuthStatus] = useState<"idle" | "scanning" | "success" | "error">("idle");
   const haptic = useHaptic();
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => { if (timeoutRef.current) clearTimeout(timeoutRef.current); };
+  }, []);
 
   const handleUnlock = async () => {
     haptic("medium");
     setAuthenticating(true);
     setAuthStatus("scanning");
-    await onUnlock();
-    // Success is determined by screen change to main (handled by parent)
-    // If we're still on lock screen after a delay, it failed
-    setTimeout(() => {
+    try {
+      await onUnlock();
+    } catch {
+      haptic("error");
+      setAuthStatus("error");
+      setAuthenticating(false);
+    }
+    timeoutRef.current = setTimeout(() => {
       setAuthenticating(prev => {
         if (prev) {
           haptic("error");

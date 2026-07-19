@@ -30,6 +30,50 @@ const QUICK_PRESETS = [
   { id: "royal", name: "Royal", emoji: "👑", themeId: "doré", palette: "amber" as const, gradientBgId: "", backgroundId: "pur" },
 ];
 
+const SectionHeader = ({ icon: Icon, title, badge }: { icon: any; title: string; badge?: string }) => (
+  <div className="flex items-center gap-2.5 mb-3">
+    <Icon size={15} className="text-primary opacity-70" />
+    <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">{title}</p>
+    {badge && (
+      <span className="ml-auto px-2 py-[2px] rounded-full bg-primary/10 text-primary text-[9px] font-bold border border-primary/20">
+        {badge}
+      </span>
+    )}
+  </div>
+);
+
+const SliderRow = ({ label, value, displayValue, min, max, step, onChange, leftLabel, rightLabel }: {
+  label: string; value: number; displayValue: string; min: number; max: number; step: number;
+  onChange: (v: number) => void; leftLabel?: string; rightLabel?: string;
+}) => (
+  <div className="space-y-2">
+    <div className="flex items-center justify-between">
+      <p className="text-[13px] font-medium">{label}</p>
+      <span className="text-[11px] font-bold text-primary tabular-nums">{displayValue}</span>
+    </div>
+    <input
+      type="range" min={min} max={max} step={step} value={value}
+      onChange={(e) => onChange(parseFloat(e.target.value))}
+      className="w-full h-[6px] rounded-full appearance-none bg-secondary cursor-pointer
+        [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5
+        [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:shadow-md
+        [&::-webkit-slider-thumb]:shadow-primary/30 [&::-webkit-slider-thumb]:transition-transform
+        [&::-webkit-slider-thumb]:duration-200 [&::-webkit-slider-thumb]:active:scale-110"
+    />
+    {(leftLabel || rightLabel) && (
+      <div className="flex justify-between text-[9px] text-muted-foreground font-medium">
+        <span>{leftLabel}</span><span>{rightLabel}</span>
+      </div>
+    )}
+  </div>
+);
+
+const SectionCard = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
+  <div className={`glass-card-enhanced rounded-[1.25rem] p-4 ${className}`}>
+    {children}
+  </div>
+);
+
 export default function AppearanceScreen({ onBack }: AppearanceScreenProps) {
   const {
     theme, toggleTheme,
@@ -88,50 +132,6 @@ export default function AppearanceScreen({ onBack }: AppearanceScreenProps) {
     classic: { label: "Classiques", icon: "🎨" },
     premium: { label: "Premium", icon: "✨" },
   };
-
-  const SectionHeader = ({ icon: Icon, title, badge }: { icon: any; title: string; badge?: string }) => (
-    <div className="flex items-center gap-2.5 mb-3">
-      <Icon size={15} className="text-primary opacity-70" />
-      <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">{title}</p>
-      {badge && (
-        <span className="ml-auto px-2 py-[2px] rounded-full bg-primary/10 text-primary text-[9px] font-bold border border-primary/20">
-          {badge}
-        </span>
-      )}
-    </div>
-  );
-
-  const SliderRow = ({ label, value, displayValue, min, max, step, onChange, leftLabel, rightLabel }: {
-    label: string; value: number; displayValue: string; min: number; max: number; step: number;
-    onChange: (v: number) => void; leftLabel?: string; rightLabel?: string;
-  }) => (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <p className="text-[13px] font-medium">{label}</p>
-        <span className="text-[11px] font-bold text-primary tabular-nums">{displayValue}</span>
-      </div>
-      <input
-        type="range" min={min} max={max} step={step} value={value}
-        onChange={(e) => onChange(parseFloat(e.target.value))}
-        className="w-full h-[6px] rounded-full appearance-none bg-secondary cursor-pointer
-          [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5
-          [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:shadow-md
-          [&::-webkit-slider-thumb]:shadow-primary/30 [&::-webkit-slider-thumb]:transition-transform
-          [&::-webkit-slider-thumb]:duration-200 [&::-webkit-slider-thumb]:active:scale-110"
-      />
-      {(leftLabel || rightLabel) && (
-        <div className="flex justify-between text-[9px] text-muted-foreground font-medium">
-          <span>{leftLabel}</span><span>{rightLabel}</span>
-        </div>
-      )}
-    </div>
-  );
-
-  const SectionCard = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
-    <div className={`glass-card-enhanced rounded-[1.25rem] p-4 ${className}`}>
-      {children}
-    </div>
-  );
 
   return (
     <motion.div

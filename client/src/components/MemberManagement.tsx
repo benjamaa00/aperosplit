@@ -144,6 +144,114 @@ function SettingsTab({ groupName, requireApproval, onUpdateSettings, onResetAllD
   );
 }
 
+interface MemberDetailProps {
+  selectedMember: Member | undefined;
+  currentMemberId: string;
+  memberStats: { totalPaid: number; totalOwed: number; expenseCount: number; involvedCount: number } | null;
+  memberRecentExpenses: Expense[];
+  isAdmin: (id: string) => boolean;
+  onChangeRole?: (id: string, role: string) => void;
+  setShowConfirmExpel: (id: string | null) => void;
+  setTab: (tab: "list" | "pending" | "memberDetail" | "settings") => void;
+}
+
+function MemberDetail({ selectedMember, currentMemberId, memberStats, memberRecentExpenses, isAdmin, onChangeRole, setShowConfirmExpel, setTab }: MemberDetailProps) {
+  const fmt = formatCurrency;
+  const fadeSlide = { initial: { opacity: 0, x: 20 }, animate: { opacity: 1, x: 0 }, exit: { opacity: 0, x: -20 } };
+
+  if (!selectedMember) return null;
+
+  return (
+    <motion.div {...fadeSlide} className="space-y-5">
+      <div className="flex items-center gap-3 mb-2">
+        <motion.button whileTap={{ scale: 0.9 }} onClick={() => setTab("list")}
+          className="w-10 h-10 rounded-2xl bg-card/30 border border-border flex items-center justify-center">
+          <ArrowLeft size={20} />
+        </motion.button>
+        <h2 className="text-xl font-bold tracking-tight">Profil du membre</h2>
+      </div>
+
+      {/* Member Header */}
+      <div className="glass-card-enhanced rounded-[1.25rem] p-6 text-center relative overflow-hidden">
+        <div className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-white/60 to-transparent" />
+        <motion.div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border-2 border-primary/30 mx-auto shadow-xl shadow-primary/10"
+          whileHover={{ scale: 1.05, rotate: [0, -3, 3, 0] }}>
+          <AvatarImg avatar={selectedMember.avatar} size="text-4xl" />
+        </motion.div>
+        <h3 className="text-xl font-bold mt-3">{selectedMember.name}</h3>
+        <div className="flex items-center justify-center gap-2 mt-1">
+          {isAdmin(selectedMember.id) && (
+            <span className="text-[10px] bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded-full font-semibold border border-amber-500/20 flex items-center gap-1">
+              <Crown size={10} /> Admin
+            </span>
+          )}
+          <span className="text-[10px] text-muted-foreground">Membre depuis le début</span>
+        </div>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="glass-card-enhanced rounded-[1.25rem] p-4 text-center">
+          <p className="text-xl font-bold">{memberStats?.expenseCount || 0}</p>
+          <p className="text-[10px] text-muted-foreground mt-1">Dépenses créées</p>
+        </div>
+        <div className="glass-card-enhanced rounded-[1.25rem] p-4 text-center">
+          <p className="text-xl font-bold text-primary">{fmt(memberStats?.totalPaid || 0)}</p>
+          <p className="text-[10px] text-muted-foreground mt-1">Total payé</p>
+        </div>
+        <div className="glass-card-enhanced rounded-[1.25rem] p-4 text-center">
+          <p className="text-xl font-bold">{memberStats?.involvedCount || 0}</p>
+          <p className="text-[10px] text-muted-foreground mt-1">Participations</p>
+        </div>
+        <div className="glass-card-enhanced rounded-[1.25rem] p-4 text-center">
+          <p className="text-xl font-bold text-orange-400">{fmt(memberStats?.totalOwed || 0)}</p>
+          <p className="text-[10px] text-muted-foreground mt-1">Part à payer</p>
+        </div>
+      </div>
+
+      {/* Recent Expenses */}
+      <div>
+        <h4 className="text-sm font-semibold mb-3">Dépenses récentes</h4>
+        {memberRecentExpenses.length === 0 ? (
+          <p className="text-xs text-muted-foreground text-center py-6">Aucune dépense</p>
+        ) : (
+          <div className="space-y-2">
+            {memberRecentExpenses.map((e, i) => (
+              <motion.div key={e.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}
+                className="glass-card-enhanced rounded-[1.25rem] p-4 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-muted/30 flex items-center justify-center text-lg">{e.categoryEmoji}</div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{e.description}</p>
+                  <p className="text-[11px] text-muted-foreground">{new Date(e.date).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}</p>
+                </div>
+                <p className="text-sm font-bold">{fmt(e.amount)}</p>
+              </motion.div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Actions */}
+      {isAdmin(currentMemberId) && selectedMember.id !== currentMemberId && (
+        <div className="space-y-2">
+          <motion.button whileTap={{ scale: 0.97 }}
+            onClick={() => onChangeRole?.(selectedMember.id, isAdmin(selectedMember.id) ? "member" : "admin")}
+            className="w-full py-3.5 rounded-2xl bg-card/30 border border-border text-sm font-semibold flex items-center justify-center gap-2">
+            {isAdmin(selectedMember.id) ? <ShieldOff size={16} /> : <Shield size={16} />}
+            {isAdmin(selectedMember.id) ? "Retirer admin" : "Promouvoir admin"}
+          </motion.button>
+          <motion.button whileTap={{ scale: 0.97 }}
+            onClick={() => setShowConfirmExpel(selectedMember.id)}
+            className="w-full py-3.5 rounded-2xl bg-red-500/10 border border-red-500/10 text-red-400 text-sm font-semibold flex items-center justify-center gap-2">
+            <UserMinus size={16} />
+            Expulser du groupe
+          </motion.button>
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
 export function MemberManagement({
   members, currentMemberId, expenses, onRemoveMember, onAddMember,
   onChangeRole, onApproveMember, onRefuseMember, pendingRequests = [], onBack,
@@ -214,99 +322,6 @@ export function MemberManagement({
 
   const fadeSlide = { initial: { opacity: 0, x: 20 }, animate: { opacity: 1, x: 0 }, exit: { opacity: 0, x: -20 } };
 
-  const MemberDetail = () => {
-    if (!selectedMember) return null;
-    return (
-      <motion.div {...fadeSlide} className="space-y-5">
-        <div className="flex items-center gap-3 mb-2">
-          <motion.button whileTap={{ scale: 0.9 }} onClick={() => setTab("list")}
-            className="w-10 h-10 rounded-2xl bg-card/30 border border-border flex items-center justify-center">
-            <ArrowLeft size={20} />
-          </motion.button>
-          <h2 className="text-xl font-bold tracking-tight">Profil du membre</h2>
-        </div>
-
-        {/* Member Header */}
-        <div className="glass-card-enhanced rounded-[1.25rem] p-6 text-center relative overflow-hidden">
-          <div className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-white/60 to-transparent" />
-          <motion.div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border-2 border-primary/30 mx-auto shadow-xl shadow-primary/10"
-            whileHover={{ scale: 1.05, rotate: [0, -3, 3, 0] }}>
-            <AvatarImg avatar={selectedMember.avatar} size="text-4xl" />
-          </motion.div>
-          <h3 className="text-xl font-bold mt-3">{selectedMember.name}</h3>
-          <div className="flex items-center justify-center gap-2 mt-1">
-            {isAdmin(selectedMember.id) && (
-              <span className="text-[10px] bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded-full font-semibold border border-amber-500/20 flex items-center gap-1">
-                <Crown size={10} /> Admin
-              </span>
-            )}
-            <span className="text-[10px] text-muted-foreground">Membre depuis le début</span>
-          </div>
-        </div>
-
-        {/* Stats */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="glass-card-enhanced rounded-[1.25rem] p-4 text-center">
-            <p className="text-xl font-bold">{memberStats?.expenseCount || 0}</p>
-            <p className="text-[10px] text-muted-foreground mt-1">Dépenses créées</p>
-          </div>
-          <div className="glass-card-enhanced rounded-[1.25rem] p-4 text-center">
-            <p className="text-xl font-bold text-primary">{fmt(memberStats?.totalPaid || 0)}</p>
-            <p className="text-[10px] text-muted-foreground mt-1">Total payé</p>
-          </div>
-          <div className="glass-card-enhanced rounded-[1.25rem] p-4 text-center">
-            <p className="text-xl font-bold">{memberStats?.involvedCount || 0}</p>
-            <p className="text-[10px] text-muted-foreground mt-1">Participations</p>
-          </div>
-          <div className="glass-card-enhanced rounded-[1.25rem] p-4 text-center">
-            <p className="text-xl font-bold text-orange-400">{fmt(memberStats?.totalOwed || 0)}</p>
-            <p className="text-[10px] text-muted-foreground mt-1">Part à payer</p>
-          </div>
-        </div>
-
-        {/* Recent Expenses */}
-        <div>
-          <h4 className="text-sm font-semibold mb-3">Dépenses récentes</h4>
-          {memberRecentExpenses.length === 0 ? (
-            <p className="text-xs text-muted-foreground text-center py-6">Aucune dépense</p>
-          ) : (
-            <div className="space-y-2">
-              {memberRecentExpenses.map((e, i) => (
-                <motion.div key={e.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}
-                  className="glass-card-enhanced rounded-[1.25rem] p-4 flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-muted/30 flex items-center justify-center text-lg">{e.categoryEmoji}</div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{e.description}</p>
-                    <p className="text-[11px] text-muted-foreground">{new Date(e.date).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}</p>
-                  </div>
-                  <p className="text-sm font-bold">{fmt(e.amount)}</p>
-                </motion.div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Actions */}
-        {isAdmin(currentMemberId) && selectedMember.id !== currentMemberId && (
-          <div className="space-y-2">
-            <motion.button whileTap={{ scale: 0.97 }}
-              onClick={() => onChangeRole?.(selectedMember.id, isAdmin(selectedMember.id) ? "member" : "admin")}
-              className="w-full py-3.5 rounded-2xl bg-card/30 border border-border text-sm font-semibold flex items-center justify-center gap-2">
-              {isAdmin(selectedMember.id) ? <ShieldOff size={16} /> : <Shield size={16} />}
-              {isAdmin(selectedMember.id) ? "Retirer admin" : "Promouvoir admin"}
-            </motion.button>
-            <motion.button whileTap={{ scale: 0.97 }}
-              onClick={() => setShowConfirmExpel(selectedMember.id)}
-              className="w-full py-3.5 rounded-2xl bg-red-500/10 border border-red-500/10 text-red-400 text-sm font-semibold flex items-center justify-center gap-2">
-              <UserMinus size={16} />
-              Expulser du groupe
-            </motion.button>
-          </div>
-        )}
-      </motion.div>
-    );
-  };
-
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-md mx-auto px-5 pt-12 space-y-5">
       {/* Header */}
@@ -329,7 +344,16 @@ export function MemberManagement({
 
       <AnimatePresence mode="wait">
         {tab === "memberDetail" ? (
-          <MemberDetail key="detail" />
+          <MemberDetail key="detail"
+            selectedMember={selectedMember}
+            currentMemberId={currentMemberId}
+            memberStats={memberStats}
+            memberRecentExpenses={memberRecentExpenses}
+            isAdmin={isAdmin}
+            onChangeRole={onChangeRole}
+            setShowConfirmExpel={setShowConfirmExpel}
+            setTab={setTab}
+          />
         ) : (
           <motion.div {...fadeSlide} className="space-y-5">
             {/* Tabs */}
@@ -472,7 +496,10 @@ export function MemberManagement({
 
       {/* Confirm Expel Modal */}
       <AnimatePresence>
-        {showConfirmExpel && (
+        {showConfirmExpel && (() => {
+          const expelMember = members.find(m => m.id === showConfirmExpel);
+          if (!expelMember) { setShowConfirmExpel(null); return null; }
+          return (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] px-6"
             onClick={() => setShowConfirmExpel(null)}>
@@ -484,7 +511,7 @@ export function MemberManagement({
               </div>
               <h3 className="text-lg font-bold text-center">Expulser ce membre ?</h3>
               <p className="text-sm text-muted-foreground text-center mt-2">
-                {members.find(m => m.id === showConfirmExpel)?.name} sera retiré du groupe.
+                {expelMember.name} sera retiré du groupe.
               </p>
               <div className="flex gap-2 mt-6">
                 <motion.button whileTap={{ scale: 0.97 }} onClick={() => setShowConfirmExpel(null)}
@@ -499,7 +526,8 @@ export function MemberManagement({
               </div>
             </motion.div>
           </motion.div>
-        )}
+          );
+        })()}
       </AnimatePresence>
 
       {/* Invite Modal */}

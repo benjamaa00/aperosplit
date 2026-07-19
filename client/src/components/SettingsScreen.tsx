@@ -7,10 +7,12 @@ import {
 } from "lucide-react";
 import {
   useThemeContext, COLOR_PALETTE_OPTIONS, GRADIENT_OPTIONS, BACKGROUND_OPTIONS,
+  type ColorPalette, type GradientStyle, type BackgroundStyle,
 } from "@/contexts/ThemeContext";
 import { Toggle } from "./Toggle";
 
 const spring = { type: "spring" as const, stiffness: 300, damping: 30 };
+const fadeSlide = { initial: { opacity: 0, x: 30 }, animate: { opacity: 1, x: 0 }, exit: { opacity: 0, x: -30 } };
 
 interface SettingsScreenProps {
   onBack: () => void;
@@ -33,209 +35,230 @@ interface SettingsScreenProps {
   onToggleBiometric: () => void;
 }
 
-export function SettingsScreen({
-  onBack, monthlyBudget, onSetBudget, currency, onSetCurrency,
-  autoReminders, onToggleReminders, privacyMode, onTogglePrivacy,
-  offlineMode, onToggleOffline, pushNotifications, onTogglePushNotifications,
-  reminderDelay, onSetReminderDelay, onClearData,
-  biometricEnabled, onToggleBiometric,
-}: SettingsScreenProps) {
-  const {
-    theme, toggleTheme, palette, setPalette, gradient, setGradient,
-    background, setBackground, borderRadius, setBorderRadius,
-    cardBlur, setCardBlur, fontScale, setFontScale, resetPreferences,
-  } = useThemeContext();
-
-  const [section, setSection] = useState<"main" | "appearance" | "colors" | "budget" | "notifications" | "privacy">("main");
-  const [showDelayPicker, setShowDelayPicker] = useState(false);
-  const [showClearConfirm, setShowClearConfirm] = useState(false);
-
-  const fadeSlide = { initial: { opacity: 0, x: 30 }, animate: { opacity: 1, x: 0 }, exit: { opacity: 0, x: -30 } };
-
-  const SectionHeader = ({ icon: Icon, title, colorClass }: { icon: any; title: string; colorClass?: string }) => (
-    <div className="flex items-center gap-3 mb-4">
-      <div className="w-10 h-10 rounded-2xl flex items-center justify-center border border-border bg-primary/10">
-        <Icon size={20} className={colorClass || "text-primary"} />
-      </div>
-      <h2 className="text-lg font-bold tracking-tight">{title}</h2>
+const SectionHeader = ({ icon: Icon, title, colorClass }: { icon: any; title: string; colorClass?: string }) => (
+  <div className="flex items-center gap-3 mb-4">
+    <div className="w-10 h-10 rounded-2xl flex items-center justify-center border border-border bg-primary/10">
+      <Icon size={20} className={colorClass || "text-primary"} />
     </div>
-  );
+    <h2 className="text-lg font-bold tracking-tight">{title}</h2>
+  </div>
+);
 
-  const SettingRow = ({ icon: Icon, label, description, action, onClick }: { icon: any; label: string; description?: string; action?: React.ReactNode; onClick?: () => void }) => (
-    <motion.button whileTap={{ scale: 0.98 }} onClick={onClick}
-      className="w-full flex items-center gap-3 p-4 rounded-2xl bg-card/30 border border-border hover:bg-card/50 active:bg-card/50 transition-colors text-left">
-      <div className="w-9 h-9 rounded-xl bg-muted/30 flex items-center justify-center shrink-0">
-        <Icon size={18} className="text-muted-foreground" />
+const SettingRow = ({ icon: Icon, label, description, action, onClick }: { icon: any; label: string; description?: string; action?: React.ReactNode; onClick?: () => void }) => (
+  <motion.button whileTap={{ scale: 0.98 }} onClick={onClick}
+    className="w-full flex items-center gap-3 p-4 rounded-2xl bg-card/30 border border-border hover:bg-card/50 active:bg-card/50 transition-colors text-left">
+    <div className="w-9 h-9 rounded-xl bg-muted/30 flex items-center justify-center shrink-0">
+      <Icon size={18} className="text-muted-foreground" />
+    </div>
+    <div className="flex-1 min-w-0">
+      <p className="text-sm font-medium">{label}</p>
+      {description && <p className="text-[11px] text-muted-foreground mt-0.5">{description}</p>}
+    </div>
+    {action || (onClick && <ChevronRight size={16} className="text-muted-foreground/50" />)}
+  </motion.button>
+);
+
+interface AppearanceSectionProps {
+  theme: string;
+  toggleTheme: () => void;
+  palette: ColorPalette;
+  setPalette: (id: ColorPalette) => void;
+  gradient: GradientStyle;
+  setGradient: (id: GradientStyle) => void;
+  background: BackgroundStyle;
+  setBackground: (id: BackgroundStyle) => void;
+  borderRadius: number;
+  setBorderRadius: (v: number) => void;
+  cardBlur: number;
+  setCardBlur: (v: number) => void;
+  fontScale: number;
+  setFontScale: (v: number) => void;
+  resetPreferences: () => void;
+}
+
+const AppearanceSection = ({
+  theme, toggleTheme, palette, setPalette, gradient, setGradient,
+  background, setBackground, borderRadius, setBorderRadius,
+  cardBlur, setCardBlur, fontScale, setFontScale, resetPreferences,
+}: AppearanceSectionProps) => (
+  <motion.div {...fadeSlide} className="space-y-6">
+    <SectionHeader icon={Palette} title="Apparence" colorClass="text-purple-400" />
+
+    <div className="glass-card-enhanced rounded-[1.25rem] p-5 space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          {theme === "dark" ? <Moon size={20} className="text-blue-400" /> : <Sun size={20} className="text-amber-400" />}
+          <div>
+            <p className="text-sm font-semibold">Mode {theme === "dark" ? "sombre" : "clair"}</p>
+            <p className="text-[11px] text-muted-foreground">Basculer le thème</p>
+          </div>
+        </div>
+        <Toggle enabled={theme === "dark"} onToggle={toggleTheme} />
       </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium">{label}</p>
-        {description && <p className="text-[11px] text-muted-foreground mt-0.5">{description}</p>}
+
+      <div className="h-px bg-muted/30" />
+
+      <div>
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Couleur principale</p>
+        <div className="grid grid-cols-5 gap-2">
+          {COLOR_PALETTE_OPTIONS.map(c => (
+            <motion.button key={c.id} whileTap={{ scale: 0.9 }} onClick={() => setPalette(c.id)}
+              className={`relative w-full aspect-square rounded-2xl border-2 transition-all ${palette === c.id ? "border-primary scale-105 shadow-lg" : "border-transparent"}`}
+              style={{ backgroundColor: c.color }}>
+              {palette === c.id && (
+                <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="absolute inset-0 flex items-center justify-center">
+                  <Check size={16} className="text-white" strokeWidth={3} />
+                </motion.div>
+              )}
+            </motion.button>
+          ))}
+        </div>
       </div>
-      {action || (onClick && <ChevronRight size={16} className="text-muted-foreground/50" />)}
+
+      <div className="h-px bg-muted/30" />
+
+      <div>
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Dégradé d'arrière-plan</p>
+        <div className="grid grid-cols-5 gap-2">
+          {GRADIENT_OPTIONS.map(g => (
+            <motion.button key={g.id} whileTap={{ scale: 0.9 }} onClick={() => setGradient(g.id)}
+              className={`relative w-full aspect-square rounded-2xl border-2 overflow-hidden transition-all ${gradient === g.id ? "border-primary scale-105 shadow-lg" : "border-transparent"}`}
+              style={{ background: g.id === "none" ? "hsl(var(--muted))" : g.preview }}>
+              {gradient === g.id && (
+                <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="absolute inset-0 flex items-center justify-center bg-black/20">
+                  <Check size={14} className="text-white" strokeWidth={3} />
+                </motion.div>
+              )}
+              <span className="absolute bottom-0 inset-x-0 text-[8px] font-bold text-white bg-black/40 py-0.5 text-center">{g.label}</span>
+            </motion.button>
+          ))}
+        </div>
+      </div>
+
+      <div className="h-px bg-muted/30" />
+
+      <div>
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Motif d'arrière-plan</p>
+        <div className="flex gap-2">
+          {BACKGROUND_OPTIONS.map(b => (
+            <motion.button key={b.id} whileTap={{ scale: 0.95 }} onClick={() => setBackground(b.id)}
+              className={`flex-1 py-3 rounded-2xl text-xs font-semibold transition-all border flex flex-col items-center gap-1.5 ${background === b.id ? "bg-primary text-primary-foreground border-primary" : "bg-card/30 border-border text-muted-foreground"}`}>
+              <span className="text-lg">{b.icon}</span>
+              {b.label}
+            </motion.button>
+          ))}
+        </div>
+      </div>
+    </div>
+
+    <div className="glass-card-enhanced rounded-[1.25rem] p-5 space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-semibold">Arrondi des coins</p>
+        <span className="text-xs font-bold text-primary">{borderRadius.toFixed(1)}rem</span>
+      </div>
+      <input type="range" min="0.5" max="2" step="0.1" value={borderRadius}
+        onChange={e => setBorderRadius(parseFloat(e.target.value))}
+        className="w-full h-2 rounded-full appearance-none bg-secondary" />
+      <div className="flex justify-between text-[10px] text-muted-foreground">
+        <span>Sharp</span><span>Rond</span><span>Pill</span>
+      </div>
+    </div>
+
+    <div className="glass-card-enhanced rounded-[1.25rem] p-5 space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-semibold">Flou des cartes</p>
+        <span className="text-xs font-bold text-primary">{cardBlur}px</span>
+      </div>
+      <input type="range" min="0" max="64" step="4" value={cardBlur}
+        onChange={e => setCardBlur(parseInt(e.target.value))}
+        className="w-full h-2 rounded-full appearance-none bg-secondary" />
+      <div className="flex justify-between text-[10px] text-muted-foreground">
+        <span>Net</span><span>Verre dépoli</span><span>Flou total</span>
+      </div>
+    </div>
+
+    <div className="glass-card-enhanced rounded-[1.25rem] p-5 space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-semibold">Taille du texte</p>
+        <span className="text-xs font-bold text-primary">{(fontScale * 100).toFixed(0)}%</span>
+      </div>
+      <input type="range" min="0.8" max="1.2" step="0.05" value={fontScale}
+        onChange={e => setFontScale(parseFloat(e.target.value))}
+        className="w-full h-2 rounded-full appearance-none bg-secondary" />
+      <div className="flex justify-between text-[10px] text-muted-foreground">
+        <span>Petit</span><span>Normal</span><span>Grand</span>
+      </div>
+    </div>
+
+    <motion.button whileTap={{ scale: 0.97 }} onClick={resetPreferences}
+      className="w-full py-3.5 rounded-2xl bg-card/30 border border-border text-sm font-semibold text-muted-foreground flex items-center justify-center gap-2">
+      <RotateCcw size={16} />
+      Réinitialiser l'apparence
     </motion.button>
-  );
+  </motion.div>
+);
 
-  const AppearanceSection = () => (
+interface BudgetSectionProps {
+  monthlyBudget: number;
+  currency: string;
+  onSetBudget: (v: number) => void;
+  onSetCurrency: (c: string) => void;
+}
+
+const BudgetSection = ({ monthlyBudget, currency, onSetBudget, onSetCurrency }: BudgetSectionProps) => {
+  const [budgetInput, setBudgetInput] = useState(monthlyBudget.toString());
+  return (
     <motion.div {...fadeSlide} className="space-y-6">
-      <SectionHeader icon={Palette} title="Apparence" colorClass="text-purple-400" />
-
+      <SectionHeader icon={DollarSign} title="Budget & Devise" colorClass="text-amber-400" />
       <div className="glass-card-enhanced rounded-[1.25rem] p-5 space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            {theme === "dark" ? <Moon size={20} className="text-blue-400" /> : <Sun size={20} className="text-amber-400" />}
-            <div>
-              <p className="text-sm font-semibold">Mode {theme === "dark" ? "sombre" : "clair"}</p>
-              <p className="text-[11px] text-muted-foreground">Basculer le thème</p>
-            </div>
-          </div>
-          <Toggle enabled={theme === "dark"} onToggle={toggleTheme} />
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Budget mensuel du groupe</p>
+        <div className="relative">
+          <input type="number" inputMode="decimal" value={budgetInput} onChange={e => setBudgetInput(e.target.value)}
+            className="w-full bg-card/30 border border-border rounded-2xl px-5 py-4 text-3xl font-bold text-center focus:outline-none focus:ring-2 focus:ring-primary/30" />
+          <span className="absolute right-5 top-1/2 -translate-y-1/2 text-muted-foreground font-bold">{currency}</span>
         </div>
-
-        <div className="h-px bg-muted/30" />
-
-        <div>
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Couleur principale</p>
-          <div className="grid grid-cols-5 gap-2">
-            {COLOR_PALETTE_OPTIONS.map(c => (
-              <motion.button key={c.id} whileTap={{ scale: 0.9 }} onClick={() => setPalette(c.id)}
-                className={`relative w-full aspect-square rounded-2xl border-2 transition-all ${palette === c.id ? "border-primary scale-105 shadow-lg" : "border-transparent"}`}
-                style={{ backgroundColor: c.color }}>
-                {palette === c.id && (
-                  <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="absolute inset-0 flex items-center justify-center">
-                    <Check size={16} className="text-white" strokeWidth={3} />
-                  </motion.div>
-                )}
-              </motion.button>
-            ))}
-          </div>
+        <div className="flex gap-2">
+          {[500, 1000, 2000, 5000].map(v => (
+            <motion.button key={v} whileTap={{ scale: 0.95 }} onClick={() => setBudgetInput(v.toString())}
+              className="flex-1 py-2.5 rounded-xl bg-secondary/50 text-xs font-semibold hover:bg-secondary/70 transition-colors">
+              {v.toLocaleString()}
+            </motion.button>
+          ))}
         </div>
-
-        <div className="h-px bg-muted/30" />
-
-        <div>
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Dégradé d'arrière-plan</p>
-          <div className="grid grid-cols-5 gap-2">
-            {GRADIENT_OPTIONS.map(g => (
-              <motion.button key={g.id} whileTap={{ scale: 0.9 }} onClick={() => setGradient(g.id)}
-                className={`relative w-full aspect-square rounded-2xl border-2 overflow-hidden transition-all ${gradient === g.id ? "border-primary scale-105 shadow-lg" : "border-transparent"}`}
-                style={{ background: g.id === "none" ? "hsl(var(--muted))" : g.preview }}>
-                {gradient === g.id && (
-                  <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="absolute inset-0 flex items-center justify-center bg-black/20">
-                    <Check size={14} className="text-white" strokeWidth={3} />
-                  </motion.div>
-                )}
-                <span className="absolute bottom-0 inset-x-0 text-[8px] font-bold text-white bg-black/40 py-0.5 text-center">{g.label}</span>
-              </motion.button>
-            ))}
-          </div>
-        </div>
-
-        <div className="h-px bg-muted/30" />
-
-        <div>
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Motif d'arrière-plan</p>
-          <div className="flex gap-2">
-            {BACKGROUND_OPTIONS.map(b => (
-              <motion.button key={b.id} whileTap={{ scale: 0.95 }} onClick={() => setBackground(b.id)}
-                className={`flex-1 py-3 rounded-2xl text-xs font-semibold transition-all border flex flex-col items-center gap-1.5 ${background === b.id ? "bg-primary text-primary-foreground border-primary" : "bg-card/30 border-border text-muted-foreground"}`}>
-                <span className="text-lg">{b.icon}</span>
-                {b.label}
-              </motion.button>
-            ))}
-          </div>
-        </div>
+        <motion.button whileTap={{ scale: 0.97 }} onClick={() => onSetBudget(parseFloat(budgetInput) || 0)}
+          className="w-full py-3.5 rounded-2xl bg-primary text-primary-foreground font-semibold">
+          Sauvegarder
+        </motion.button>
       </div>
 
       <div className="glass-card-enhanced rounded-[1.25rem] p-5 space-y-3">
-        <div className="flex items-center justify-between">
-          <p className="text-sm font-semibold">Arrondi des coins</p>
-          <span className="text-xs font-bold text-primary">{borderRadius.toFixed(1)}rem</span>
-        </div>
-        <input type="range" min="0.5" max="2" step="0.1" value={borderRadius}
-          onChange={e => setBorderRadius(parseFloat(e.target.value))}
-          className="w-full h-2 rounded-full appearance-none bg-secondary" />
-        <div className="flex justify-between text-[10px] text-muted-foreground">
-          <span>Sharp</span><span>Rond</span><span>Pill</span>
-        </div>
-      </div>
-
-      <div className="glass-card-enhanced rounded-[1.25rem] p-5 space-y-3">
-        <div className="flex items-center justify-between">
-          <p className="text-sm font-semibold">Flou des cartes</p>
-          <span className="text-xs font-bold text-primary">{cardBlur}px</span>
-        </div>
-        <input type="range" min="0" max="64" step="4" value={cardBlur}
-          onChange={e => setCardBlur(parseInt(e.target.value))}
-          className="w-full h-2 rounded-full appearance-none bg-secondary" />
-        <div className="flex justify-between text-[10px] text-muted-foreground">
-          <span>Net</span><span>Verre dépoli</span><span>Flou total</span>
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Devise</p>
+        <div className="grid grid-cols-3 gap-2">
+          {[{ code: "MAD", label: "Dirham (MAD)", flag: "🇲🇦" }, { code: "EUR", label: "Euro (EUR)", flag: "🇪🇺" }, { code: "USD", label: "Dollar (USD)", flag: "🇺🇸" }].map(c => (
+            <motion.button key={c.code} whileTap={{ scale: 0.95 }} onClick={() => onSetCurrency(c.code)}
+              className={`py-3 rounded-2xl text-sm font-bold transition-all border flex flex-col items-center gap-1 ${currency === c.code ? "bg-primary text-primary-foreground border-primary" : "bg-card/30 border-border text-muted-foreground"}`}>
+              <span className="text-lg">{c.flag}</span>
+              {c.code}
+            </motion.button>
+          ))}
         </div>
       </div>
-
-      <div className="glass-card-enhanced rounded-[1.25rem] p-5 space-y-3">
-        <div className="flex items-center justify-between">
-          <p className="text-sm font-semibold">Taille du texte</p>
-          <span className="text-xs font-bold text-primary">{(fontScale * 100).toFixed(0)}%</span>
-        </div>
-        <input type="range" min="0.8" max="1.2" step="0.05" value={fontScale}
-          onChange={e => setFontScale(parseFloat(e.target.value))}
-          className="w-full h-2 rounded-full appearance-none bg-secondary" />
-        <div className="flex justify-between text-[10px] text-muted-foreground">
-          <span>Petit</span><span>Normal</span><span>Grand</span>
-        </div>
-      </div>
-
-      <motion.button whileTap={{ scale: 0.97 }} onClick={resetPreferences}
-        className="w-full py-3.5 rounded-2xl bg-card/30 border border-border text-sm font-semibold text-muted-foreground flex items-center justify-center gap-2">
-        <RotateCcw size={16} />
-        Réinitialiser l'apparence
-      </motion.button>
     </motion.div>
   );
+};
 
-  const BudgetSection = () => {
-    const [budgetInput, setBudgetInput] = useState(monthlyBudget.toString());
-    return (
-      <motion.div {...fadeSlide} className="space-y-6">
-        <SectionHeader icon={DollarSign} title="Budget & Devise" colorClass="text-amber-400" />
-        <div className="glass-card-enhanced rounded-[1.25rem] p-5 space-y-4">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Budget mensuel du groupe</p>
-          <div className="relative">
-            <input type="number" inputMode="decimal" value={budgetInput} onChange={e => setBudgetInput(e.target.value)}
-              className="w-full bg-card/30 border border-border rounded-2xl px-5 py-4 text-3xl font-bold text-center focus:outline-none focus:ring-2 focus:ring-primary/30" />
-            <span className="absolute right-5 top-1/2 -translate-y-1/2 text-muted-foreground font-bold">{currency}</span>
-          </div>
-          <div className="flex gap-2">
-            {[500, 1000, 2000, 5000].map(v => (
-              <motion.button key={v} whileTap={{ scale: 0.95 }} onClick={() => setBudgetInput(v.toString())}
-                className="flex-1 py-2.5 rounded-xl bg-secondary/50 text-xs font-semibold hover:bg-secondary/70 transition-colors">
-                {v.toLocaleString()}
-              </motion.button>
-            ))}
-          </div>
-          <motion.button whileTap={{ scale: 0.97 }} onClick={() => onSetBudget(parseFloat(budgetInput) || 0)}
-            className="w-full py-3.5 rounded-2xl bg-primary text-primary-foreground font-semibold">
-            Sauvegarder
-          </motion.button>
-        </div>
+interface NotificationsSectionProps {
+  pushNotifications: boolean;
+  onTogglePushNotifications: () => void;
+  autoReminders: boolean;
+  onToggleReminders: () => void;
+  reminderDelay: number;
+  onSetReminderDelay: (d: number) => void;
+}
 
-        <div className="glass-card-enhanced rounded-[1.25rem] p-5 space-y-3">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Devise</p>
-          <div className="grid grid-cols-3 gap-2">
-            {[{ code: "MAD", label: "Dirham (MAD)", flag: "🇲🇦" }, { code: "EUR", label: "Euro (EUR)", flag: "🇪🇺" }, { code: "USD", label: "Dollar (USD)", flag: "🇺🇸" }].map(c => (
-              <motion.button key={c.code} whileTap={{ scale: 0.95 }} onClick={() => onSetCurrency(c.code)}
-                className={`py-3 rounded-2xl text-sm font-bold transition-all border flex flex-col items-center gap-1 ${currency === c.code ? "bg-primary text-primary-foreground border-primary" : "bg-card/30 border-border text-muted-foreground"}`}>
-                <span className="text-lg">{c.flag}</span>
-                {c.code}
-              </motion.button>
-            ))}
-          </div>
-        </div>
-      </motion.div>
-    );
-  };
-
-  const NotificationsSection = () => (
+const NotificationsSection = ({ pushNotifications, onTogglePushNotifications, autoReminders, onToggleReminders, reminderDelay, onSetReminderDelay }: NotificationsSectionProps) => {
+  const [showDelayPicker, setShowDelayPicker] = useState(false);
+  return (
     <motion.div {...fadeSlide} className="space-y-6">
       <SectionHeader icon={Bell} title="Notifications" colorClass="text-pink-400" />
       <div className="glass-card-enhanced rounded-[1.25rem] p-5 space-y-4">
@@ -280,8 +303,21 @@ export function SettingsScreen({
       </AnimatePresence>
     </motion.div>
   );
+};
 
-  const PrivacySection = () => (
+interface PrivacySectionProps {
+  privacyMode: boolean;
+  onTogglePrivacy: () => void;
+  offlineMode: boolean;
+  onToggleOffline: () => void;
+  biometricEnabled: boolean;
+  onToggleBiometric: () => void;
+  onClearData: () => void;
+}
+
+const PrivacySection = ({ privacyMode, onTogglePrivacy, offlineMode, onToggleOffline, biometricEnabled, onToggleBiometric, onClearData }: PrivacySectionProps) => {
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+  return (
     <motion.div {...fadeSlide} className="space-y-6">
       <SectionHeader icon={Shield} title="Confidentialité" colorClass="text-emerald-400" />
       <div className="glass-card-enhanced rounded-[1.25rem] p-5 space-y-4">
@@ -330,19 +366,42 @@ export function SettingsScreen({
       </AnimatePresence>
     </motion.div>
   );
+};
 
-  const MainSection = () => (
-    <motion.div {...fadeSlide} className="space-y-3">
-      <SettingRow icon={Palette} label="Apparence" description="Couleurs, thème, dégradés" onClick={() => setSection("appearance")} />
-      <SettingRow icon={DollarSign} label="Budget & Devise" description="Budget mensuel, MAD/EUR/USD" onClick={() => setSection("budget")} />
-      <SettingRow icon={Bell} label="Notifications" description="Push, rappels automatiques" onClick={() => setSection("notifications")} />
-      <SettingRow icon={Shield} label="Confidentialité & Sécurité" description="Hors-ligne, données" onClick={() => setSection("privacy")} />
-    </motion.div>
-  );
+type Section = "main" | "appearance" | "colors" | "budget" | "notifications" | "privacy";
 
-  const titles: Record<string, string> = {
+interface MainSectionProps {
+  onNavigate: (section: Section) => void;
+}
+
+const MainSection = ({ onNavigate }: MainSectionProps) => (
+  <motion.div {...fadeSlide} className="space-y-3">
+    <SettingRow icon={Palette} label="Apparence" description="Couleurs, thème, dégradés" onClick={() => onNavigate("appearance")} />
+    <SettingRow icon={DollarSign} label="Budget & Devise" description="Budget mensuel, MAD/EUR/USD" onClick={() => onNavigate("budget")} />
+    <SettingRow icon={Bell} label="Notifications" description="Push, rappels automatiques" onClick={() => onNavigate("notifications")} />
+    <SettingRow icon={Shield} label="Confidentialité & Sécurité" description="Hors-ligne, données" onClick={() => onNavigate("privacy")} />
+  </motion.div>
+);
+
+export function SettingsScreen({
+  onBack, monthlyBudget, onSetBudget, currency, onSetCurrency,
+  autoReminders, onToggleReminders, privacyMode, onTogglePrivacy,
+  offlineMode, onToggleOffline, pushNotifications, onTogglePushNotifications,
+  reminderDelay, onSetReminderDelay, onClearData,
+  biometricEnabled, onToggleBiometric,
+}: SettingsScreenProps) {
+  const {
+    theme, toggleTheme, palette, setPalette, gradient, setGradient,
+    background, setBackground, borderRadius, setBorderRadius,
+    cardBlur, setCardBlur, fontScale, setFontScale, resetPreferences,
+  } = useThemeContext();
+
+  const [section, setSection] = useState<Section>("main");
+
+  const titles: Record<Section, string> = {
     main: "Paramètres",
     appearance: "Apparence",
+    colors: "Couleurs",
     budget: "Budget & Devise",
     notifications: "Notifications",
     privacy: "Confidentialité",
@@ -359,11 +418,24 @@ export function SettingsScreen({
       </div>
 
       <AnimatePresence mode="wait">
-        {section === "main" && <MainSection key="main" />}
-        {section === "appearance" && <AppearanceSection key="appearance" />}
-        {section === "budget" && <BudgetSection key="budget" />}
-        {section === "notifications" && <NotificationsSection key="notifications" />}
-        {section === "privacy" && <PrivacySection key="privacy" />}
+        {section === "main" && <MainSection key="main" onNavigate={setSection} />}
+        {section === "appearance" && <AppearanceSection key="appearance"
+          theme={theme} toggleTheme={toggleTheme} palette={palette} setPalette={setPalette}
+          gradient={gradient} setGradient={setGradient} background={background} setBackground={setBackground}
+          borderRadius={borderRadius} setBorderRadius={setBorderRadius}
+          cardBlur={cardBlur} setCardBlur={setCardBlur} fontScale={fontScale} setFontScale={setFontScale}
+          resetPreferences={resetPreferences} />}
+        {section === "budget" && <BudgetSection key="budget"
+          monthlyBudget={monthlyBudget} currency={currency} onSetBudget={onSetBudget} onSetCurrency={onSetCurrency} />}
+        {section === "notifications" && <NotificationsSection key="notifications"
+          pushNotifications={pushNotifications} onTogglePushNotifications={onTogglePushNotifications}
+          autoReminders={autoReminders} onToggleReminders={onToggleReminders}
+          reminderDelay={reminderDelay} onSetReminderDelay={onSetReminderDelay} />}
+        {section === "privacy" && <PrivacySection key="privacy"
+          privacyMode={privacyMode} onTogglePrivacy={onTogglePrivacy}
+          offlineMode={offlineMode} onToggleOffline={onToggleOffline}
+          biometricEnabled={biometricEnabled} onToggleBiometric={onToggleBiometric}
+          onClearData={onClearData} />}
       </AnimatePresence>
 
       <div className="h-8" />

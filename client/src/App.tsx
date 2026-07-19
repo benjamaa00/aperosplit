@@ -161,7 +161,8 @@ export default function App() {
     if (!isNetlify && members.length > 0) {
       initGroup.mutateAsync({ members: members.map(m => ({ id: m.id, name: m.name, avatar: m.avatar, role: m.role as "admin" | "member" | undefined, status: m.status as "active" | "pending" | undefined })) }).catch(() => {});
     }
-  }, [isNetlify, members.length]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isNetlify, members]);
 
   useEffect(() => {
     if (getNotificationsQuery.data) {
@@ -322,7 +323,10 @@ export default function App() {
 
   const selectIdentity = useCallback((id: string) => {
     const stored = localStorage.getItem("equilibra_locked_member");
-    if (stored && stored !== id) { showNotification("Accès verrouillé", `Compte verrouillé sur ${members.find((m) => m.id === stored)?.name}`); return; }
+    if (stored && stored !== id) {
+      const lockedMember = members.find((m) => m.id === stored);
+      if (!lockedMember) { localStorage.removeItem("equilibra_locked_member"); } else { showNotification("Accès verrouillé", `Compte verrouillé sur ${lockedMember.name}`); return; }
+    }
     handleSwitchAccount(id);
   }, [handleSwitchAccount, members, showNotification]);
 
@@ -375,7 +379,7 @@ export default function App() {
     showNotification("Demande envoyée", `Demande de ${formatCurrency(amount)} à ${toName}`);
     toast.success(`Demande de ${formatCurrency(amount)} envoyée à ${toName}`);
     if (!isNetlify) { try { await requestPaymentMutation.mutateAsync({ ...payment, groupId: GROUP_ID }); await refetch(); } catch (e) { toast.error("Erreur lors de l'envoi de la demande"); } }
-  }, [currentMemberId, members, haptic, pendingPayments, requestPaymentMutation, refetch, showNotification, isNetlify]);
+  }, [currentMemberId, members, haptic, requestPaymentMutation, refetch, showNotification, isNetlify]);
 
   const requestGroupPayment = useCallback(async (expenseId: string, participantIds?: string[], note?: string) => {
     const expense = expenses.find((e) => e.id === expenseId);

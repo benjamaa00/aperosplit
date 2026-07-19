@@ -106,7 +106,7 @@ export function ExpensesTab({
       expenseId: exp.id,
       participants: otherIds,
       selectedId: null,
-      perPerson: exp.amount / exp.participants.length,
+      perPerson: exp.amount / (exp.participants.length || 1),
       note: "",
     });
   };
@@ -120,7 +120,7 @@ export function ExpensesTab({
       type: "reimbursement",
       expenseId: exp.id,
       toId: otherId,
-      perPerson: exp.amount / exp.participants.length,
+      perPerson: exp.amount / (exp.participants.length || 1),
       note: "",
     });
   };
@@ -210,7 +210,7 @@ export function ExpensesTab({
           ) : (
             filtered.map((exp, i) => {
               const payer = getMember(exp.payerId);
-              const perPerson = exp.amount / exp.participants.length;
+              const perPerson = exp.amount / (exp.participants.length || 1);
               const userShare = exp.participants.includes(currentMemberId)
                 ? perPerson
                 : 0;
