@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { THEMES, type ThemeColors } from "@/themes/definitions";
 import { GRADIENT_DEFINITIONS, getGradientById } from "@/themes/gradients";
 import { BACKGROUND_DEFINITIONS, getBackgroundById, BACKGROUND_ANIMATION_KEYFRAMES } from "@/themes/backgrounds";
@@ -403,46 +403,64 @@ export function ThemeProvider({ children, memberId }: { children: React.ReactNod
     localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_PREFS));
   }, []);
 
+  const setters = useMemo(() => ({
+    setPalette: (p: ColorPalette) => setPrefs({ palette: p }),
+    setGradient: (g: GradientStyle) => setPrefs({ gradient: g }),
+    setBackground: (b: BackgroundStyle) => setPrefs({ background: b }),
+    setBorderRadius: (r: number) => setPrefs({ borderRadius: r }),
+    setCardBlur: (b: number) => setPrefs({ cardBlur: b }),
+    setFontScale: (s: number) => setPrefs({ fontScale: s }),
+    setThemeId: (id: string) => setPrefs({ themeId: id }),
+    setBackgroundId: (id: string) => setPrefs({ backgroundId: id }),
+    setGradientBgId: (id: string) => setPrefs({ gradientBgId: id }),
+    setShadowIntensity: (v: number) => setPrefs({ shadowIntensity: v }),
+    setTransparency: (v: number) => setPrefs({ transparency: v }),
+    setGlassmorphism: (v: boolean) => setPrefs({ glassmorphism: v }),
+    setAnimationSpeed: (s: AnimationSpeed) => setPrefs({ animationSpeed: s }),
+    setCardSize: (s: CardSize) => setPrefs({ cardSize: s }),
+    setIconScale: (s: number) => setPrefs({ iconScale: s }),
+  }), [setPrefs]);
+
+  const value = useMemo(() => ({
+    theme: prefs.theme,
+    palette: prefs.palette,
+    gradient: prefs.gradient,
+    background: prefs.background,
+    borderRadius: prefs.borderRadius,
+    cardBlur: prefs.cardBlur,
+    fontScale: prefs.fontScale,
+    themeId: prefs.themeId,
+    backgroundId: prefs.backgroundId,
+    gradientBgId: prefs.gradientBgId,
+    shadowIntensity: prefs.shadowIntensity,
+    transparency: prefs.transparency,
+    glassmorphism: prefs.glassmorphism,
+    animationSpeed: prefs.animationSpeed,
+    cardSize: prefs.cardSize,
+    iconScale: prefs.iconScale,
+    preferences: prefs,
+    toggleTheme,
+    setPalette: setters.setPalette,
+    setGradient: setters.setGradient,
+    setBackground: setters.setBackground,
+    setBorderRadius: setters.setBorderRadius,
+    setCardBlur: setters.setCardBlur,
+    setFontScale: setters.setFontScale,
+    setThemeId: setters.setThemeId,
+    setBackgroundId: setters.setBackgroundId,
+    setGradientBgId: setters.setGradientBgId,
+    setShadowIntensity: setters.setShadowIntensity,
+    setTransparency: setters.setTransparency,
+    setGlassmorphism: setters.setGlassmorphism,
+    setAnimationSpeed: setters.setAnimationSpeed,
+    setCardSize: setters.setCardSize,
+    setIconScale: setters.setIconScale,
+    setPreferences: setPrefs,
+    resetPreferences,
+  }), [prefs, toggleTheme, setters, setPrefs, resetPreferences]);
+
   return (
-    <ThemeContext.Provider
-      value={{
-        theme: prefs.theme,
-        palette: prefs.palette,
-        gradient: prefs.gradient,
-        background: prefs.background,
-        borderRadius: prefs.borderRadius,
-        cardBlur: prefs.cardBlur,
-        fontScale: prefs.fontScale,
-        themeId: prefs.themeId,
-        backgroundId: prefs.backgroundId,
-        gradientBgId: prefs.gradientBgId,
-        shadowIntensity: prefs.shadowIntensity,
-        transparency: prefs.transparency,
-        glassmorphism: prefs.glassmorphism,
-        animationSpeed: prefs.animationSpeed,
-        cardSize: prefs.cardSize,
-        iconScale: prefs.iconScale,
-        preferences: prefs,
-        toggleTheme,
-        setPalette: (p) => setPrefs({ palette: p }),
-        setGradient: (g) => setPrefs({ gradient: g }),
-        setBackground: (b) => setPrefs({ background: b }),
-        setBorderRadius: (r) => setPrefs({ borderRadius: r }),
-        setCardBlur: (b) => setPrefs({ cardBlur: b }),
-        setFontScale: (s) => setPrefs({ fontScale: s }),
-        setThemeId: (id) => setPrefs({ themeId: id }),
-        setBackgroundId: (id) => setPrefs({ backgroundId: id }),
-        setGradientBgId: (id) => setPrefs({ gradientBgId: id }),
-        setShadowIntensity: (v) => setPrefs({ shadowIntensity: v }),
-        setTransparency: (v) => setPrefs({ transparency: v }),
-        setGlassmorphism: (v) => setPrefs({ glassmorphism: v }),
-        setAnimationSpeed: (s) => setPrefs({ animationSpeed: s }),
-        setCardSize: (s) => setPrefs({ cardSize: s }),
-        setIconScale: (s) => setPrefs({ iconScale: s }),
-        setPreferences: setPrefs,
-        resetPreferences,
-      }}
-    >
+    <ThemeContext.Provider value={value}>
       {children}
     </ThemeContext.Provider>
   );

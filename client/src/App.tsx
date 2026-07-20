@@ -598,91 +598,109 @@ export default function App() {
   }, [currentMemberId, isNetlify, updateMemberProfileMutation, refetch]);
 
   // ─── Screen Routing ────────────────────────────────────────
-  const themed = (content: React.ReactNode) => <ThemeProvider memberId={currentMemberId}>{content}</ThemeProvider>;
-  if (screen === "access") return themed(<AppShell><AccessScreen onSubmit={handleAccessCode} /></AppShell>);
-  if (screen === "identity") {
-    if (members.length === 0) return themed(<AppShell><RegisterScreen onRegister={(name, rawAvatar) => {
+  let content: React.ReactNode = null;
+
+  if (screen === "access") {
+    content = <AppShell><AccessScreen onSubmit={handleAccessCode} /></AppShell>;
+  } else if (screen === "identity") {
+    if (members.length === 0) {
+      content = <AppShell><RegisterScreen onRegister={(name, rawAvatar) => {
+        const memberId = Date.now().toString();
+        const avatar = prepareAvatar(memberId, rawAvatar);
+        const newMember: Member = { id: memberId, name, avatar, role: "admin", status: "active" };
+        setMembers([newMember]);
+        setCurrentMemberId(newMember.id);
+        setScreen("main");
+        if (!isNetlify) {
+          syncingFromServer.current = true;
+          initGroup.mutateAsync({ members: [{ id: memberId, name, avatar, role: "admin", status: "active" }] }).catch(() => {});
+        }
+      }} onBack={() => setScreen("access")} groupName="Équilibra" /></AppShell>;
+    } else {
+      content = <AppShell><IdentityScreen members={members} onSelect={selectIdentity} onReset={async () => { try { await resetAllDataMutation.mutateAsync(); setMembers([]); setExpenses([]); setPendingPayments([]); setCompletedPayments([]); toast.success("Groupe réinitialisé"); } catch { toast.error("Erreur lors de la réinitialisation"); } }} /></AppShell>;
+    }
+  } else if (screen === "register") {
+    content = <AppShell><RegisterScreen onRegister={handleRegister} onBack={() => setScreen("access")} /></AppShell>;
+  } else if (screen === "invite") {
+    content = <AppShell><InviteScreen inviteToken={inviteToken!} onJoinByInvite={async (name, rawAvatar) => {
       const memberId = Date.now().toString();
       const avatar = prepareAvatar(memberId, rawAvatar);
-      const newMember: Member = { id: memberId, name, avatar, role: "admin", status: "active" };
-      setMembers([newMember]);
-      setCurrentMemberId(newMember.id);
-      setScreen("main");
-      if (!isNetlify) {
-        syncingFromServer.current = true;
-        initGroup.mutateAsync({ members: [{ id: memberId, name, avatar, role: "admin", status: "active" }] }).catch(() => {});
-      }
-    }} onBack={() => setScreen("access")} groupName="Équilibra" /></AppShell>);
-    return themed(<AppShell><IdentityScreen members={members} onSelect={selectIdentity} onReset={async () => { try { await resetAllDataMutation.mutateAsync(); setMembers([]); setExpenses([]); setPendingPayments([]); setCompletedPayments([]); toast.success("Groupe réinitialisé"); } catch { toast.error("Erreur lors de la réinitialisation"); } }} /></AppShell>);
+      try {
+        const r = await joinGroupByInviteMutation.mutateAsync({ token: inviteToken!, memberId, memberName: name, memberAvatar: avatar });
+        if (r?.success) {
+          await refetch();
+          const status = r.requiresApproval ? "pending" : "active";
+          const newMember: Member = { id: memberId, name, avatar, role: "member", status };
+          setMembers((prev) => [...prev, newMember]);
+          setCurrentMemberId(memberId);
+          if (r.requiresApproval) { setScreen("identity"); toast.info("Votre demande est en attente d'approbation par l'admin."); }
+          else { setScreen("main"); }
+        }
+        return r ?? { success: false };
+      } catch { return { success: false, error: "Erreur de connexion" }; }
+    }} onBack={() => setScreen("access")} /></AppShell>;
+  } else if (screen === "lock" && currentMember) {
+    content = <AppShell><LockScreen member={currentMember} onUnlock={handleBiometricUnlock} onSkip={() => setScreen("main")} onSwitchIdentity={() => setScreen("identity")} /></AppShell>;
+  } else if (screen === "notifications") {
+    content = <AppShell><NotificationsScreen notifications={notifications} currentMemberId={currentMemberId} onBack={() => setScreen("main")} onMarkRead={(id) => markNotificationReadMutation.mutate({ notificationId: id })} onMarkAllRead={() => markAllNotificationsReadMutation.mutate({ memberId: currentMemberId })} /></AppShell>;
+  } else if (screen === "notificationSettings") {
+    content = <AppShell><NotificationSettingsScreen settings={{ pushEnabled: pushNotifications, emailEnabled: false, reminderFrequency: reminderDelay.toString() + "h" }} onBack={() => setScreen("main")} onSave={(s) => { if (s.pushEnabled !== undefined) setPushNotifications(s.pushEnabled); if (s.reminderFrequency) { const hours = parseInt(s.reminderFrequency); if (!isNaN(hours)) setReminderDelay(hours); } }} /></AppShell>;
+  } else if (screen === "groupSettings" || screen === "settings") {
+    content = <AppShell><SettingsScreen monthlyBudget={monthlyBudget} onSetBudget={updateBudget} currency={currency} onSetCurrency={updateCurrency} autoReminders={autoReminders} onToggleReminders={() => setAutoReminders(!autoReminders)} privacyMode={privacyMode} onTogglePrivacy={() => setPrivacyMode(!privacyMode)} offlineMode={offlineMode} onToggleOffline={() => setOfflineMode(!offlineMode)} pushNotifications={pushNotifications} onTogglePushNotifications={() => setPushNotifications(!pushNotifications)} reminderDelay={reminderDelay} onSetReminderDelay={(d: number) => setReminderDelay(d)} onClearData={() => { Object.keys(localStorage).forEach(k => { if (k.startsWith("equilibra_")) localStorage.removeItem(k); }); window.location.reload(); }} biometricEnabled={!!biometricEnabled[currentMemberId]} onToggleBiometric={toggleBiometric} onBack={() => setScreen("main")} /></AppShell>;
+  } else if (screen === "members") {
+    content = <AppShell><MemberManagement members={members} currentMemberId={currentMemberId} expenses={expenses} pendingRequests={pendingMembers.map(m => ({ id: `pending_${m.id}`, memberId: m.id, memberName: m.name, memberAvatar: m.avatar, requestedAt: 0 }))} onChangeRole={(id, role) => { setMembers((prev) => prev.map((m) => m.id === id ? { ...m, role } : m)); changeMemberRoleMutation.mutate({ memberId: id, role: role as "admin" | "member" }); }} onRemoveMember={removeMember} onAddMember={() => addMember("Nouveau", "👤")} onApproveMember={approveMember} onRefuseMember={refuseMemberCb} onBack={() => setScreen("main")} onUpdateGroupSettings={(settings) => { updateGroupSettingsMutation.mutate(settings); toast.success("Paramètres mis à jour"); }} onResetAllData={async () => { try { await resetAllDataMutation.mutateAsync(); setMembers([]); setExpenses([]); setPendingPayments([]); setCompletedPayments([]); setScreen("identity"); toast.success("Toutes les données ont été réinitialisées"); } catch { toast.error("Erreur lors de la réinitialisation"); } }} groupName="Équilibra Groupe" groupRequireApproval={requireApproval} /></AppShell>;
+  } else if (screen === "appearance") {
+    content = <AppShell><AppearanceScreen onBack={() => setScreen("main")} /></AppShell>;
+  } else if (screen === "editProfile" && currentMember) {
+    content = <AppShell><EditProfileScreen currentName={currentMember.name} currentAvatar={currentMember.avatar} onSave={handleUpdateProfile} onBack={() => setScreen("main")} saving={profileSaving} /></AppShell>;
+  } else if (screen === "reports") {
+    content = <AppShell><ReportsScreen expenses={expenses} members={members} pendingPayments={pendingPayments} completedPayments={completedPayments} monthlyBudget={monthlyBudget} onBack={() => setScreen("main")} /></AppShell>;
+  } else if (!currentMember) {
+    content = <AppShell><div className="flex items-center justify-center h-screen"><p className="text-muted-foreground">Chargement...</p></div></AppShell>;
+  } else {
+    // ─── Main View ─────────────────────────────────────────────
+    const totalSpent = expenses.reduce((s, e) => s + e.amount, 0);
+    const myBalance = balances[currentMemberId] || 0;
+    const recentExpenses = [...expenses].sort((a, b) => b.date - a.date).slice(0, 5);
+    const myPendingPayments = pendingPayments.filter((p) => (p.toId === currentMemberId || p.fromId === currentMemberId) && (p.status === "pending" || p.status === "late" || p.status === "refused" || p.status === "disputed" || p.status === "paid" || p.status === "accepted"));
+    const myCompletedPayments = completedPayments.filter((p) => p.toId === currentMemberId || p.fromId === currentMemberId);
+
+    content = (
+      <AppShell>
+        <div className="min-h-screen pb-24 scrollbar-hidden overflow-y-auto">
+          <AnimatePresence mode="wait">
+            {activeTab === "home" && <HomeTab key="home" currentMember={currentMember} balance={myBalance} totalSpent={totalSpent} expenseCount={expenses.length} recentExpenses={recentExpenses} members={members} pendingPayments={myPendingPayments} completedPayments={myCompletedPayments} onConfirmPayment={confirmPayment} onRefusePayment={refusePayment} onResentPayment={resentPayment} onConfirmReceipt={confirmReceipt} onReportNotReceived={reportNotReceived} onMarkAsPaid={markAsPaid} expenses={expenses} monthlyBudget={monthlyBudget} currency={currency} onUpdateBudget={updateBudget} />}
+            {activeTab === "expenses" && <ExpensesTab key="expenses" expenses={expenses} members={members} currentMemberId={currentMemberId} onDelete={deleteExpense} onAdd={() => setShowAddExpense(true)} onRequestPayment={requestPayment} onRequestGroupPayment={requestGroupPayment} currency={currency} pendingPayments={pendingPayments} completedPayments={completedPayments} />}
+            {activeTab === "balances" && <BalancesTab key="balances" members={members} balances={balances} suggestedTransactions={suggestedTransactions} currentMemberId={currentMemberId} onRequestPayment={(toId, amount, note) => requestPayment(toId, amount, undefined, note)} expenses={expenses} currency={currency} />}
+            {activeTab === "history" && <PaymentHistory key="history" payments={[...completedPayments, ...pendingPayments].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))} expenses={expenses} members={members} currentMemberId={currentMemberId} currency={currency} onConfirmPayment={confirmPayment} onRefusePayment={refusePayment} onResentPayment={resentPayment} onConfirmReceipt={confirmReceipt} onReportNotReceived={reportNotReceived} onMarkAsPaid={markAsPaid} onCancelPayment={cancelPaymentRequest} />}
+            {activeTab === "stats" && <StatsTab key="stats" expenses={expenses} members={members} currentMemberId={currentMemberId} pendingPayments={pendingPayments} completedPayments={completedPayments} monthlyBudget={monthlyBudget} currency={currency} />}
+            {activeTab === "profile" && <ProfileTab key="profile" currentMember={currentMember} members={members} biometricEnabled={!!biometricEnabled[currentMemberId]} biometricAvailable={biometricAvailable} onToggleBiometric={toggleBiometric} onLogout={() => { setCurrentMemberId(""); setScreen("identity"); }} onRemoveMember={removeMember} isLocked={!!localStorage.getItem("equilibra_locked_member")} unreadCount={unreadCount} onOpenNotifications={() => setScreen("notifications")} onOpenReports={() => setScreen("reports")} onOpenGroupSettings={() => setScreen("groupSettings")} onOpenMembers={() => setScreen("members")} onOpenAppearance={() => setScreen("appearance")} onOpenEditProfile={() => setScreen("editProfile")} onResetAllData={async () => { try { await resetAllDataMutation.mutateAsync(); setMembers([]); setExpenses([]); setPendingPayments([]); setCompletedPayments([]); setScreen("identity"); toast.success("Toutes les données ont été réinitialisées"); } catch { toast.error("Erreur lors de la réinitialisation"); } }} onLeaveGroup={leaveGroup} currency={currency} onSetCurrency={updateCurrency} monthlyBudget={monthlyBudget} onSetBudget={updateBudget} pushNotifications={pushNotifications} onTogglePushNotifications={() => setPushNotifications(!pushNotifications)} autoReminders={autoReminders} onToggleReminders={() => setAutoReminders(!autoReminders)} reminderDelay={reminderDelay} onSetReminderDelay={(d: number) => setReminderDelay(d)} privacyMode={privacyMode} onTogglePrivacy={() => setPrivacyMode(!privacyMode)} />}
+          </AnimatePresence>
+
+          {/* Bottom Navigation */}
+          <nav className="fixed bottom-0 inset-x-0 z-40 bg-card/80 backdrop-blur-xl border-t border-border">
+            <div className="max-w-md mx-auto flex items-center justify-around py-2">
+              {([["home", Home, "Accueil"], ["expenses", Receipt, "Dépenses"], ["balances", Scale, "Soldes"], ["history", History, "Historique"], ["stats", BarChart3, "Stats"], ["profile", User, "Profil"]] as [Tab, typeof Home, string][]).map(([tab, Icon, label]) => (
+                <motion.button key={tab} whileTap={{ scale: 0.9 }} onClick={() => setActiveTab(tab)} className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition-colors ${activeTab === tab ? "text-primary" : "text-muted-foreground"}`}>
+                  <Icon size={20} strokeWidth={activeTab === tab ? 2.5 : 1.5} />
+                  <span className="text-[10px] font-medium">{label}</span>
+                </motion.button>
+              ))}
+            </div>
+          </nav>
+
+          {/* Floating Add Button */}
+          {activeTab === "expenses" && (
+            <motion.button initial={{ scale: 0 }} animate={{ scale: 1 }} whileTap={{ scale: 0.9 }} onClick={() => setShowAddExpense(true)} className="fixed bottom-20 right-4 z-50 w-14 h-14 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg shadow-primary/30">
+              <Plus size={24} />
+            </motion.button>
+          )}
+
+          {showAddExpense && <AddExpenseSheet members={members} currentMemberId={currentMemberId} onAdd={(e) => { addExpense(e); setShowAddExpense(false); }} onClose={() => setShowAddExpense(false)} currency={currency} />}
+        </div>
+      </AppShell>
+    );
   }
-  if (screen === "register") return themed(<AppShell><RegisterScreen onRegister={handleRegister} onBack={() => setScreen("access")} /></AppShell>);
-  if (screen === "invite") return themed(<AppShell><InviteScreen inviteToken={inviteToken!} onJoinByInvite={async (name, rawAvatar) => {
-    const memberId = Date.now().toString();
-    const avatar = prepareAvatar(memberId, rawAvatar);
-    try {
-      const r = await joinGroupByInviteMutation.mutateAsync({ token: inviteToken!, memberId, memberName: name, memberAvatar: avatar });
-      if (r?.success) {
-        await refetch();
-        const status = r.requiresApproval ? "pending" : "active";
-        const newMember: Member = { id: memberId, name, avatar, role: "member", status };
-        setMembers((prev) => [...prev, newMember]);
-        setCurrentMemberId(memberId);
-        if (r.requiresApproval) { setScreen("identity"); toast.info("Votre demande est en attente d'approbation par l'admin."); }
-        else { setScreen("main"); }
-      }
-      return r ?? { success: false };
-    } catch { return { success: false, error: "Erreur de connexion" }; }
-  }} onBack={() => setScreen("access")} /></AppShell>);
-  if (screen === "lock" && currentMember) return themed(<AppShell><LockScreen member={currentMember} onUnlock={handleBiometricUnlock} onSkip={() => setScreen("main")} onSwitchIdentity={() => setScreen("identity")} /></AppShell>);
-  if (screen === "notifications") return themed(<AppShell><NotificationsScreen notifications={notifications} currentMemberId={currentMemberId} onBack={() => setScreen("main")} onMarkRead={(id) => markNotificationReadMutation.mutate({ notificationId: id })} onMarkAllRead={() => markAllNotificationsReadMutation.mutate({ memberId: currentMemberId })} /></AppShell>);
-  if (screen === "notificationSettings") return themed(<AppShell><NotificationSettingsScreen settings={{ pushEnabled: pushNotifications, emailEnabled: false, reminderFrequency: reminderDelay.toString() + "h" }} onBack={() => setScreen("main")} onSave={(s) => { if (s.pushEnabled !== undefined) setPushNotifications(s.pushEnabled); if (s.reminderFrequency) { const hours = parseInt(s.reminderFrequency); if (!isNaN(hours)) setReminderDelay(hours); } }} /></AppShell>);
-  if (screen === "groupSettings" || screen === "settings") return themed(<AppShell><SettingsScreen monthlyBudget={monthlyBudget} onSetBudget={updateBudget} currency={currency} onSetCurrency={updateCurrency} autoReminders={autoReminders} onToggleReminders={() => setAutoReminders(!autoReminders)} privacyMode={privacyMode} onTogglePrivacy={() => setPrivacyMode(!privacyMode)} offlineMode={offlineMode} onToggleOffline={() => setOfflineMode(!offlineMode)} pushNotifications={pushNotifications} onTogglePushNotifications={() => setPushNotifications(!pushNotifications)} reminderDelay={reminderDelay} onSetReminderDelay={(d: number) => setReminderDelay(d)} onClearData={() => { Object.keys(localStorage).forEach(k => { if (k.startsWith("equilibra_")) localStorage.removeItem(k); }); window.location.reload(); }} biometricEnabled={!!biometricEnabled[currentMemberId]} onToggleBiometric={toggleBiometric} onBack={() => setScreen("main")} /></AppShell>);
-  if (screen === "members") return themed(<AppShell><MemberManagement members={members} currentMemberId={currentMemberId} expenses={expenses} pendingRequests={pendingMembers.map(m => ({ id: `pending_${m.id}`, memberId: m.id, memberName: m.name, memberAvatar: m.avatar, requestedAt: 0 }))} onChangeRole={(id, role) => { setMembers((prev) => prev.map((m) => m.id === id ? { ...m, role } : m)); changeMemberRoleMutation.mutate({ memberId: id, role: role as "admin" | "member" }); }} onRemoveMember={removeMember} onAddMember={() => addMember("Nouveau", "👤")} onApproveMember={approveMember} onRefuseMember={refuseMemberCb} onBack={() => setScreen("main")} onUpdateGroupSettings={(settings) => { updateGroupSettingsMutation.mutate(settings); toast.success("Paramètres mis à jour"); }} onResetAllData={async () => { try { await resetAllDataMutation.mutateAsync(); setMembers([]); setExpenses([]); setPendingPayments([]); setCompletedPayments([]); setScreen("identity"); toast.success("Toutes les données ont été réinitialisées"); } catch { toast.error("Erreur lors de la réinitialisation"); } }} groupName="Équilibra Groupe" groupRequireApproval={requireApproval} /></AppShell>);
-  if (screen === "appearance") return themed(<AppShell><AppearanceScreen onBack={() => setScreen("main")} /></AppShell>);
-  if (screen === "editProfile" && currentMember) return themed(<AppShell><EditProfileScreen currentName={currentMember.name} currentAvatar={currentMember.avatar} onSave={handleUpdateProfile} onBack={() => setScreen("main")} saving={profileSaving} /></AppShell>);
-  if (screen === "reports") return themed(<AppShell><ReportsScreen expenses={expenses} members={members} pendingPayments={pendingPayments} completedPayments={completedPayments} monthlyBudget={monthlyBudget} onBack={() => setScreen("main")} /></AppShell>);
-  if (!currentMember) return themed(<AppShell><div className="flex items-center justify-center h-screen"><p className="text-muted-foreground">Chargement...</p></div></AppShell>);
 
-  // ─── Main View ─────────────────────────────────────────────
-  const totalSpent = expenses.reduce((s, e) => s + e.amount, 0);
-  const myBalance = balances[currentMemberId] || 0;
-  const recentExpenses = [...expenses].sort((a, b) => b.date - a.date).slice(0, 5);
-  const myPendingPayments = pendingPayments.filter((p) => (p.toId === currentMemberId || p.fromId === currentMemberId) && (p.status === "pending" || p.status === "late" || p.status === "refused" || p.status === "disputed" || p.status === "paid" || p.status === "accepted"));
-  const myCompletedPayments = completedPayments.filter((p) => p.toId === currentMemberId || p.fromId === currentMemberId);
-
-  return themed(
-    <AppShell>
-      <div className="min-h-screen pb-24 scrollbar-hidden overflow-y-auto">
-        <AnimatePresence mode="wait">
-          {activeTab === "home" && <HomeTab key="home" currentMember={currentMember} balance={myBalance} totalSpent={totalSpent} expenseCount={expenses.length} recentExpenses={recentExpenses} members={members} pendingPayments={myPendingPayments} completedPayments={myCompletedPayments} onConfirmPayment={confirmPayment} onRefusePayment={refusePayment} onResentPayment={resentPayment} onConfirmReceipt={confirmReceipt} onReportNotReceived={reportNotReceived} onMarkAsPaid={markAsPaid} expenses={expenses} monthlyBudget={monthlyBudget} currency={currency} onUpdateBudget={updateBudget} />}
-          {activeTab === "expenses" && <ExpensesTab key="expenses" expenses={expenses} members={members} currentMemberId={currentMemberId} onDelete={deleteExpense} onAdd={() => setShowAddExpense(true)} onRequestPayment={requestPayment} onRequestGroupPayment={requestGroupPayment} currency={currency} pendingPayments={pendingPayments} completedPayments={completedPayments} />}
-          {activeTab === "balances" && <BalancesTab key="balances" members={members} balances={balances} suggestedTransactions={suggestedTransactions} currentMemberId={currentMemberId} onRequestPayment={(toId, amount, note) => requestPayment(toId, amount, undefined, note)} expenses={expenses} currency={currency} />}
-          {activeTab === "history" && <PaymentHistory key="history" payments={[...completedPayments, ...pendingPayments].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))} expenses={expenses} members={members} currentMemberId={currentMemberId} currency={currency} onConfirmPayment={confirmPayment} onRefusePayment={refusePayment} onResentPayment={resentPayment} onConfirmReceipt={confirmReceipt} onReportNotReceived={reportNotReceived} onMarkAsPaid={markAsPaid} onCancelPayment={cancelPaymentRequest} />}
-          {activeTab === "stats" && <StatsTab key="stats" expenses={expenses} members={members} currentMemberId={currentMemberId} pendingPayments={pendingPayments} completedPayments={completedPayments} monthlyBudget={monthlyBudget} currency={currency} />}
-          {activeTab === "profile" && <ProfileTab key="profile" currentMember={currentMember} members={members} biometricEnabled={!!biometricEnabled[currentMemberId]} biometricAvailable={biometricAvailable} onToggleBiometric={toggleBiometric} onLogout={() => { setCurrentMemberId(""); setScreen("identity"); }} onRemoveMember={removeMember} isLocked={!!localStorage.getItem("equilibra_locked_member")} unreadCount={unreadCount} onOpenNotifications={() => setScreen("notifications")} onOpenReports={() => setScreen("reports")} onOpenGroupSettings={() => setScreen("groupSettings")} onOpenMembers={() => setScreen("members")} onOpenAppearance={() => setScreen("appearance")} onOpenEditProfile={() => setScreen("editProfile")} onResetAllData={async () => { try { await resetAllDataMutation.mutateAsync(); setMembers([]); setExpenses([]); setPendingPayments([]); setCompletedPayments([]); setScreen("identity"); toast.success("Toutes les données ont été réinitialisées"); } catch { toast.error("Erreur lors de la réinitialisation"); } }} onLeaveGroup={leaveGroup} currency={currency} onSetCurrency={updateCurrency} monthlyBudget={monthlyBudget} onSetBudget={updateBudget} pushNotifications={pushNotifications} onTogglePushNotifications={() => setPushNotifications(!pushNotifications)} autoReminders={autoReminders} onToggleReminders={() => setAutoReminders(!autoReminders)} reminderDelay={reminderDelay} onSetReminderDelay={(d: number) => setReminderDelay(d)} privacyMode={privacyMode} onTogglePrivacy={() => setPrivacyMode(!privacyMode)} />}
-        </AnimatePresence>
-
-        {/* Bottom Navigation */}
-        <nav className="fixed bottom-0 inset-x-0 z-40 bg-card/80 backdrop-blur-xl border-t border-border">
-          <div className="max-w-md mx-auto flex items-center justify-around py-2">
-            {([["home", Home, "Accueil"], ["expenses", Receipt, "Dépenses"], ["balances", Scale, "Soldes"], ["history", History, "Historique"], ["stats", BarChart3, "Stats"], ["profile", User, "Profil"]] as [Tab, typeof Home, string][]).map(([tab, Icon, label]) => (
-              <motion.button key={tab} whileTap={{ scale: 0.9 }} onClick={() => setActiveTab(tab)} className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition-colors ${activeTab === tab ? "text-primary" : "text-muted-foreground"}`}>
-                <Icon size={20} strokeWidth={activeTab === tab ? 2.5 : 1.5} />
-                <span className="text-[10px] font-medium">{label}</span>
-              </motion.button>
-            ))}
-          </div>
-        </nav>
-
-        {/* Floating Add Button */}
-        {activeTab === "expenses" && (
-          <motion.button initial={{ scale: 0 }} animate={{ scale: 1 }} whileTap={{ scale: 0.9 }} onClick={() => setShowAddExpense(true)} className="fixed bottom-20 right-4 z-50 w-14 h-14 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg shadow-primary/30">
-            <Plus size={24} />
-          </motion.button>
-        )}
-
-        {showAddExpense && <AddExpenseSheet members={members} currentMemberId={currentMemberId} onAdd={(e) => { addExpense(e); setShowAddExpense(false); }} onClose={() => setShowAddExpense(false)} currency={currency} />}
-      </div>
-    </AppShell>
-  );
+  return <ThemeProvider memberId={currentMemberId}>{content}</ThemeProvider>;
 }
