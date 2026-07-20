@@ -458,7 +458,7 @@ export async function confirmPayment(paymentId: string, fromId: string, toId: st
        status = 'completed',
        responded_at = NOW(),
        confirmed_at = NOW()
-     WHERE id = $1 AND from_id = $2 AND to_id = $3 AND status IN ('pending','accepted','paid','disputed')`,
+     WHERE id = $1 AND from_id = $2 AND to_id = $3 AND status IN ('pending','accepted','paid','disputed','late')`,
     [paymentId, fromId, toId],
   );
   return result.rowCount === 1;
@@ -815,7 +815,7 @@ export async function resendPaymentRequest(paymentId: string) {
   const db = await ready();
   if (!db) return false;
   return (await db.query(
-    `UPDATE payments SET attempt_count = attempt_count + 1, responded_at = NULL WHERE id = $1 AND status IN ('pending', 'refused', 'late')`,
+    `UPDATE payments SET attempt_count = attempt_count + 1, responded_at = NULL WHERE id = $1 AND attempt_count < 3 AND status IN ('pending', 'refused', 'late')`,
     [paymentId]
   )).rowCount === 1;
 }

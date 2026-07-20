@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Filter, X, Clock, Search, Receipt, ArrowUpRight, ArrowDownLeft, Check, AlertTriangle, RefreshCw, Pause, Send, ChevronDown, Inbox } from "lucide-react";
+import { motion } from "framer-motion";
+import { X, Clock, Search, ArrowUpRight, ArrowDownLeft, Check, AlertTriangle, RefreshCw, Send, Inbox, Receipt, CheckCircle, Ban } from "lucide-react";
 import { AvatarImg } from "./AvatarImg";
 import { formatCurrency } from "../utils/currency";
 import { getStatusDot, getStatusPill, getStatusLabel } from "../utils/statusColors";
@@ -15,34 +15,44 @@ function getStatusIcon(status: string): React.ReactNode {
     case "refused": return <X size={11} />;
     case "disputed": return <AlertTriangle size={11} />;
     case "resent": return <Send size={11} />;
-    case "in_progress": return <Pause size={11} />;
     default: return <Clock size={11} />;
   }
 }
 
+interface PaymentHistoryPayment {
+  id: string;
+  fromId: string;
+  fromName: string;
+  toId: string;
+  toName: string;
+  amount: number;
+  status: "pending" | "accepted" | "refused" | "completed" | "late" | "disputed" | "paid" | "in_progress" | "resent";
+  createdAt?: number;
+  completedAt?: number;
+  respondedAt?: number;
+  paidAt?: number;
+  confirmedAt?: number;
+  comment?: string;
+  requestNote?: string;
+  expenseId?: string;
+  attemptCount?: number;
+  notificationCount?: number;
+  isGroupRequest?: boolean;
+}
+
 interface PaymentHistoryProps {
-  payments: Array<{
-    id: string;
-    fromId: string;
-    fromName: string;
-    toId: string;
-    toName: string;
-    amount: number;
-    status: "pending" | "accepted" | "refused" | "resent" | "in_progress" | "completed" | "late" | "disputed" | "paid";
-    createdAt?: number;
-    completedAt?: number;
-    respondedAt?: number;
-    paidAt?: number;
-    confirmedAt?: number;
-    comment?: string;
-    expenseId?: string;
-    attemptCount?: number;
-    isGroupRequest?: boolean;
-  }>;
+  payments: PaymentHistoryPayment[];
   expenses: Array<{ id: string; description: string; amount: number; payerId: string; date: number; category: string; categoryEmoji: string }>;
   members: Array<{ id: string; name: string; avatar: string }>;
   currentMemberId: string;
   currency: string;
+  onConfirmPayment?: (id: string) => void;
+  onRefusePayment?: (id: string) => void;
+  onResentPayment?: (id: string) => void;
+  onConfirmReceipt?: (id: string) => void;
+  onReportNotReceived?: (id: string, comment?: string) => void;
+  onMarkAsPaid?: (id: string) => void;
+  onCancelPayment?: (id: string) => void;
 }
 
 type FilterTab = "all" | "pending" | "completed" | "refused" | "sent" | "received";
@@ -59,11 +69,16 @@ function relativeTime(ts: number): string {
   return new Date(ts).toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
 }
 
-export function PaymentHistory({ payments, expenses, members, currentMemberId, currency }: PaymentHistoryProps) {
+export function PaymentHistory({
+  payments, expenses, members, currentMemberId, currency,
+  onConfirmPayment, onRefusePayment, onResentPayment,
+  onConfirmReceipt, onReportNotReceived, onMarkAsPaid, onCancelPayment,
+}: PaymentHistoryProps) {
   const [activeTab, setActiveTab] = useState<FilterTab>("all");
   const [search, setSearch] = useState("");
 
   const getMember = (id: string) => members.find(m => m.id === id);
+  const getExpense = (id?: string) => id ? expenses.find(e => e.id === id) : undefined;
 
   const totalReceived = useMemo(
     () => payments.filter(p => p.toId === currentMemberId && (p.status === "completed" || p.status === "paid")).reduce((s, p) => s + p.amount, 0),
@@ -76,8 +91,8 @@ export function PaymentHistory({ payments, expenses, members, currentMemberId, c
   );
 
   const totalPending = useMemo(
-    () => payments.filter(p => p.status === "pending" || p.status === "late" || p.status === "accepted").reduce((s, p) => s + p.amount, 0),
-    [payments]
+    () => payments.filter(p => (p.toId === currentMemberId || p.fromId === currentMemberId) && (p.status === "pending" || p.status === "late" || p.status === "accepted")).reduce((s, p) => s + p.amount, 0),
+    [payments, currentMemberId]
   );
 
   const filteredPayments = useMemo(() => {
@@ -115,7 +130,7 @@ export function PaymentHistory({ payments, expenses, members, currentMemberId, c
     const monthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate()).getTime();
 
     const order = ["Aujourd'hui", "Hier", "Cette semaine", "Ce mois", "Plus ancien"];
-    const groups: Record<string, typeof payments> = {};
+    const groups: Record<string, PaymentHistoryPayment[]> = {};
 
     const sorted = [...filteredPayments].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
 
@@ -228,6 +243,13 @@ export function PaymentHistory({ payments, expenses, members, currentMemberId, c
                 {items.map((p, idx) => {
                   const from = getMember(p.fromId);
                   const to = getMember(p.toId);
+                  const expense = getExpense(p.expenseId);
+                  const isFromCurrentUser = p.fromId === currentMemberId;
+                  const isToCurrentUser = p.toId === currentMemberId;
+                  const isPending = p.status === "pending" || p.status === "late";
+                  const attempts = p.attemptCount || 0;
+                  const canRemind = isPending && isFromCurrentUser && attempts < 3;
+
                   return (
                     <motion.div
                       key={p.id}
@@ -270,6 +292,15 @@ export function PaymentHistory({ payments, expenses, members, currentMemberId, c
                             </span>
                             <span className="text-[10px] text-muted-foreground">{relativeTime(p.createdAt || Date.now())}</span>
                           </div>
+                          {expense && (
+                            <div className="flex items-center gap-1 mt-1">
+                              <Receipt size={10} className="text-muted-foreground/50" />
+                              <p className="text-[10px] text-muted-foreground/60 truncate">{expense.description} ({formatCurrency(expense.amount, currency)})</p>
+                            </div>
+                          )}
+                          {p.requestNote && (
+                            <p className="text-[11px] text-muted-foreground/60 mt-1 truncate">{p.requestNote}</p>
+                          )}
                           {p.attemptCount != null && p.attemptCount > 0 && (
                             <p className="text-[10px] text-muted-foreground/70 mt-1">{p.attemptCount} rappel{p.attemptCount > 1 ? "s" : ""} envoyé{p.attemptCount > 1 ? "s" : ""}</p>
                           )}
@@ -280,6 +311,89 @@ export function PaymentHistory({ payments, expenses, members, currentMemberId, c
 
                         <p className="text-sm font-bold tabular-nums shrink-0">{formatCurrency(p.amount, currency)}</p>
                       </div>
+
+                      {canRemind && onResentPayment && (
+                        <div className="mt-2.5 pt-2.5 border-t border-border/50">
+                          <div className="flex gap-2">
+                            {isPending && isFromCurrentUser && (
+                              <motion.button
+                                whileTap={{ scale: 0.95 }}
+                                onClick={() => onResentPayment(p.id)}
+                                className="flex-1 py-2 rounded-xl text-[11px] font-semibold flex items-center justify-center gap-1.5 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 transition-colors"
+                              >
+                                <RefreshCw size={12} />
+                                Rappeler ({attempts + 1}/3)
+                              </motion.button>
+                            )}
+                            {isPending && isFromCurrentUser && onCancelPayment && (
+                              <motion.button
+                                whileTap={{ scale: 0.95 }}
+                                onClick={() => onCancelPayment(p.id)}
+                                className="py-2 px-3 rounded-xl text-[11px] font-semibold flex items-center justify-center gap-1.5 bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors"
+                              >
+                                <Ban size={12} />
+                              </motion.button>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {!canRemind && isPending && isFromCurrentUser && attempts >= 3 && (
+                        <div className="mt-2.5 pt-2.5 border-t border-border/50">
+                          <p className="text-[11px] text-orange-400/60 flex items-center gap-1.5 justify-center">
+                            <AlertTriangle size={12} />
+                            3 rappels envoyés
+                          </p>
+                        </div>
+                      )}
+
+                      {isPending && isToCurrentUser && onMarkAsPaid && (
+                        <div className="mt-2.5 pt-2.5 border-t border-border/50">
+                          <div className="flex gap-2">
+                            <motion.button
+                              whileTap={{ scale: 0.95 }}
+                              onClick={() => onMarkAsPaid(p.id)}
+                              className="flex-1 py-2 rounded-xl text-[11px] font-semibold flex items-center justify-center gap-1.5 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors"
+                            >
+                              <CheckCircle size={12} />
+                              J'ai payé
+                            </motion.button>
+                            {p.status !== "late" && onRefusePayment && (
+                              <motion.button
+                                whileTap={{ scale: 0.95 }}
+                                onClick={() => onRefusePayment(p.id)}
+                                className="py-2 px-3 rounded-xl text-[11px] font-semibold flex items-center justify-center gap-1.5 bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors"
+                              >
+                                <Ban size={12} />
+                              </motion.button>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {p.status === "paid" && isFromCurrentUser && onConfirmReceipt && (
+                        <div className="mt-2.5 pt-2.5 border-t border-border/50">
+                          <div className="flex gap-2">
+                            <motion.button
+                              whileTap={{ scale: 0.95 }}
+                              onClick={() => onConfirmReceipt(p.id)}
+                              className="flex-1 py-2 rounded-xl text-[11px] font-semibold flex items-center justify-center gap-1.5 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors"
+                            >
+                              <Check size={12} />
+                              J'ai reçu
+                            </motion.button>
+                            {onReportNotReceived && (
+                              <motion.button
+                                whileTap={{ scale: 0.95 }}
+                                onClick={() => onReportNotReceived(p.id, "Paiement non reçu")}
+                                className="py-2 px-3 rounded-xl text-[11px] font-semibold flex items-center justify-center gap-1.5 bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors"
+                              >
+                                <AlertTriangle size={12} />
+                              </motion.button>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </motion.div>
                   );
                 })}

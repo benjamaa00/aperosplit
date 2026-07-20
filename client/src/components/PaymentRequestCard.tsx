@@ -267,20 +267,26 @@ export function PaymentRequestCard({
                   </motion.button>
                 </>
               )}
-              {isFromCurrentUser && (
+              {isFromCurrentUser && attempts < 3 && (
                 <motion.button
                   whileTap={{ scale: 0.95 }}
                   onClick={() => onResentPayment(payment.id)}
                   className="flex-1 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 transition-colors"
                 >
                   <RefreshCw size={13} />
-                  Rappeler {payment.status === "late" && `(${attempts + 1}/3)`}
+                  Rappeler ({attempts + 1}/3)
                 </motion.button>
+              )}
+              {isFromCurrentUser && attempts >= 3 && payment.status === "late" && (
+                <p className="flex-1 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 text-orange-400/60">
+                  <AlertTriangle size={13} />
+                  3 rappels envoyés
+                </p>
               )}
             </>
           )}
 
-          {payment.status === "refused" && isFromCurrentUser && (
+          {payment.status === "refused" && isFromCurrentUser && attempts < 3 && (
             <motion.button
               whileTap={{ scale: 0.95 }}
               onClick={() => onResentPayment(payment.id)}

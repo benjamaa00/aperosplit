@@ -271,20 +271,6 @@ export const equilibraRouter = router({
       return { success };
     }),
 
-  sendReminder: groupProcedure
-    .input(z.object({ paymentId: z.string(), toId: z.string(), toName: z.string(), fromName: z.string(), amount: z.number() }))
-    .mutation(async ({ input }) => {
-      const success = await resendPaymentRequest(input.paymentId);
-      if (success) {
-        await addNotification(input.toId, GROUP_ID, "payment_reminder",
-          "Rappel de paiement",
-          `${input.fromName} vous envoie un rappel pour ${input.amount.toFixed(2)} €`,
-          { paymentId: input.paymentId }
-        );
-      }
-      return { success };
-    }),
-
   markAsPaid: groupProcedure
     .input(z.object({ paymentId: z.string(), fromId: z.string() }))
     .mutation(async ({ input }) => {
