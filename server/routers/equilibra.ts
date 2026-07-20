@@ -101,7 +101,6 @@ export const equilibraRouter = router({
       pinCode: data.group?.pinCode || null,
       requireApproval: data.group?.requireApproval || false,
       categories: data.categories || [],
-      notifications: data.notifications || [],
     };
   }),
 
@@ -305,9 +304,9 @@ export const equilibraRouter = router({
     .mutation(async ({ input }) => {
       const success = await confirmReceipt(input.paymentId);
       if (success) {
-        await addNotification(input.fromId, GROUP_ID, "receipt_confirmed",
+        await addNotification(input.toId, GROUP_ID, "receipt_confirmed",
           "Paiement confirmé",
-          "Le destinataire a confirmé avoir reçu le paiement",
+          `${input.fromId ? "Le créancier a confirmé" : "Confirmé"} avoir reçu le paiement`,
           { paymentId: input.paymentId }
         );
       }

@@ -609,7 +609,7 @@ export default function App() {
   const totalSpent = expenses.reduce((s, e) => s + e.amount, 0);
   const myBalance = balances[currentMemberId] || 0;
   const recentExpenses = [...expenses].sort((a, b) => b.date - a.date).slice(0, 5);
-  const myPendingPayments = pendingPayments.filter((p) => (p.toId === currentMemberId || p.fromId === currentMemberId) && (p.status === "pending" || p.status === "late" || p.status === "refused" || p.status === "disputed"));
+  const myPendingPayments = pendingPayments.filter((p) => (p.toId === currentMemberId || p.fromId === currentMemberId) && (p.status === "pending" || p.status === "late" || p.status === "refused" || p.status === "disputed" || p.status === "paid" || p.status === "accepted"));
   const myCompletedPayments = completedPayments.filter((p) => p.toId === currentMemberId || p.fromId === currentMemberId);
 
   return themed(

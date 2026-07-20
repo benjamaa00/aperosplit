@@ -343,14 +343,13 @@ export async function getGroupData(groupId: string) {
     };
   }
   await getOrCreateGroup(groupId);
-  const [group, members, expenses, payments, history, categories, notifications] = await Promise.all([
+  const [group, members, expenses, payments, history, categories] = await Promise.all([
     db.query(`SELECT id, name, share_url AS "shareUrl", pin_code AS "pinCode", require_approval AS "requireApproval" FROM groups WHERE id = $1`, [groupId]),
     db.query(`SELECT id, name, avatar, role, status, user_id AS "userId", biometric_enabled AS "biometricEnabled", credential_id AS "credentialId", joined_at AS "joinedAt" FROM group_members WHERE group_id = $1 ORDER BY joined_at`, [groupId]),
     db.query(`SELECT id, group_id AS "groupId", description, amount, category, payer_id AS "payerId", participants, photo_url AS "photoUrl", category_emoji AS "categoryEmoji", status, is_recurring AS "isRecurring", recurrence_interval AS "recurrenceInterval", recurrence_end_date AS "recurrenceEndDate", validated_by AS "validatedBy", date, created_at AS "createdAt" FROM expenses WHERE group_id = $1 ORDER BY date`, [groupId]),
     db.query(`SELECT id, group_id AS "groupId", from_id AS "fromId", from_name AS "fromName", to_id AS "toId", to_name AS "toName", amount, original_amount AS "originalAmount", status, expense_id AS "expenseId", notification_count AS "notificationCount", attempt_count AS "attemptCount", is_group_request AS "isGroupRequest", request_group_id AS "requestGroupId", request_note AS "requestNote", accept_note AS "acceptNote", paid_at AS "paidAt", confirmed_at AS "confirmedAt", dispute_note AS "disputeNote", date, responded_at AS "respondedAt", created_at AS "createdAt" FROM payments WHERE group_id = $1 ORDER BY created_at DESC`, [groupId]),
     db.query(`SELECT id, group_id AS "groupId", type, author_id AS "authorId", description, amount, from_id AS "fromId", to_id AS "toId", date FROM activity_history WHERE group_id = $1 ORDER BY date DESC LIMIT 200`, [groupId]),
     db.query(`SELECT id, name, emoji, is_default AS "isDefault" FROM expense_categories WHERE group_id = $1 ORDER BY is_default DESC, name`, [groupId]),
-    db.query(`SELECT id, type, title, message, read, data, created_at AS "createdAt" FROM notifications WHERE member_id IN (SELECT id FROM group_members WHERE group_id = $1) ORDER BY created_at DESC LIMIT 50`, [groupId]),
   ]);
   const memberList = members.rows;
   return {
@@ -364,7 +363,6 @@ export async function getGroupData(groupId: string) {
       ...history.rows,
     ],
     categories: categories.rows,
-    notifications: notifications.rows,
   };
 }
 
@@ -430,24 +428,11 @@ export async function addPendingPayment(payment: any) {
     updateStorage("pendingPayments", pendingPayments);
     return payment.id;
   }
-  const existing = await db.query(
-    `UPDATE payments
-     SET notification_count = notification_count + 1
-     WHERE id = (
-       SELECT id FROM payments
-       WHERE group_id = $1 AND from_id = $2 AND to_id = $3 AND amount = $4
-         AND expense_id IS NOT DISTINCT FROM $5 AND status IN ('pending','accepted')
-       ORDER BY created_at DESC LIMIT 1
-     )
-     RETURNING id`,
-    [payment.groupId, payment.fromId, payment.toId, payment.amount, payment.expenseId ?? null],
-  );
-  if (existing.rows[0]?.id) return existing.rows[0].id as string;
   await db.query(
-    `INSERT INTO payments (id, group_id, from_id, from_name, to_id, to_name, amount, status, expense_id, date)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+    `INSERT INTO payments (id, group_id, from_id, from_name, to_id, to_name, amount, original_amount, status, expense_id, attempt_count, is_group_request, request_group_id, request_note, date)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
      ON CONFLICT (id) DO UPDATE SET notification_count = payments.notification_count + 1`,
-    [payment.id, payment.groupId, payment.fromId, payment.fromName, payment.toId, payment.toName, payment.amount, payment.status, payment.expenseId ?? null, payment.date],
+    [payment.id, payment.groupId, payment.fromId, payment.fromName, payment.toId, payment.toName, payment.amount, payment.originalAmount ?? payment.amount, payment.status, payment.expenseId ?? null, payment.attemptCount ?? 1, payment.isGroupRequest ?? false, payment.requestGroupId ?? null, payment.requestNote ?? null, payment.date],
   );
   return payment.id as string;
 }
@@ -470,9 +455,10 @@ export async function confirmPayment(paymentId: string, fromId: string, toId: st
   }
   const result = await db.query(
     `UPDATE payments SET
-       status = CASE WHEN status = 'pending' THEN 'accepted' WHEN status = 'accepted' THEN 'completed' ELSE status END,
-       responded_at = NOW()
-     WHERE id = $1 AND from_id = $2 AND to_id = $3 AND status IN ('pending','accepted')`,
+       status = 'completed',
+       responded_at = NOW(),
+       confirmed_at = NOW()
+     WHERE id = $1 AND from_id = $2 AND to_id = $3 AND status IN ('pending','accepted','paid','disputed')`,
     [paymentId, fromId, toId],
   );
   return result.rowCount === 1;
@@ -865,7 +851,7 @@ export async function confirmReceipt(paymentId: string) {
   const db = await ready();
   if (!db) return false;
   return (await db.query(
-    `UPDATE payments SET status = 'completed', confirmed_at = NOW(), responded_at = NOW() WHERE id = $1 AND status IN ('accepted', 'paid', 'disputed')`,
+    `UPDATE payments SET status = 'completed', confirmed_at = NOW(), responded_at = NOW() WHERE id = $1 AND status IN ('pending', 'accepted', 'paid', 'disputed')`,
     [paymentId]
   )).rowCount === 1;
 }
