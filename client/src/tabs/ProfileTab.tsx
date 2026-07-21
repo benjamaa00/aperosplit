@@ -167,7 +167,6 @@ export const ProfileTab = memo(function ProfileTab({
         className="text-center py-6"
       >
         <motion.button
-          whileTap={{ scale: 0.97 }}
           onClick={() => { haptic("light"); onOpenEditProfile?.(); }}
           className="relative inline-block"
         >
@@ -221,7 +220,6 @@ export const ProfileTab = memo(function ProfileTab({
               {currencies.map((c) => (
                 <motion.button
                   key={c.code}
-                  whileTap={{ scale: 0.9 }}
                   onClick={() => { haptic("light"); onSetCurrency(c.code); }}
                   className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
                     currency === c.code
@@ -245,7 +243,6 @@ export const ProfileTab = memo(function ProfileTab({
             subtitle={monthlyBudget.toLocaleString("fr-MA") + " " + currency}
           >
             <motion.button
-              whileTap={{ scale: 0.9 }}
               onClick={() => {
                 haptic("light");
                 setBudgetInput(monthlyBudget.toString());
@@ -267,7 +264,6 @@ export const ProfileTab = memo(function ProfileTab({
                 {[500, 1000, 2000, 5000].map((v) => (
                   <motion.button
                     key={v}
-                    whileTap={{ scale: 0.9 }}
                     onClick={() => { haptic("light"); setBudgetInput(v.toString()); }}
                     className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${
                       budgetInput === v.toString()
@@ -297,7 +293,6 @@ export const ProfileTab = memo(function ProfileTab({
                 placeholder="Montant"
               />
               <motion.button
-                whileTap={{ scale: 0.97 }}
                 onClick={() => {
                   const v = parseFloat(budgetInput);
                   if (!isNaN(v) && v > 0) {
@@ -343,7 +338,6 @@ export const ProfileTab = memo(function ProfileTab({
                 {[1, 2, 3, 5, 7].map((d) => (
                   <motion.button
                     key={d}
-                    whileTap={{ scale: 0.9 }}
                     onClick={() => { haptic("light"); onSetReminderDelay(d); }}
                     className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${
                       reminderDelay === d
@@ -407,7 +401,6 @@ export const ProfileTab = memo(function ProfileTab({
           </SettingRow>
           {onOpenAppearance && (
             <motion.button
-              whileTap={{ scale: 0.98 }}
               onClick={() => { haptic("light"); onOpenAppearance(); }}
               className="w-full p-4 flex items-center justify-between bg-card/50 border border-border rounded-2xl"
             >
@@ -425,7 +418,6 @@ export const ProfileTab = memo(function ProfileTab({
           )}
           {onOpenCategories && currentMember.role === "admin" && (
             <motion.button
-              whileTap={{ scale: 0.98 }}
               onClick={() => { haptic("light"); onOpenCategories(); }}
               className="w-full p-4 flex items-center justify-between bg-card/50 border border-border rounded-2xl"
             >
@@ -451,7 +443,6 @@ export const ProfileTab = memo(function ProfileTab({
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.15 }}
-            whileTap={{ scale: 0.97 }}
             whileHover={{ scale: 1.03 }}
             onClick={() => { haptic("light"); onOpenNotifications(); }}
             className="p-4 rounded-2xl bg-card border border-border flex flex-col items-center gap-2 relative"
@@ -470,7 +461,6 @@ export const ProfileTab = memo(function ProfileTab({
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.17 }}
-            whileTap={{ scale: 0.97 }}
             whileHover={{ scale: 1.03 }}
             onClick={() => { haptic("light"); onOpenReports(); }}
             className="p-4 rounded-2xl bg-card border border-border flex flex-col items-center gap-2"
@@ -484,7 +474,6 @@ export const ProfileTab = memo(function ProfileTab({
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.19 }}
-            whileTap={{ scale: 0.97 }}
             whileHover={{ scale: 1.03 }}
             onClick={() => { haptic("light"); onOpenGroupSettings(); }}
             className="p-4 rounded-2xl bg-card border border-border flex flex-col items-center gap-2"
@@ -498,7 +487,6 @@ export const ProfileTab = memo(function ProfileTab({
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.21 }}
-            whileTap={{ scale: 0.97 }}
             whileHover={{ scale: 1.03 }}
             onClick={() => { haptic("light"); onOpenMembers(); }}
             className="p-4 rounded-2xl bg-card border border-border flex flex-col items-center gap-2"
@@ -543,7 +531,6 @@ export const ProfileTab = memo(function ProfileTab({
               </motion.div>
             ) : (
               <motion.button
-                whileTap={{ scale: 0.97 }}
                 onClick={handleGenerateInvite}
                 disabled={inviteLoading}
                 className="bg-white/50 border border-dashed border-primary/30 rounded-3xl w-[210px] h-[210px] flex flex-col items-center justify-center gap-3 mb-4 hover:bg-white/80 transition-colors"
@@ -567,7 +554,6 @@ export const ProfileTab = memo(function ProfileTab({
               {inviteTokenValue ? (
                 <>
                   <motion.button
-                    whileTap={{ scale: 0.97 }}
                     onClick={copyLink}
                     className="flex-1 bg-primary text-primary-foreground font-semibold py-3 rounded-xl press-scale flex items-center justify-center gap-2"
                   >
@@ -575,7 +561,6 @@ export const ProfileTab = memo(function ProfileTab({
                     Copier le lien
                   </motion.button>
                   <motion.button
-                    whileTap={{ scale: 0.97 }}
                     onClick={shareLink}
                     className="flex-1 bg-secondary text-secondary-foreground font-semibold py-3 rounded-xl press-scale flex items-center justify-center gap-2"
                   >
@@ -585,7 +570,6 @@ export const ProfileTab = memo(function ProfileTab({
                 </>
               ) : (
                 <motion.button
-                  whileTap={{ scale: 0.97 }}
                   onClick={handleGenerateInvite}
                   disabled={inviteLoading}
                   className="flex-1 bg-primary text-primary-foreground font-semibold py-3 rounded-xl press-scale flex items-center justify-center gap-2 disabled:opacity-40"
@@ -648,7 +632,6 @@ export const ProfileTab = memo(function ProfileTab({
             )}
             {onRemoveMember && currentMember.role === "admin" && member.id !== currentMember.id && (
               <motion.button
-                whileTap={{ scale: 0.8 }}
                 onClick={() => onRemoveMember(member.id)}
                 className="w-8 h-8 rounded-full bg-red-500/10 text-red-400 flex items-center justify-center border border-red-500/10"
               >
@@ -665,7 +648,6 @@ export const ProfileTab = memo(function ProfileTab({
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          whileTap={{ scale: 0.97 }}
           whileHover={{ scale: 1.02 }}
           onClick={() => { haptic("medium"); onLogout(); }}
           className="w-full bg-primary/10 text-primary font-semibold py-3.5 rounded-2xl border border-primary/20 press-scale shadow-lg shadow-primary/5"
@@ -680,7 +662,6 @@ export const ProfileTab = memo(function ProfileTab({
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.32 }}
-          whileTap={{ scale: 0.97 }}
           whileHover={{ scale: 1.02 }}
           onClick={() => { haptic("heavy"); setShowLeaveConfirm(true); }}
           className="w-full bg-red-500/10 text-red-400 font-semibold py-3.5 rounded-2xl border border-red-500/10 press-scale shadow-lg shadow-red-500/5"
@@ -706,7 +687,6 @@ export const ProfileTab = memo(function ProfileTab({
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.35 }}
-          whileTap={{ scale: 0.97 }}
           whileHover={{ scale: 1.02 }}
           onClick={() => { haptic("medium"); onLogout(); }}
           className="w-full bg-red-500/10 text-red-400 font-semibold py-3.5 rounded-2xl border border-red-500/10 press-scale shadow-lg shadow-red-500/5"
@@ -723,7 +703,6 @@ export const ProfileTab = memo(function ProfileTab({
           transition={{ delay: 0.4 }}
         >
           <motion.button
-            whileTap={{ scale: 0.97 }}
             whileHover={{ scale: 1.02 }}
             onClick={() => { haptic("heavy"); setShowResetConfirm(true); }}
             className="w-full bg-red-500/20 text-red-400 font-semibold py-3.5 rounded-2xl border border-red-500/20 press-scale shadow-lg shadow-red-500/10 flex items-center justify-center gap-2"

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
-import '../providers/app_state.dart';
+import '../main.dart';
 import '../utils/currency.dart';
 import '../utils/debts.dart';
 
@@ -24,7 +24,7 @@ class HomeTab extends ConsumerWidget {
     final expenseCount = appState.expenseCount;
     final currentMonthSpending = appState.currentMonthSpending;
     final budgetPercentage = appState.monthlyBudget > 0
-        ? (currentMonthSpending / appState.monthlyBudget * 100).clamp(0, 100)
+        ? (currentMonthSpending / appState.monthlyBudget * 100).clamp(0.0, 100.0)
         : 0.0;
     final breakdown = getMemberBreakdown(member.id, appState.expenses, appState.members);
 

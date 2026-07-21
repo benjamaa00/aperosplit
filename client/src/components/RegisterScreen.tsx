@@ -120,7 +120,6 @@ export function RegisterScreen({ onRegister, onBack, groupName }: RegisterScreen
             <motion.button
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
-              whileTap={{ scale: 0.9 }}
               onClick={() => setStep("name")}
               className="w-10 h-10 rounded-2xl bg-card/30 border border-border flex items-center justify-center"
             >
@@ -129,7 +128,6 @@ export function RegisterScreen({ onRegister, onBack, groupName }: RegisterScreen
           )}
           {step === "name" && onBack && (
             <motion.button
-              whileTap={{ scale: 0.9 }}
               onClick={onBack}
               className="w-10 h-10 rounded-2xl bg-card/30 border border-border flex items-center justify-center"
             >
@@ -184,7 +182,6 @@ export function RegisterScreen({ onRegister, onBack, groupName }: RegisterScreen
               </div>
 
               <motion.button
-                whileTap={{ scale: 0.97 }}
                 onClick={handleNameNext}
                 disabled={!name.trim()}
                 className="w-full bg-primary text-primary-foreground font-semibold py-4 rounded-2xl shadow-xl shadow-primary/25 text-base disabled:opacity-40 disabled:shadow-none mt-4"
@@ -228,7 +225,6 @@ export function RegisterScreen({ onRegister, onBack, groupName }: RegisterScreen
               {/* Action buttons */}
               <div className="flex gap-2 mb-4">
                 <motion.button
-                  whileTap={{ scale: 0.95 }}
                   onClick={handleRandomAvatar}
                   className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl bg-card/50 border border-border text-sm font-semibold transition-colors hover:bg-card/80"
                 >
@@ -236,7 +232,6 @@ export function RegisterScreen({ onRegister, onBack, groupName }: RegisterScreen
                   Aléatoire
                 </motion.button>
                 <motion.button
-                  whileTap={{ scale: 0.95 }}
                   onClick={() => cameraInputRef.current?.click()}
                   className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl bg-card/50 border border-border text-sm font-semibold transition-colors hover:bg-card/80"
                 >
@@ -244,7 +239,6 @@ export function RegisterScreen({ onRegister, onBack, groupName }: RegisterScreen
                   Selfie
                 </motion.button>
                 <motion.button
-                  whileTap={{ scale: 0.95 }}
                   onClick={() => fileInputRef.current?.click()}
                   className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl bg-card/50 border border-border text-sm font-semibold transition-colors hover:bg-card/80"
                 >
@@ -275,7 +269,6 @@ export function RegisterScreen({ onRegister, onBack, groupName }: RegisterScreen
                 <motion.button
                   initial={{ opacity: 0, y: 5 }}
                   animate={{ opacity: 1, y: 0 }}
-                  whileTap={{ scale: 0.97 }}
                   onClick={() => { setAvatarMode("emoji"); setPhotoPreview(null); setAvatar("👤"); }}
                   className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-muted/30 text-sm font-medium text-muted-foreground mb-4"
                 >
@@ -308,7 +301,6 @@ export function RegisterScreen({ onRegister, onBack, groupName }: RegisterScreen
                   {EMOJI_CATEGORIES[selectedCategory].emojis.map((emoji) => (
                     <motion.button
                       key={emoji}
-                      whileTap={{ scale: 0.85 }}
                       onClick={() => {
                         setAvatar(emoji);
                         setAvatarMode("emoji");
@@ -353,7 +345,6 @@ export function RegisterScreen({ onRegister, onBack, groupName }: RegisterScreen
                     {customEmojis.map((emoji, i) => (
                       <motion.button
                         key={`${emoji}-${i}`}
-                        whileTap={{ scale: 0.85 }}
                         onClick={() => {
                           setAvatar(emoji);
                           setAvatarMode("emoji");
@@ -380,7 +371,6 @@ export function RegisterScreen({ onRegister, onBack, groupName }: RegisterScreen
           <motion.button
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            whileTap={{ scale: 0.97 }}
             onClick={handleSubmit}
             className="w-full bg-primary text-primary-foreground font-semibold py-4 rounded-2xl shadow-xl shadow-primary/25 text-base mt-4 flex items-center justify-center gap-2"
           >

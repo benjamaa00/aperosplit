@@ -186,7 +186,6 @@ export function InviteScreen({ inviteToken, onJoinByInvite, onBack }: InviteScre
             </p>
             <div className="flex gap-3 w-full max-w-xs">
               <motion.button
-                whileTap={{ scale: 0.97 }}
                 onClick={() => onBack?.()}
                 className="flex-1 bg-primary text-primary-foreground font-semibold py-3.5 rounded-2xl"
               >

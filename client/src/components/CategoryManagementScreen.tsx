@@ -49,7 +49,7 @@ const EmojiPicker = memo(function EmojiPicker({ onSelect, onClose }: EmojiPicker
       >
         <div className="flex items-center justify-between mb-3">
           <p className="text-sm font-bold">Choisir un emoji</p>
-          <motion.button whileTap={{ scale: 0.85 }} onClick={onClose} className="w-8 h-8 rounded-full bg-secondary/50 flex items-center justify-center">
+          <motion.button onClick={onClose} className="w-8 h-8 rounded-full bg-secondary/50 flex items-center justify-center">
             <X size={14} />
           </motion.button>
         </div>
@@ -57,7 +57,6 @@ const EmojiPicker = memo(function EmojiPicker({ onSelect, onClose }: EmojiPicker
           {EMOJI_GRID.map((emoji, i) => (
             <motion.button
               key={`${emoji}-${i}`}
-              whileTap={{ scale: 0.85 }}
               onClick={() => { onSelect(emoji); onClose(); }}
               className="w-9 h-9 rounded-xl bg-card/60 border border-border/50 flex items-center justify-center text-xl hover:bg-card hover:border-border transition-colors"
             >
@@ -81,7 +80,6 @@ const ColorPicker = memo(function ColorPicker({ value, onSelect }: ColorPickerPr
       {PRESET_COLORS.map((c) => (
         <motion.button
           key={c}
-          whileTap={{ scale: 0.85 }}
           onClick={() => onSelect(c)}
           className={`w-8 h-8 rounded-full border-2 transition-all ${
             value === c ? "border-foreground scale-110 shadow-lg" : "border-transparent hover:scale-105"
@@ -180,7 +178,6 @@ const CategoryCard = memo(function CategoryCard({
       <div className="p-4">
         <div className="flex items-center gap-3">
           <motion.button
-            whileTap={{ scale: 0.9 }}
             onClick={onToggleExpand}
             className="flex items-center gap-3 flex-1 min-w-0"
           >
@@ -202,7 +199,6 @@ const CategoryCard = memo(function CategoryCard({
           {isAdmin && (
             <div className="flex items-center gap-1.5 shrink-0">
               <motion.button
-                whileTap={{ scale: 0.85 }}
                 onClick={onEdit}
                 className="w-8 h-8 rounded-xl bg-secondary/50 flex items-center justify-center"
               >
@@ -210,7 +206,6 @@ const CategoryCard = memo(function CategoryCard({
               </motion.button>
               {category.isActive ? (
                 <motion.button
-                  whileTap={{ scale: 0.85 }}
                   onClick={onArchive}
                   className="w-8 h-8 rounded-xl bg-secondary/50 flex items-center justify-center"
                 >
@@ -218,7 +213,6 @@ const CategoryCard = memo(function CategoryCard({
                 </motion.button>
               ) : (
                 <motion.button
-                  whileTap={{ scale: 0.85 }}
                   onClick={onDelete}
                   className="w-8 h-8 rounded-xl bg-red-500/10 flex items-center justify-center"
                 >
@@ -264,10 +258,10 @@ const CategoryCard = memo(function CategoryCard({
                               autoFocus
                               className="flex-1 bg-background border border-border rounded-lg px-2.5 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary/30"
                             />
-                            <motion.button whileTap={{ scale: 0.85 }} onClick={() => handleUpdateSub(sub.id)} className="w-6 h-6 rounded-lg bg-primary/10 flex items-center justify-center">
+                            <motion.button onClick={() => handleUpdateSub(sub.id)} className="w-6 h-6 rounded-lg bg-primary/10 flex items-center justify-center">
                               <Check size={10} className="text-primary" />
                             </motion.button>
-                            <motion.button whileTap={{ scale: 0.85 }} onClick={() => setEditingSubId(null)} className="w-6 h-6 rounded-lg bg-secondary/50 flex items-center justify-center">
+                            <motion.button onClick={() => setEditingSubId(null)} className="w-6 h-6 rounded-lg bg-secondary/50 flex items-center justify-center">
                               <X size={10} />
                             </motion.button>
                           </div>
@@ -278,14 +272,12 @@ const CategoryCard = memo(function CategoryCard({
                               <div className="flex items-center gap-1 shrink-0">
                                 <Toggle enabled={sub.isActive} onToggle={() => onToggleSubcategoryActive(sub.id, !sub.isActive)} />
                                 <motion.button
-                                  whileTap={{ scale: 0.85 }}
                                   onClick={() => { setEditingSubId(sub.id); setEditingSubName(sub.name); }}
                                   className="w-6 h-6 rounded-lg bg-secondary/50 flex items-center justify-center"
                                 >
                                   <Pencil size={9} />
                                 </motion.button>
                                 <motion.button
-                                  whileTap={{ scale: 0.85 }}
                                   onClick={() => handleDeleteSub(sub.id)}
                                   className="w-6 h-6 rounded-lg bg-red-500/10 flex items-center justify-center"
                                 >
@@ -311,7 +303,6 @@ const CategoryCard = memo(function CategoryCard({
                       className="flex items-center gap-2"
                     >
                       <motion.button
-                        whileTap={{ scale: 0.85 }}
                         onClick={() => setShowSubEmojiPicker(true)}
                         className="w-9 h-9 rounded-xl bg-card/60 border border-border/50 flex items-center justify-center text-lg shrink-0"
                       >
@@ -327,7 +318,6 @@ const CategoryCard = memo(function CategoryCard({
                         className="flex-1 bg-background border border-border rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-primary/30"
                       />
                       <motion.button
-                        whileTap={{ scale: 0.85 }}
                         onClick={handleCreateSub}
                         disabled={!newSubName.trim()}
                         className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center disabled:opacity-40"
@@ -335,7 +325,6 @@ const CategoryCard = memo(function CategoryCard({
                         <Check size={13} className="text-primary" />
                       </motion.button>
                       <motion.button
-                        whileTap={{ scale: 0.85 }}
                         onClick={() => { setAddingSub(false); setNewSubName(""); }}
                         className="w-8 h-8 rounded-xl bg-secondary/50 flex items-center justify-center"
                       >
@@ -344,7 +333,6 @@ const CategoryCard = memo(function CategoryCard({
                     </motion.div>
                   ) : (
                     <motion.button
-                      whileTap={{ scale: 0.97 }}
                       onClick={() => setAddingSub(true)}
                       className="w-full py-2.5 rounded-xl border border-dashed border-border text-xs font-medium text-muted-foreground hover:bg-card/50 transition-colors flex items-center justify-center gap-1.5"
                     >
@@ -537,7 +525,6 @@ export const CategoryManagementScreen = memo(function CategoryManagementScreen({
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-bold">{isEdit ? "Modifier la catégorie" : "Nouvelle catégorie"}</h3>
           <motion.button
-            whileTap={{ scale: 0.85 }}
             onClick={() => isEdit ? setEditingCategory(null) : setShowAddModal(false)}
             className="w-8 h-8 rounded-full bg-secondary/50 flex items-center justify-center"
           >
@@ -548,7 +535,6 @@ export const CategoryManagementScreen = memo(function CategoryManagementScreen({
         <div className="space-y-4">
           <div className="flex items-center gap-3">
             <motion.button
-              whileTap={{ scale: 0.9 }}
               onClick={() => setShowEmojiPicker(true)}
               className="w-14 h-14 rounded-2xl bg-card border border-border flex items-center justify-center text-3xl shrink-0"
             >
@@ -571,7 +557,6 @@ export const CategoryManagementScreen = memo(function CategoryManagementScreen({
         </div>
 
         <motion.button
-          whileTap={{ scale: 0.97 }}
           onClick={isEdit ? handleEdit : handleCreate}
           disabled={!newName.trim()}
           className="w-full bg-primary text-primary-foreground font-semibold py-4 rounded-2xl disabled:opacity-50"
@@ -587,7 +572,6 @@ export const CategoryManagementScreen = memo(function CategoryManagementScreen({
       {/* Header */}
       <div className="flex items-center gap-3">
         <motion.button
-          whileTap={{ scale: 0.9 }}
           onClick={onBack}
           className="w-10 h-10 rounded-2xl bg-card/30 border border-border flex items-center justify-center"
         >
@@ -615,7 +599,6 @@ export const CategoryManagementScreen = memo(function CategoryManagementScreen({
           <motion.button
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
-            whileTap={{ scale: 0.85 }}
             onClick={() => setSearch("")}
             className="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-secondary/50 flex items-center justify-center"
           >
@@ -626,7 +609,6 @@ export const CategoryManagementScreen = memo(function CategoryManagementScreen({
 
       {/* Add button */}
       <motion.button
-        whileTap={{ scale: 0.97 }}
         onClick={openAdd}
         className="w-full py-3.5 rounded-2xl border-2 border-dashed border-primary/30 text-sm font-semibold text-primary hover:bg-primary/5 transition-colors flex items-center justify-center gap-2"
       >

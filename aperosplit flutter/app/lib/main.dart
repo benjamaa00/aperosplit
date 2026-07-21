@@ -1,22 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../router/app_router.dart';
-import '../providers/app_state.dart';
-import '../themes/app_theme.dart';
+import 'router/app_router.dart';
+import 'providers/app_state.dart';
+import 'themes/app_theme.dart';
+
+export 'providers/app_state.dart';
 
 final appStateProvider = ChangeNotifierProvider<AppState>((ref) {
   return AppState();
 });
 
-class EquilibraApp extends ConsumerWidget {
-  const EquilibraApp({super.key});
+class AperoSplitApp extends ConsumerWidget {
+  const AperoSplitApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final appState = ref.watch(appStateProvider);
 
     return MaterialApp.router(
-      title: 'Equilibra Groupe',
+      title: 'AperoSplit',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.getTheme(
         appState.paletteName,
@@ -37,4 +39,12 @@ class EquilibraApp extends ConsumerWidget {
       ],
     );
   }
+}
+
+void main() {
+  runApp(
+    const ProviderScope(
+      child: AperoSplitApp(),
+    ),
+  );
 }

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:fl_chart/fl_chart.dart';
-import '../providers/app_state.dart';
+import '../main.dart';
 import '../utils/currency.dart';
 import '../utils/constants.dart';
 

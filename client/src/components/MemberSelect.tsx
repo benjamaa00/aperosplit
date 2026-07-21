@@ -43,7 +43,6 @@ export function MemberSelect({
   return (
     <div ref={ref} className={`relative ${className}`}>
       <motion.button
-        whileTap={{ scale: 0.98 }}
         onClick={() => setOpen(!open)}
         className="w-full flex items-center gap-3 py-3 px-4 rounded-2xl bg-card/50 border border-border text-sm font-medium text-foreground transition-all focus:outline-none focus:ring-2 focus:ring-primary/30"
       >

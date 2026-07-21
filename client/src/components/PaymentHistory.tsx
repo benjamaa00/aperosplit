@@ -317,7 +317,6 @@ export function PaymentHistory({
                           <div className="flex gap-2">
                             {isPending && isFromCurrentUser && (
                               <motion.button
-                                whileTap={{ scale: 0.95 }}
                                 onClick={() => onResentPayment(p.id)}
                                 className="flex-1 py-2 rounded-xl text-[11px] font-semibold flex items-center justify-center gap-1.5 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 transition-colors"
                               >
@@ -327,7 +326,6 @@ export function PaymentHistory({
                             )}
                             {isPending && isFromCurrentUser && onCancelPayment && (
                               <motion.button
-                                whileTap={{ scale: 0.95 }}
                                 onClick={() => onCancelPayment(p.id)}
                                 className="py-2 px-3 rounded-xl text-[11px] font-semibold flex items-center justify-center gap-1.5 bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors"
                               >
@@ -351,7 +349,6 @@ export function PaymentHistory({
                         <div className="mt-2.5 pt-2.5 border-t border-border/50">
                           <div className="flex gap-2">
                             <motion.button
-                              whileTap={{ scale: 0.95 }}
                               onClick={() => onMarkAsPaid(p.id)}
                               className="flex-1 py-2 rounded-xl text-[11px] font-semibold flex items-center justify-center gap-1.5 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors"
                             >
@@ -360,7 +357,6 @@ export function PaymentHistory({
                             </motion.button>
                             {p.status !== "late" && onRefusePayment && (
                               <motion.button
-                                whileTap={{ scale: 0.95 }}
                                 onClick={() => onRefusePayment(p.id)}
                                 className="py-2 px-3 rounded-xl text-[11px] font-semibold flex items-center justify-center gap-1.5 bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors"
                               >
@@ -375,7 +371,6 @@ export function PaymentHistory({
                         <div className="mt-2.5 pt-2.5 border-t border-border/50">
                           <div className="flex gap-2">
                             <motion.button
-                              whileTap={{ scale: 0.95 }}
                               onClick={() => onConfirmReceipt(p.id)}
                               className="flex-1 py-2 rounded-xl text-[11px] font-semibold flex items-center justify-center gap-1.5 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors"
                             >
@@ -384,7 +379,6 @@ export function PaymentHistory({
                             </motion.button>
                             {onReportNotReceived && (
                               <motion.button
-                                whileTap={{ scale: 0.95 }}
                                 onClick={() => onReportNotReceived(p.id, "Paiement non reçu")}
                                 className="py-2 px-3 rounded-xl text-[11px] font-semibold flex items-center justify-center gap-1.5 bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors"
                               >

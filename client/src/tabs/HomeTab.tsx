@@ -144,7 +144,6 @@ export const HomeTab = memo(function HomeTab({
             </p>
           </div>
           <motion.button
-            whileTap={{ scale: 0.95 }}
             onClick={() => setShowBudgetPrompt(true)}
             className="text-xs text-primary font-medium"
           >

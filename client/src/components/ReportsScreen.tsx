@@ -243,7 +243,7 @@ export function ReportsScreen({ expenses, members, pendingPayments, completedPay
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-md mx-auto px-5 pt-12 space-y-5">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <motion.button whileTap={{ scale: 0.9 }} onClick={onBack}
+        <motion.button onClick={onBack}
           className="w-10 h-10 rounded-2xl bg-card/30 border border-border flex items-center justify-center">
           <ArrowLeft size={20} />
         </motion.button>
@@ -251,7 +251,7 @@ export function ReportsScreen({ expenses, members, pendingPayments, completedPay
           <h1 className="text-3xl font-bold tracking-tight">Rapports</h1>
           <p className="text-sm text-muted-foreground">Analyse de vos dépenses</p>
         </div>
-        <motion.button whileTap={{ scale: 0.9 }} onClick={handleExportPDF}
+        <motion.button onClick={handleExportPDF}
           className="w-10 h-10 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center shadow-lg shadow-primary/30">
           <Download size={20} />
         </motion.button>
@@ -477,15 +477,15 @@ export function ReportsScreen({ expenses, members, pendingPayments, completedPay
 
       {/* Export Buttons */}
       <div className="flex gap-2">
-        <motion.button whileTap={{ scale: 0.97 }} onClick={handleExportPDF}
+        <motion.button onClick={handleExportPDF}
           className="flex-1 py-3.5 rounded-2xl bg-card/30 border border-border text-sm font-semibold flex items-center justify-center gap-2">
           <FileText size={16} /> PDF
         </motion.button>
-        <motion.button whileTap={{ scale: 0.97 }} onClick={handleExportCSV}
+        <motion.button onClick={handleExportCSV}
           className="flex-1 py-3.5 rounded-2xl bg-card/30 border border-border text-sm font-semibold flex items-center justify-center gap-2">
           <Download size={16} /> CSV
         </motion.button>
-        <motion.button whileTap={{ scale: 0.97 }} onClick={handlePrint}
+        <motion.button onClick={handlePrint}
           className="flex-1 py-3.5 rounded-2xl bg-card/30 border border-border text-sm font-semibold flex items-center justify-center gap-2">
           <Printer size={16} /> Imprimer
         </motion.button>

@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import '../providers/app_state.dart';
+import '../main.dart';
 
 class AccessScreen extends ConsumerStatefulWidget {
   const AccessScreen({super.key});
@@ -44,7 +44,6 @@ class _AccessScreenState extends ConsumerState<AccessScreen> {
       _error = '';
     });
 
-    // Simulate validation - in production, call API
     await Future.delayed(const Duration(seconds: 1));
 
     if (!mounted) return;
@@ -52,14 +51,7 @@ class _AccessScreenState extends ConsumerState<AccessScreen> {
     setState(() => _loading = false);
 
     ref.read(appStateProvider.notifier).setAccessKey(pin);
-
-    // Check if user has already registered
-    final hasMember = false; // Would check from local storage
-    if (hasMember) {
-      context.go('/');
-    } else {
-      context.go('/register');
-    }
+    context.go('/register');
   }
 
   @override
@@ -80,8 +72,8 @@ class _AccessScreenState extends ConsumerState<AccessScreen> {
                   color: theme.colorScheme.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(24),
                 ),
-                child: Center(
-                  child: Text('⚖️', style: TextStyle(fontSize: 36)),
+                child: const Center(
+                  child: Text('🎉', style: TextStyle(fontSize: 36)),
                 ),
               )
                   .animate()
@@ -94,7 +86,7 @@ class _AccessScreenState extends ConsumerState<AccessScreen> {
                   .fadeIn(),
               const SizedBox(height: 24),
               Text(
-                'Equilibra Groupe',
+                'AperoSplit',
                 style: theme.textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.w700,
                 ),
@@ -114,61 +106,48 @@ class _AccessScreenState extends ConsumerState<AccessScreen> {
                     width: 48,
                     height: 56,
                     margin: const EdgeInsets.symmetric(horizontal: 4),
-                    child: RawKeyboardListener(
-                      focusNode: FocusNode(),
-                      onKey: (event) {
-                        if (event is RawKeyDownEvent &&
-                            event.logicalKey ==
-                                LogicalKeyboardKey.backspace &&
-                            _controllers[i].text.isEmpty &&
-                            i > 0) {
-                          _controllers[i - 1].clear();
-                          _focusNodes[i - 1].requestFocus();
-                        }
-                      },
-                      child: TextField(
-                        controller: _controllers[i],
-                        focusNode: _focusNodes[i],
-                        textAlign: TextAlign.center,
-                        maxLength: 1,
-                        keyboardType: TextInputType.number,
-                        obscureText: true,
-                        style: const TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w700,
-                        ),
-                        decoration: InputDecoration(
-                          counterText: '',
-                          filled: true,
-                          fillColor: _controllers[i].text.isNotEmpty
-                              ? theme.colorScheme.primary.withValues(alpha: 0.1)
-                              : theme.colorScheme.surfaceContainerHighest
-                                  .withValues(alpha: 0.5),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
-                            borderSide: BorderSide.none,
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
-                            borderSide: BorderSide(
-                              color: theme.colorScheme.primary,
-                              width: 2,
-                            ),
-                          ),
-                        ),
-                        inputFormatters: [
-                          FilteringTextInputFormatter.digitsOnly,
-                        ],
-                        onChanged: (value) {
-                          if (value.isNotEmpty && i < 5) {
-                            _focusNodes[i + 1].requestFocus();
-                          }
-                          if (_pin.length == 6) {
-                            _validate();
-                          }
-                          setState(() {});
-                        },
+                    child: TextField(
+                      controller: _controllers[i],
+                      focusNode: _focusNodes[i],
+                      textAlign: TextAlign.center,
+                      maxLength: 1,
+                      keyboardType: TextInputType.number,
+                      obscureText: true,
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w700,
                       ),
+                      decoration: InputDecoration(
+                        counterText: '',
+                        filled: true,
+                        fillColor: _controllers[i].text.isNotEmpty
+                            ? theme.colorScheme.primary.withValues(alpha: 0.1)
+                            : theme.colorScheme.surfaceContainerHighest
+                                .withValues(alpha: 0.5),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: BorderSide.none,
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: BorderSide(
+                            color: theme.colorScheme.primary,
+                            width: 2,
+                          ),
+                        ),
+                      ),
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                      ],
+                      onChanged: (value) {
+                        if (value.isNotEmpty && i < 5) {
+                          _focusNodes[i + 1].requestFocus();
+                        }
+                        if (_pin.length == 6) {
+                          _validate();
+                        }
+                        setState(() {});
+                      },
                     ),
                   )
                       .animate()

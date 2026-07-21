@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
-import '../providers/app_state.dart';
+import '../main.dart';
 import '../utils/currency.dart';
 
 class ReportsScreen extends ConsumerWidget {
@@ -60,11 +60,7 @@ class ReportsScreen extends ConsumerWidget {
               'Envoyez le lien d\'invitation par message',
               () {
                 // Share invite link
-                SharePlus.instance.share(
-                  ShareParams(
-                    text: 'Rejoins le groupe Equilibra !\nLien: https://equilibra.app/invite/xxx',
-                  ),
-                );
+                Share.share('Rejoins le groupe Equilibra !\nLien: https://equilibra.app/invite/xxx');
               },
             ).animate().fadeIn(delay: 300.ms),
             const SizedBox(height: 24),

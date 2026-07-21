@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import '../main.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -64,8 +66,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 ),
               ).animate().fadeIn(delay: 100.ms),
               const SizedBox(height: 32),
-
-              // Avatar selection
               Center(
                 child: Container(
                   width: 100,
@@ -92,8 +92,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     curve: Curves.elasticOut,
                   ),
               const SizedBox(height: 16),
-
-              // Avatar grid
               SizedBox(
                 height: 200,
                 child: GridView.builder(
@@ -135,8 +133,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 ),
               ).animate().fadeIn(delay: 200.ms),
               const SizedBox(height: 24),
-
-              // Name input
               TextField(
                 controller: _nameController,
                 textCapitalization: TextCapitalization.words,
@@ -148,8 +144,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 onChanged: (_) => setState(() {}),
               ).animate().fadeIn(delay: 300.ms).slideY(begin: 0.1),
               const SizedBox(height: 32),
-
-              // Register button
               SizedBox(
                 width: double.infinity,
                 height: 56,
@@ -177,6 +171,3 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     );
   }
 }
-
-// ignore: avoid_unused_import
-import 'package:flutter/services.dart';

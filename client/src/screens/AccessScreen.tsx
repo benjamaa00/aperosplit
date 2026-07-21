@@ -64,7 +64,6 @@ export function AccessScreen({ onSubmit }: { onSubmit: (code: string) => void })
           autoFocus
         />
         <motion.button
-          whileTap={{ scale: 0.97 }}
           onClick={handleSubmit}
           disabled={loading || !code.trim()}
           className="w-full bg-primary text-primary-foreground font-semibold py-4 rounded-2xl disabled:opacity-50"

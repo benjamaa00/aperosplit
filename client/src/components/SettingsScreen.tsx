@@ -45,7 +45,7 @@ const SectionHeader = ({ icon: Icon, title, colorClass }: { icon: any; title: st
 );
 
 const SettingRow = ({ icon: Icon, label, description, action, onClick }: { icon: any; label: string; description?: string; action?: React.ReactNode; onClick?: () => void }) => (
-  <motion.button whileTap={{ scale: 0.98 }} onClick={onClick}
+  <motion.button onClick={onClick}
     className="w-full flex items-center gap-3 p-4 rounded-2xl bg-card/30 border border-border hover:bg-card/50 active:bg-card/50 transition-colors text-left">
     <div className="w-9 h-9 rounded-xl bg-muted/30 flex items-center justify-center shrink-0">
       <Icon size={18} className="text-muted-foreground" />
@@ -102,7 +102,7 @@ const AppearanceSection = ({
         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Couleur principale</p>
         <div className="grid grid-cols-5 gap-2">
           {COLOR_PALETTE_OPTIONS.map(c => (
-            <motion.button key={c.id} whileTap={{ scale: 0.9 }} onClick={() => setPalette(c.id)}
+            <motion.button key={c.id} onClick={() => setPalette(c.id)}
               className={`relative w-full aspect-square rounded-2xl border-2 transition-all ${palette === c.id ? "border-primary scale-105 shadow-lg" : "border-transparent"}`}
               style={{ backgroundColor: c.color }}>
               {palette === c.id && (
@@ -121,7 +121,7 @@ const AppearanceSection = ({
         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Dégradé d'arrière-plan</p>
         <div className="grid grid-cols-5 gap-2">
           {GRADIENT_OPTIONS.map(g => (
-            <motion.button key={g.id} whileTap={{ scale: 0.9 }} onClick={() => setGradient(g.id)}
+            <motion.button key={g.id} onClick={() => setGradient(g.id)}
               className={`relative w-full aspect-square rounded-2xl border-2 overflow-hidden transition-all ${gradient === g.id ? "border-primary scale-105 shadow-lg" : "border-transparent"}`}
               style={{ background: g.id === "none" ? "hsl(var(--muted))" : g.preview }}>
               {gradient === g.id && (
@@ -141,7 +141,7 @@ const AppearanceSection = ({
         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Motif d'arrière-plan</p>
         <div className="flex gap-2">
           {BACKGROUND_OPTIONS.map(b => (
-            <motion.button key={b.id} whileTap={{ scale: 0.95 }} onClick={() => setBackground(b.id)}
+            <motion.button key={b.id} onClick={() => setBackground(b.id)}
               className={`flex-1 py-3 rounded-2xl text-xs font-semibold transition-all border flex flex-col items-center gap-1.5 ${background === b.id ? "bg-primary text-primary-foreground border-primary" : "bg-card/30 border-border text-muted-foreground"}`}>
               <span className="text-lg">{b.icon}</span>
               {b.label}
@@ -190,7 +190,7 @@ const AppearanceSection = ({
       </div>
     </div>
 
-    <motion.button whileTap={{ scale: 0.97 }} onClick={resetPreferences}
+    <motion.button onClick={resetPreferences}
       className="w-full py-3.5 rounded-2xl bg-card/30 border border-border text-sm font-semibold text-muted-foreground flex items-center justify-center gap-2">
       <RotateCcw size={16} />
       Réinitialiser l'apparence
@@ -219,13 +219,13 @@ const BudgetSection = ({ monthlyBudget, currency, onSetBudget, onSetCurrency }: 
         </div>
         <div className="flex gap-2">
           {[500, 1000, 2000, 5000].map(v => (
-            <motion.button key={v} whileTap={{ scale: 0.95 }} onClick={() => setBudgetInput(v.toString())}
+            <motion.button key={v} onClick={() => setBudgetInput(v.toString())}
               className="flex-1 py-2.5 rounded-xl bg-secondary/50 text-xs font-semibold hover:bg-secondary/70 transition-colors">
               {v.toLocaleString()}
             </motion.button>
           ))}
         </div>
-        <motion.button whileTap={{ scale: 0.97 }} onClick={() => onSetBudget(parseFloat(budgetInput) || 0)}
+        <motion.button onClick={() => onSetBudget(parseFloat(budgetInput) || 0)}
           className="w-full py-3.5 rounded-2xl bg-primary text-primary-foreground font-semibold">
           Sauvegarder
         </motion.button>
@@ -235,7 +235,7 @@ const BudgetSection = ({ monthlyBudget, currency, onSetBudget, onSetCurrency }: 
         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Devise</p>
         <div className="grid grid-cols-3 gap-2">
           {[{ code: "MAD", label: "Dirham (MAD)", flag: "🇲🇦" }, { code: "EUR", label: "Euro (EUR)", flag: "🇪🇺" }, { code: "USD", label: "Dollar (USD)", flag: "🇺🇸" }].map(c => (
-            <motion.button key={c.code} whileTap={{ scale: 0.95 }} onClick={() => onSetCurrency(c.code)}
+            <motion.button key={c.code} onClick={() => onSetCurrency(c.code)}
               className={`py-3 rounded-2xl text-sm font-bold transition-all border flex flex-col items-center gap-1 ${currency === c.code ? "bg-primary text-primary-foreground border-primary" : "bg-card/30 border-border text-muted-foreground"}`}>
               <span className="text-lg">{c.flag}</span>
               {c.code}
@@ -289,8 +289,7 @@ const NotificationsSection = ({ pushNotifications, onTogglePushNotifications, au
               </div>
               <div className="space-y-2">
                 {[1, 2, 3, 5, 7].map(d => (
-                  <motion.button key={d} whileTap={{ scale: 0.98 }}
-                    onClick={() => { onSetReminderDelay(d); setShowDelayPicker(false); }}
+                  <motion.button key={d} onClick={() => { onSetReminderDelay(d); setShowDelayPicker(false); }}
                     className={`w-full py-3 px-4 rounded-xl text-sm font-medium flex items-center justify-between transition-colors ${reminderDelay === d ? "bg-primary/10 text-primary border border-primary/20" : "bg-muted/30 text-foreground"}`}>
                     <span>{d} jour{d > 1 ? 's' : ''}</span>
                     {reminderDelay === d && <Check size={16} className="text-primary" />}
@@ -351,11 +350,11 @@ const PrivacySection = ({ privacyMode, onTogglePrivacy, offlineMode, onToggleOff
                 Cette action est irréversible. Toutes les données locales seront supprimées.
               </p>
               <div className="flex gap-2 mt-5">
-                <motion.button whileTap={{ scale: 0.97 }} onClick={() => setShowClearConfirm(false)}
+                <motion.button onClick={() => setShowClearConfirm(false)}
                   className="flex-1 py-3 rounded-2xl bg-muted/30 text-sm font-semibold border border-border">
                   Annuler
                 </motion.button>
-                <motion.button whileTap={{ scale: 0.97 }} onClick={onClearData}
+                <motion.button onClick={onClearData}
                   className="flex-1 py-3 rounded-2xl bg-destructive text-white text-sm font-semibold hover:opacity-90 transition-opacity">
                   Effacer
                 </motion.button>
@@ -410,7 +409,7 @@ export function SettingsScreen({
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-md mx-auto px-5 pt-12 space-y-5">
       <div className="flex items-center gap-3 mb-2">
-        <motion.button whileTap={{ scale: 0.9 }} onClick={section !== "main" ? () => setSection("main") : onBack}
+        <motion.button onClick={section !== "main" ? () => setSection("main") : onBack}
           className="w-10 h-10 rounded-2xl bg-card/30 border border-border flex items-center justify-center">
           <ArrowLeft size={20} />
         </motion.button>

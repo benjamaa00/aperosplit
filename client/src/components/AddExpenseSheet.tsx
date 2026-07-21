@@ -159,7 +159,6 @@ function AddExpenseSheet({
             {[50, 100, 200, 500].map((val) => (
               <motion.button
                 key={val}
-                whileTap={{ scale: 0.95 }}
                 onClick={() => setAmount(val.toString())}
                 className="px-4 py-2 rounded-xl bg-secondary/50 text-sm font-semibold hover:bg-secondary/70 transition-colors"
               >
@@ -188,7 +187,6 @@ function AddExpenseSheet({
               <motion.button
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
-                whileTap={{ scale: 0.85 }}
                 onClick={() => setCategorySearch("")}
                 className="absolute right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-secondary/50 flex items-center justify-center"
               >
@@ -205,7 +203,6 @@ function AddExpenseSheet({
               return (
                 <div key={cat.id}>
                   <motion.button
-                    whileTap={{ scale: 0.97 }}
                     onClick={() => {
                       if (hasSubs) {
                         setExpandedCategoryId(isExpanded ? null : cat.id);
@@ -260,7 +257,6 @@ function AddExpenseSheet({
                               return (
                                 <motion.button
                                   key={sub.id}
-                                  whileTap={{ scale: 0.96 }}
                                   onClick={() => handleCategorySelect(sub.name, sub.emoji || cat.emoji)}
                                   className={`flex items-center gap-2 p-3 rounded-xl transition-all ${
                                     isSelected
@@ -307,7 +303,6 @@ function AddExpenseSheet({
                     return (
                       <motion.button
                         key={item.name}
-                        whileTap={{ scale: 0.96 }}
                         onClick={() => handleCategorySelect(item.name, item.emoji)}
                         className={`relative flex items-center gap-3 p-3.5 rounded-2xl transition-all duration-200 ${
                           isSelected
@@ -399,7 +394,6 @@ function AddExpenseSheet({
           {members.map((member) => (
             <motion.button
               key={member.id}
-              whileTap={{ scale: 0.98 }}
               onClick={() => setPayerId(member.id)}
               className={`w-full p-4 rounded-2xl flex items-center gap-4 transition-all ${
                 payerId === member.id
@@ -422,7 +416,6 @@ function AddExpenseSheet({
           {members.map((member) => (
             <motion.button
               key={member.id}
-              whileTap={{ scale: 0.98 }}
               onClick={() => toggleParticipant(member.id)}
               className={`w-full p-4 rounded-2xl flex items-center gap-4 transition-all ${
                 participants.includes(member.id)
@@ -436,7 +429,6 @@ function AddExpenseSheet({
             </motion.button>
           ))}
           <motion.button
-            whileTap={{ scale: 0.95 }}
             onClick={() => setParticipants(members.map((m) => m.id))}
             className="w-full p-3 rounded-xl bg-secondary/50 text-sm font-semibold text-center"
           >
@@ -520,7 +512,6 @@ function AddExpenseSheet({
             <div className="flex items-center gap-3">
               {step > 0 && (
                 <motion.button
-                  whileTap={{ scale: 0.85 }}
                   onClick={() => {
                     if (step === 1) setCategorySearch("");
                     setStep(step > 1 ? step - 1 : 0);
@@ -534,7 +525,6 @@ function AddExpenseSheet({
               <h2 className="text-xl font-bold">{steps[step].title}</h2>
             </div>
             <motion.button
-              whileTap={{ scale: 0.85 }}
               onClick={onClose}
               aria-label="Fermer"
               className="w-8 h-8 rounded-full bg-secondary/50 flex items-center justify-center"
@@ -579,7 +569,6 @@ function AddExpenseSheet({
             {step !== 1 && (
               step < steps.length - 1 ? (
                 <motion.button
-                  whileTap={{ scale: 0.97 }}
                   onClick={() => setStep(step + 1)}
                   disabled={step === 0 && !amount}
                   className="flex-1 bg-primary text-primary-foreground font-semibold py-4 rounded-2xl disabled:opacity-50"
@@ -588,7 +577,6 @@ function AddExpenseSheet({
                 </motion.button>
               ) : (
                 <motion.button
-                  whileTap={{ scale: 0.97 }}
                   onClick={handleSubmit}
                   disabled={isSubmitting || participants.length === 0}
                   className="flex-1 bg-primary text-primary-foreground font-semibold py-4 rounded-2xl disabled:opacity-50"

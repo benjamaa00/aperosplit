@@ -76,8 +76,7 @@ function SettingsTab({ groupName, requireApproval, onUpdateSettings, onResetAllD
         <label className="text-xs font-semibold text-muted-foreground">Nom du groupe</label>
         <input type="text" value={name} onChange={e => setName(e.target.value)}
           className="w-full px-4 py-3 rounded-xl bg-background/50 border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
-        <motion.button whileTap={{ scale: 0.97 }}
-          onClick={() => onUpdateSettings?.({ name })}
+        <motion.button onClick={() => onUpdateSettings?.({ name })}
           className="w-full py-2.5 rounded-xl bg-primary text-primary-foreground text-xs font-semibold">
           Sauvegarder
         </motion.button>
@@ -103,8 +102,7 @@ function SettingsTab({ groupName, requireApproval, onUpdateSettings, onResetAllD
           <p className="text-xs text-muted-foreground mb-3">
             Réinitialiser toutes les données du groupe (dépenses, paiements, historique, membres invités). Seul le groupe sera conservé.
           </p>
-          <motion.button whileTap={{ scale: 0.97 }}
-            onClick={() => setShowResetConfirm(true)}
+          <motion.button onClick={() => setShowResetConfirm(true)}
             className="w-full py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-semibold flex items-center justify-center gap-2">
             <AlertTriangle size={14} /> Réinitialiser toutes les données
           </motion.button>
@@ -128,12 +126,11 @@ function SettingsTab({ groupName, requireApproval, onUpdateSettings, onResetAllD
                 Toutes les dépenses, paiements, historique et membres invités seront supprimés. Cette action est irréversible.
               </p>
               <div className="flex gap-2 mt-6">
-                <motion.button whileTap={{ scale: 0.97 }} onClick={() => setShowResetConfirm(false)}
+                <motion.button onClick={() => setShowResetConfirm(false)}
                   className="flex-1 py-3 rounded-2xl bg-card/30 border border-border text-sm font-semibold">
                   Annuler
                 </motion.button>
-                <motion.button whileTap={{ scale: 0.97 }}
-                  onClick={() => { setShowResetConfirm(false); onResetAllData?.(); }}
+                <motion.button onClick={() => { setShowResetConfirm(false); onResetAllData?.(); }}
                   className="flex-1 py-3 rounded-2xl bg-red-500 text-white text-sm font-semibold">
                   Réinitialiser
                 </motion.button>
@@ -166,7 +163,7 @@ function MemberDetail({ selectedMember, currentMemberId, memberStats, memberRece
   return (
     <motion.div {...fadeSlide} className="space-y-5">
       <div className="flex items-center gap-3 mb-2">
-        <motion.button whileTap={{ scale: 0.9 }} onClick={() => setTab("list")}
+        <motion.button onClick={() => setTab("list")}
           className="w-10 h-10 rounded-2xl bg-card/30 border border-border flex items-center justify-center">
           <ArrowLeft size={20} />
         </motion.button>
@@ -236,14 +233,12 @@ function MemberDetail({ selectedMember, currentMemberId, memberStats, memberRece
       {/* Actions */}
       {isAdmin(currentMemberId) && selectedMember.id !== currentMemberId && (
         <div className="space-y-2">
-          <motion.button whileTap={{ scale: 0.97 }}
-            onClick={() => onChangeRole?.(selectedMember.id, isAdmin(selectedMember.id) ? "member" : "admin")}
+          <motion.button onClick={() => onChangeRole?.(selectedMember.id, isAdmin(selectedMember.id) ? "member" : "admin")}
             className="w-full py-3.5 rounded-2xl bg-card/30 border border-border text-sm font-semibold flex items-center justify-center gap-2">
             {isAdmin(selectedMember.id) ? <ShieldOff size={16} /> : <Shield size={16} />}
             {isAdmin(selectedMember.id) ? "Retirer admin" : "Promouvoir admin"}
           </motion.button>
-          <motion.button whileTap={{ scale: 0.97 }}
-            onClick={() => setShowConfirmExpel(selectedMember.id)}
+          <motion.button onClick={() => setShowConfirmExpel(selectedMember.id)}
             className="w-full py-3.5 rounded-2xl bg-red-500/10 border border-red-500/10 text-red-400 text-sm font-semibold flex items-center justify-center gap-2">
             <UserMinus size={16} />
             Expulser du groupe
@@ -336,7 +331,7 @@ export function MemberManagement({
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-md mx-auto px-5 pt-12 space-y-5">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <motion.button whileTap={{ scale: 0.9 }} onClick={onBack}
+        <motion.button onClick={onBack}
           className="w-10 h-10 rounded-2xl bg-card/30 border border-border flex items-center justify-center">
           <ArrowLeft size={20} />
         </motion.button>
@@ -345,7 +340,7 @@ export function MemberManagement({
           <p className="text-sm text-muted-foreground">{members.length} membres</p>
         </div>
         {isAdmin(currentMemberId) && (
-          <motion.button whileTap={{ scale: 0.9 }} onClick={() => { setShowAddMember(true); setAddMemberName(""); setAddMemberResult(null); setShowPin(false); }}
+          <motion.button onClick={() => { setShowAddMember(true); setAddMemberName(""); setAddMemberResult(null); setShowPin(false); }}
             className="w-10 h-10 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center shadow-lg shadow-primary/30">
             <UserPlus size={20} />
           </motion.button>
@@ -417,13 +412,11 @@ export function MemberManagement({
                         <div className="flex items-center gap-1.5">
                           {isAdmin(currentMemberId) && member.id !== currentMemberId && (
                             <>
-                              <motion.button whileTap={{ scale: 0.9 }}
-                                onClick={() => setShowRoleMenu(showRoleMenu === member.id ? null : member.id)}
+                              <motion.button onClick={() => setShowRoleMenu(showRoleMenu === member.id ? null : member.id)}
                                 className="w-8 h-8 rounded-xl bg-muted/30 flex items-center justify-center">
                                 <Shield size={14} className="text-muted-foreground" />
                               </motion.button>
-                              <motion.button whileTap={{ scale: 0.8 }}
-                                onClick={() => setShowConfirmExpel(member.id)}
+                              <motion.button onClick={() => setShowConfirmExpel(member.id)}
                                 className="w-8 h-8 rounded-xl bg-red-500/10 text-red-400 flex items-center justify-center">
                                 <X size={14} />
                               </motion.button>
@@ -477,11 +470,11 @@ export function MemberManagement({
                         </p>
                       </div>
                       <div className="flex gap-1.5">
-                        <motion.button whileTap={{ scale: 0.9 }} whileHover={{ scale: 1.05 }} onClick={() => onApproveMember?.(req.memberId)}
+                        <motion.button whileHover={{ scale: 1.05 }} onClick={() => onApproveMember?.(req.memberId)}
                           className="w-9 h-9 rounded-xl bg-green-500/10 text-green-400 flex items-center justify-center border border-green-500/20">
                           <Check size={16} />
                         </motion.button>
-                        <motion.button whileTap={{ scale: 0.9 }} whileHover={{ scale: 1.05 }} onClick={() => onRefuseMember?.(req.memberId)}
+                        <motion.button whileHover={{ scale: 1.05 }} onClick={() => onRefuseMember?.(req.memberId)}
                           className="w-9 h-9 rounded-xl bg-red-500/10 text-red-400 flex items-center justify-center border border-red-500/20">
                           <X size={16} />
                         </motion.button>
@@ -524,12 +517,11 @@ export function MemberManagement({
                 {expelMember.name} sera retiré du groupe.
               </p>
               <div className="flex gap-2 mt-6">
-                <motion.button whileTap={{ scale: 0.97 }} onClick={() => setShowConfirmExpel(null)}
+                <motion.button onClick={() => setShowConfirmExpel(null)}
                   className="flex-1 py-3 rounded-2xl bg-card/30 border border-border text-sm font-semibold">
                   Annuler
                 </motion.button>
-                <motion.button whileTap={{ scale: 0.97 }}
-                  onClick={() => { onRemoveMember(showConfirmExpel); setShowConfirmExpel(null); setTab("list"); }}
+                <motion.button onClick={() => { onRemoveMember(showConfirmExpel); setShowConfirmExpel(null); setTab("list"); }}
                   className="flex-1 py-3 rounded-2xl bg-red-500 text-white text-sm font-semibold">
                   Expulser
                 </motion.button>
@@ -571,11 +563,11 @@ export function MemberManagement({
                     autoFocus
                   />
                   <div className="flex gap-2 mt-4">
-                    <motion.button whileTap={{ scale: 0.97 }} onClick={() => { setShowAddMember(false); setAddMemberResult(null); }}
+                    <motion.button onClick={() => { setShowAddMember(false); setAddMemberResult(null); }}
                       className="flex-1 py-3 rounded-2xl bg-card/30 border border-border text-sm font-semibold" disabled={addMemberLoading}>
                       Annuler
                     </motion.button>
-                    <motion.button whileTap={{ scale: 0.97 }} onClick={handleAddMember}
+                    <motion.button onClick={handleAddMember}
                       disabled={!addMemberName.trim() || addMemberLoading}
                       className="flex-1 py-3 rounded-2xl bg-primary text-primary-foreground text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-50">
                       {addMemberLoading ? <><Loader2 size={16} className="animate-spin" /> Ajout...</> : <><Check size={16} /> Ajouter</>}
@@ -599,7 +591,7 @@ export function MemberManagement({
                       <p className="text-lg font-bold tracking-widest flex-1 text-center">
                         {showPin ? addMemberResult.accessPin : "••••••"}
                       </p>
-                      <motion.button whileTap={{ scale: 0.9 }} onClick={() => setShowPin(!showPin)}
+                      <motion.button onClick={() => setShowPin(!showPin)}
                         className="w-9 h-9 rounded-xl bg-card/30 border border-border flex items-center justify-center">
                         {showPin ? <EyeOff size={16} /> : <Eye size={16} />}
                       </motion.button>
@@ -609,19 +601,16 @@ export function MemberManagement({
                     Le membre ouvre l'app → entre ce code → sélectionne son nom
                   </p>
                   <div className="flex gap-2 mt-4">
-                    <motion.button whileTap={{ scale: 0.97 }}
-                      onClick={() => handleSharePin(addMemberResult.name, addMemberResult.accessPin)}
+                    <motion.button onClick={() => handleSharePin(addMemberResult.name, addMemberResult.accessPin)}
                       className="flex-1 py-3 rounded-2xl bg-card/30 border border-border text-sm font-semibold flex items-center justify-center gap-2">
                       <Share2 size={16} /> Partager
                     </motion.button>
-                    <motion.button whileTap={{ scale: 0.97 }}
-                      onClick={() => { handleCopyPin(addMemberResult.accessPin); }}
+                    <motion.button onClick={() => { handleCopyPin(addMemberResult.accessPin); }}
                       className="flex-1 py-3 rounded-2xl bg-primary text-primary-foreground text-sm font-semibold flex items-center justify-center gap-2">
                       <Copy size={16} /> Copier le code
                     </motion.button>
                   </div>
-                  <motion.button whileTap={{ scale: 0.97 }}
-                    onClick={() => { setShowAddMember(false); setAddMemberResult(null); setShowPin(false); }}
+                  <motion.button onClick={() => { setShowAddMember(false); setAddMemberResult(null); setShowPin(false); }}
                     className="w-full py-3 rounded-2xl bg-card/30 border border-border text-sm font-semibold text-muted-foreground mt-2">
                     Fermer
                   </motion.button>

@@ -33,7 +33,7 @@ export function NotificationsScreen({ notifications, currentMemberId, onBack, on
   return (
     <motion.div {...fadeUp} className="max-w-md mx-auto px-5 pt-12 space-y-5">
       <div className="flex items-center gap-3">
-        <motion.button whileTap={{ scale: 0.9 }} onClick={onBack}
+        <motion.button onClick={onBack}
           className="w-10 h-10 rounded-2xl bg-card/30 border border-border flex items-center justify-center">
           <ArrowLeft size={20} />
         </motion.button>
@@ -42,7 +42,7 @@ export function NotificationsScreen({ notifications, currentMemberId, onBack, on
           <p className="text-sm text-muted-foreground">{unread} non lues</p>
         </div>
         {unread > 0 && (
-          <motion.button whileTap={{ scale: 0.95 }} onClick={onMarkAllRead}
+          <motion.button onClick={onMarkAllRead}
             className="text-xs text-primary font-semibold px-4 py-2 rounded-2xl bg-primary/10 border border-primary/20">
             Tout lire
           </motion.button>

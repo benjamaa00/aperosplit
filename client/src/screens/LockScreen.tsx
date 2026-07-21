@@ -148,7 +148,6 @@ export function LockScreen({ member, onUnlock, onSkip, onSwitchIdentity }: { mem
 
         {/* Biometric button */}
         <motion.button
-          whileTap={{ scale: 0.95 }}
           whileHover={{ scale: 1.05 }}
           onClick={handleUnlock}
           disabled={authenticating}
@@ -178,7 +177,6 @@ export function LockScreen({ member, onUnlock, onSkip, onSwitchIdentity }: { mem
 
         {/* Skip button */}
         <motion.button
-          whileTap={{ scale: 0.98 }}
           onClick={onSkip}
           className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-200 underline-offset-4 hover:underline font-medium mb-4"
         >
@@ -188,7 +186,6 @@ export function LockScreen({ member, onUnlock, onSkip, onSwitchIdentity }: { mem
         {/* Switch identity button */}
         {onSwitchIdentity && (
           <motion.button
-            whileTap={{ scale: 0.98 }}
             onClick={onSwitchIdentity}
             className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-200 underline-offset-4 hover:underline font-medium"
           >

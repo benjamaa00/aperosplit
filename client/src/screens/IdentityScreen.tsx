@@ -43,7 +43,6 @@ export function IdentityScreen({ members, onSelect, onReset }: { members: Member
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             transition={{ delay: 0.2 + i * 0.08, ...spring }}
-            whileTap={{ scale: 0.95 }}
             whileHover={{ scale: 1.02 }}
             onClick={() => handleSelect(member.id)}
             className="flex flex-col items-center gap-3 p-6 rounded-3xl bg-card/50 border border-border hover:border-primary/30 hover:bg-card hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 press-scale backdrop-blur-sm"

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import '../providers/app_state.dart';
+import '../main.dart';
 import '../themes/app_theme.dart';
 
 class AppearanceScreen extends ConsumerWidget {
@@ -98,72 +98,74 @@ class AppearanceScreen extends ConsumerWidget {
               ),
             ).animate().fadeIn(delay: 300.ms),
             const SizedBox(height: 12),
-            ...AppTheme.gradients.entries.map((entry) {
-              final isSelected = entry.key == appState.gradientStyle;
-              return GestureDetector(
-                onTap: () {
-                  HapticFeedback.lightImpact();
-                  ref.read(appStateProvider.notifier).setGradient(entry.key);
-                },
-                child: Container(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-                    borderRadius: BorderRadius.circular(14),
-                    border: isSelected
-                        ? Border.all(
-                            color: theme.colorScheme.primary,
-                            width: 2,
-                          )
-                        : null,
-                  ),
-                  child: Row(
-                    children: [
-                      if (entry.value.isNotEmpty)
-                        Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: entry.value,
+            Column(
+              children: AppTheme.gradients.entries.map((entry) {
+                final isSelected = entry.key == appState.gradientStyle;
+                return GestureDetector(
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    ref.read(appStateProvider.notifier).setGradient(entry.key);
+                  },
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(14),
+                      border: isSelected
+                          ? Border.all(
+                              color: theme.colorScheme.primary,
+                              width: 2,
+                            )
+                          : null,
+                    ),
+                    child: Row(
+                      children: [
+                        if (entry.value.isNotEmpty)
+                          Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: entry.value,
+                              ),
+                              borderRadius: BorderRadius.circular(10),
                             ),
-                            borderRadius: BorderRadius.circular(10),
+                          )
+                        else
+                          Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.surfaceContainerHighest,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Icon(
+                              Icons.block,
+                              size: 18,
+                              color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
+                            ),
                           ),
-                        )
-                      else
-                        Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.surfaceContainerHighest,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Icon(
-                            Icons.block,
-                            size: 18,
-                            color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Text(
+                            entry.key,
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Text(
-                          entry.key,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
+                        if (isSelected)
+                          Icon(
+                            Icons.check_circle,
+                            color: theme.colorScheme.primary,
                           ),
-                        ),
-                      ),
-                      if (isSelected)
-                        Icon(
-                          Icons.check_circle,
-                          color: theme.colorScheme.primary,
-                        ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-              );
-            }).animate().fadeIn(delay: 400.ms),
+                );
+              }).toList(),
+            ).animate().fadeIn(delay: 400.ms),
             const SizedBox(height: 24),
 
             // Glassmorphism

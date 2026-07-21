@@ -98,7 +98,6 @@ export function EditProfileScreen({ currentName, currentAvatar, onSave, onBack, 
       {/* Header */}
       <div className="px-5 pt-12 pb-4 flex items-center gap-3">
         <motion.button
-          whileTap={{ scale: 0.9 }}
           onClick={onBack}
           className="w-10 h-10 rounded-2xl bg-card/30 border border-border flex items-center justify-center"
         >
@@ -130,7 +129,6 @@ export function EditProfileScreen({ currentName, currentAvatar, onSave, onBack, 
         {/* Photo action buttons */}
         <div className="flex gap-2">
           <motion.button
-            whileTap={{ scale: 0.95 }}
             onClick={handleRandomAvatar}
             className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl bg-card/50 border border-border text-sm font-semibold transition-colors hover:bg-card/80"
           >
@@ -138,7 +136,6 @@ export function EditProfileScreen({ currentName, currentAvatar, onSave, onBack, 
             Aléatoire
           </motion.button>
           <motion.button
-            whileTap={{ scale: 0.95 }}
             onClick={() => cameraInputRef.current?.click()}
             className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl bg-card/50 border border-border text-sm font-semibold transition-colors hover:bg-card/80"
           >
@@ -146,7 +143,6 @@ export function EditProfileScreen({ currentName, currentAvatar, onSave, onBack, 
             Selfie
           </motion.button>
           <motion.button
-            whileTap={{ scale: 0.95 }}
             onClick={() => fileInputRef.current?.click()}
             className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl bg-card/50 border border-border text-sm font-semibold transition-colors hover:bg-card/80"
           >
@@ -163,7 +159,6 @@ export function EditProfileScreen({ currentName, currentAvatar, onSave, onBack, 
           <motion.button
             initial={{ opacity: 0, y: 5 }}
             animate={{ opacity: 1, y: 0 }}
-            whileTap={{ scale: 0.97 }}
             onClick={() => { setAvatarMode("emoji"); setPhotoPreview(null); setAvatar("👤"); }}
             className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-muted/30 text-sm font-medium text-muted-foreground"
           >
@@ -195,7 +190,6 @@ export function EditProfileScreen({ currentName, currentAvatar, onSave, onBack, 
               {EMOJI_CATEGORIES[selectedCategory].emojis.map((emoji) => (
                 <motion.button
                   key={emoji}
-                  whileTap={{ scale: 0.85 }}
                   onClick={() => { setAvatar(emoji); setAvatarMode("emoji"); setPhotoPreview(null); }}
                   className={`aspect-square rounded-xl flex items-center justify-center transition-all text-xl ${
                     avatar === emoji && avatarMode === "emoji"
@@ -231,7 +225,6 @@ export function EditProfileScreen({ currentName, currentAvatar, onSave, onBack, 
       {/* Save button */}
       <div className="px-5 pb-8 pt-4">
         <motion.button
-          whileTap={{ scale: 0.97 }}
           onClick={handleSave}
           disabled={!name.trim() || !isDirty || !!saving}
           className="w-full bg-primary text-primary-foreground font-semibold py-4 rounded-2xl shadow-xl shadow-primary/25 text-base disabled:opacity-40 disabled:shadow-none flex items-center justify-center gap-2"

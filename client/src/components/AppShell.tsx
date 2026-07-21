@@ -72,7 +72,6 @@ const AppShell = memo(({ children, activeTab, onTabChange }: AppShellProps) => {
                     ref={(el) => {
                       if (el) tabRefs.current.set(id, el);
                     }}
-                    whileTap={{ scale: 0.9 }}
                     onClick={() => handleTabChange(id)}
                     aria-label={label}
                     className={`relative z-10 flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition-colors duration-200 ${

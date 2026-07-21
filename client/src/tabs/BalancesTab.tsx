@@ -41,7 +41,6 @@ function RequestSheet({ member, amount, currency, onClose, onConfirm }: RequestS
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-bold tracking-tight">Demander un paiement</h3>
             <motion.button
-              whileTap={{ scale: 0.9 }}
               onClick={onClose}
               className="w-8 h-8 flex items-center justify-center rounded-full bg-muted/50 text-muted-foreground hover:text-foreground transition-colors"
             >
@@ -74,7 +73,6 @@ function RequestSheet({ member, amount, currency, onClose, onConfirm }: RequestS
           </div>
 
           <motion.button
-            whileTap={{ scale: 0.95 }}
             onClick={() => onConfirm(note)}
             className="w-full bg-primary text-primary-foreground font-semibold py-3.5 rounded-2xl flex items-center justify-center gap-2 text-sm hover:bg-primary/90 transition-colors"
           >
@@ -188,7 +186,6 @@ export const BalancesTab = memo(function BalancesTab({
                   </p>
                   {showDemandButton && (
                     <motion.button
-                      whileTap={{ scale: 0.95 }}
                       onClick={(e) => {
                         e.stopPropagation();
                         setRequestSheet({
@@ -224,7 +221,6 @@ export const BalancesTab = memo(function BalancesTab({
                           Détail pour {member.name}
                         </h3>
                         <motion.button
-                          whileTap={{ scale: 0.9 }}
                           onClick={() => setSelectedMember(null)}
                           className="text-muted-foreground hover:text-foreground transition-colors"
                         >
@@ -281,7 +277,6 @@ export const BalancesTab = memo(function BalancesTab({
                                     </p>
                                     {canDemand && (
                                       <motion.button
-                                        whileTap={{ scale: 0.95 }}
                                         onClick={() => {
                                           setRequestSheet({
                                             member: to,
@@ -395,7 +390,6 @@ export const BalancesTab = memo(function BalancesTab({
                   </p>
                   {isForMe && (
                     <motion.button
-                      whileTap={{ scale: 0.95 }}
                       onClick={() => {
                         setRequestSheet({
                           member: from,

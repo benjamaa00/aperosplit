@@ -804,7 +804,6 @@ export default function App() {
               Tentative {serverWakeRetries + 1}/3
             </p>
             <motion.button
-              whileTap={{ scale: 0.95 }}
               onClick={() => { setServerWakeRetries(prev => prev + 1); refetch(); }}
               className="mt-6 px-6 py-3 rounded-xl bg-primary text-primary-foreground text-sm font-semibold"
             >
@@ -831,7 +830,7 @@ export default function App() {
 
           {/* Floating Add Button */}
           {activeTab === "expenses" && (
-            <motion.button initial={{ scale: 0 }} animate={{ scale: 1 }} whileTap={{ scale: 0.9 }} onClick={() => setShowAddExpense(true)} className="fixed bottom-20 right-4 z-50 w-14 h-14 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg shadow-primary/30">
+            <motion.button initial={{ scale: 0 }} animate={{ scale: 1 }} onClick={() => setShowAddExpense(true)} className="fixed bottom-20 right-4 z-50 w-14 h-14 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg shadow-primary/30">
               <Plus size={24} />
             </motion.button>
           )}

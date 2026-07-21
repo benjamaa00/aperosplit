@@ -11,7 +11,6 @@ interface ToggleProps {
 
 export const Toggle = memo(({ enabled, onToggle, disabled }: ToggleProps) => (
   <motion.button
-    whileTap={disabled ? undefined : { scale: 0.95 }}
     onClick={() => { if (!disabled) { haptics.selection(); onToggle(); } }}
     className={`w-[52px] h-8 rounded-full transition-colors duration-300 relative flex-shrink-0 ${
       enabled ? "bg-primary shadow-lg shadow-primary/30" : "bg-secondary"

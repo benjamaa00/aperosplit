@@ -304,13 +304,7 @@
     z-index: 0;
   }
 
-  /* Smooth press animation */
-  .press-scale {
-    transition: transform calc(160ms * var(--animation-multiplier, 1)) cubic-bezier(0.23, 1, 0.32, 1);
-  }
-  .press-scale:active {
-    transform: scale(0.97);
-  }
+  /* No press scale animation */
 
   /* iOS-style page transition */
   .page-transition {
@@ -713,12 +707,7 @@
   }
 }
 
-/* Premium press states */
-button:active:not(:disabled),
-[role="button"]:active {
-  transform: scale(0.97);
-  transition: transform 0.1s ease;
-}
+/* No button press animations */
 
 /* Glass shimmer effect for cards */
 .glass-card-enhanced::before {

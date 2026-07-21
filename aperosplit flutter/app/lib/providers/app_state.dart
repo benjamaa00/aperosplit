@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import '../utils/debts.dart';
 import '../models/models.dart';
+import '../utils/debts.dart';
 
 class AppState extends ChangeNotifier {
-  // Core data
   String _accessKey = '';
   Member? _currentMember;
   List<Member> _members = [];
@@ -14,18 +13,14 @@ class AppState extends ChangeNotifier {
   List<GroupCategory> _categories = [];
   List<AppNotification> _notifications = [];
 
-  // Settings
   String _currency = 'MAD';
   double _monthlyBudget = 0;
   String _groupName = 'Equilibra';
-
-  // Theme
   String _paletteName = 'Violet';
   String _gradientStyle = 'None';
   bool _isDarkMode = false;
   bool _isGlassmorphism = true;
 
-  // Getters
   String get accessKey => _accessKey;
   Member? get currentMember => _currentMember;
   List<Member> get members => _members;
@@ -43,7 +38,6 @@ class AppState extends ChangeNotifier {
   bool get isDarkMode => _isDarkMode;
   bool get isGlassmorphism => _isGlassmorphism;
 
-  // Computed
   double get balance {
     if (_currentMember == null) return 0;
     return calculateBalance(_currentMember!.id, _expenses, _members);
@@ -74,7 +68,6 @@ class AppState extends ChangeNotifier {
   List<Member> get activeMembers =>
       _members.where((m) => m.status == 'active' || m.status == null).toList();
 
-  // Setters
   void setAccessKey(String key) {
     _accessKey = key;
     notifyListeners();

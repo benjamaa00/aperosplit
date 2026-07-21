@@ -226,7 +226,6 @@ export const ExpensesTab = memo(function ExpensesTab({
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold tracking-tight">Dépenses</h1>
           <motion.button
-            whileTap={{ scale: 0.9 }}
             onClick={onAdd}
             className="w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg shadow-primary/30"
           >
@@ -331,7 +330,6 @@ export const ExpensesTab = memo(function ExpensesTab({
                       </p>
                       <div className="relative">
                         <motion.button
-                          whileTap={{ scale: 0.85 }}
                           onClick={(e) => {
                             e.stopPropagation();
                             setOpenMenuId(openMenuId === exp.id ? null : exp.id);
@@ -500,7 +498,6 @@ export const ExpensesTab = memo(function ExpensesTab({
                       {isPayer &&
                         otherParticipants.length > 1 && (
                           <motion.button
-                            whileTap={{ scale: 0.95 }}
                             whileHover={{ scale: 1.03 }}
                             onClick={() =>
                               openGroupModal(exp)
@@ -514,7 +511,6 @@ export const ExpensesTab = memo(function ExpensesTab({
                       {isPayer &&
                         otherParticipants.length > 1 && (
                           <motion.button
-                            whileTap={{ scale: 0.95 }}
                             whileHover={{ scale: 1.03 }}
                             onClick={() =>
                               openIndividualModal(exp)
@@ -527,7 +523,6 @@ export const ExpensesTab = memo(function ExpensesTab({
                         )}
                       {isReimbursementCase && (
                           <motion.button
-                            whileTap={{ scale: 0.95 }}
                             whileHover={{ scale: 1.03 }}
                             onClick={() =>
                               openReimbursementModal(exp)
@@ -588,7 +583,6 @@ export const ExpensesTab = memo(function ExpensesTab({
                 Demander à tous
               </h2>
               <motion.button
-                whileTap={{ scale: 0.9 }}
                 onClick={close}
                 className="w-8 h-8 rounded-full bg-muted flex items-center justify-center"
               >
@@ -605,7 +599,6 @@ export const ExpensesTab = memo(function ExpensesTab({
                 return (
                   <motion.button
                     key={pid}
-                    whileTap={{ scale: 0.98 }}
                     onClick={() =>
                       toggleGroupParticipant(pid)
                     }
@@ -659,7 +652,6 @@ export const ExpensesTab = memo(function ExpensesTab({
             </div>
 
             <motion.button
-              whileTap={{ scale: 0.95 }}
               onClick={handleGroupConfirm}
               disabled={modal.selectedIds.length === 0}
               className="w-full bg-primary text-primary-foreground py-3.5 rounded-2xl text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-40"
@@ -705,7 +697,6 @@ export const ExpensesTab = memo(function ExpensesTab({
                 Choisir un membre
               </h2>
               <motion.button
-                whileTap={{ scale: 0.9 }}
                 onClick={close}
                 className="w-8 h-8 rounded-full bg-muted flex items-center justify-center"
               >
@@ -721,7 +712,6 @@ export const ExpensesTab = memo(function ExpensesTab({
                 return (
                   <motion.button
                     key={pid}
-                    whileTap={{ scale: 0.98 }}
                     onClick={() =>
                       setModal({
                         ...modal,
@@ -785,7 +775,6 @@ export const ExpensesTab = memo(function ExpensesTab({
             </div>
 
             <motion.button
-              whileTap={{ scale: 0.95 }}
               onClick={handleIndividualConfirm}
               disabled={!modal.selectedId}
               className="w-full bg-primary text-primary-foreground py-3.5 rounded-2xl text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-40"
@@ -829,7 +818,6 @@ export const ExpensesTab = memo(function ExpensesTab({
                 Demander remboursement
               </h2>
               <motion.button
-                whileTap={{ scale: 0.9 }}
                 onClick={close}
                 className="w-8 h-8 rounded-full bg-muted flex items-center justify-center"
               >
@@ -874,7 +862,6 @@ export const ExpensesTab = memo(function ExpensesTab({
             </div>
 
             <motion.button
-              whileTap={{ scale: 0.95 }}
               onClick={handleReimbursementConfirm}
               className="w-full bg-primary text-primary-foreground py-3.5 rounded-2xl text-sm font-semibold flex items-center justify-center gap-2"
             >

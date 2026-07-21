@@ -147,7 +147,6 @@ export default function AppearanceScreen({ onBack }: AppearanceScreenProps) {
         {/* ── Header ──────────────────────────────────────────── */}
         <div className="flex items-center gap-3 mb-1">
           <motion.button
-            whileTap={{ scale: 0.88 }}
             onClick={onBack}
             className="w-10 h-10 rounded-2xl bg-card/30 border border-border flex items-center justify-center"
           >
@@ -155,7 +154,6 @@ export default function AppearanceScreen({ onBack }: AppearanceScreenProps) {
           </motion.button>
           <h1 className="text-2xl font-bold tracking-tight flex-1">Apparence</h1>
           <motion.button
-            whileTap={{ scale: 0.88 }}
             onClick={() => setPreviewMode(!previewMode)}
             className={`w-9 h-9 rounded-xl border flex items-center justify-center transition-all duration-200 ${
               previewMode ? "bg-primary text-primary-foreground border-primary" : "bg-card/40 border-border/50"
@@ -188,7 +186,6 @@ export default function AppearanceScreen({ onBack }: AppearanceScreenProps) {
             {QUICK_PRESETS.map((preset) => (
               <motion.button
                 key={preset.id}
-                whileTap={{ scale: 0.93 }}
                 onClick={() => {
                   setThemeId(preset.themeId);
                   setPalette(preset.palette);
@@ -211,7 +208,6 @@ export default function AppearanceScreen({ onBack }: AppearanceScreenProps) {
             {COLOR_PALETTE_OPTIONS.map((p) => (
               <motion.button
                 key={p.id}
-                whileTap={{ scale: 0.88 }}
                 onClick={() => setPalette(p.id)}
                 className="flex flex-col items-center gap-1.5"
               >
@@ -261,7 +257,6 @@ export default function AppearanceScreen({ onBack }: AppearanceScreenProps) {
                   {themes.map((t) => (
                     <motion.button
                       key={t.id}
-                      whileTap={{ scale: 0.92 }}
                       whileHover={{ scale: 1.03 }}
                       onClick={() => setThemeId(t.id)}
                       className="flex flex-col items-center gap-1.5 shrink-0 scroll-snap-start"
@@ -314,7 +309,6 @@ export default function AppearanceScreen({ onBack }: AppearanceScreenProps) {
           <div className="flex gap-1.5 overflow-x-auto pb-2.5 -mx-0.5 px-0.5 scrollbar-hide"
             style={{ scrollSnapType: "x proximity", WebkitOverflowScrolling: "touch" }}>
             <motion.button
-              whileTap={{ scale: 0.93 }}
               onClick={() => setGradientBgId("")}
               className={`shrink-0 px-3 py-[7px] rounded-full text-[10px] font-semibold transition-all border ${
                 gradientBgId === ""
@@ -327,7 +321,6 @@ export default function AppearanceScreen({ onBack }: AppearanceScreenProps) {
             {GRADIENT_CATEGORIES.map((cat) => (
               <motion.button
                 key={cat.id}
-                whileTap={{ scale: 0.93 }}
                 onClick={() => setActiveGradientCategory(cat.id)}
                 className={`shrink-0 px-3 py-[7px] rounded-full text-[10px] font-semibold transition-all border ${
                   activeGradientCategory === cat.id
@@ -344,7 +337,6 @@ export default function AppearanceScreen({ onBack }: AppearanceScreenProps) {
             {filteredGradients.map((g) => (
               <motion.button
                 key={g.id}
-                whileTap={{ scale: 0.88 }}
                 whileHover={{ scale: 1.03 }}
                 onClick={() => setGradientBgId(g.id)}
                 className={`relative w-full aspect-square rounded-[14px] border-[2.5px] overflow-hidden transition-all duration-200 ${
@@ -382,7 +374,6 @@ export default function AppearanceScreen({ onBack }: AppearanceScreenProps) {
             {BACKGROUND_CATEGORIES.map((cat) => (
               <motion.button
                 key={cat.id}
-                whileTap={{ scale: 0.93 }}
                 onClick={() => setActiveBackgroundCategory(cat.id)}
                 className={`shrink-0 px-3 py-[7px] rounded-full text-[10px] font-semibold transition-all border ${
                   activeBackgroundCategory === cat.id
@@ -399,7 +390,6 @@ export default function AppearanceScreen({ onBack }: AppearanceScreenProps) {
             {filteredBackgrounds.map((bg) => (
               <motion.button
                 key={bg.id}
-                whileTap={{ scale: 0.88 }}
                 whileHover={{ scale: 1.03 }}
                 onClick={() => setBackgroundId(bg.id)}
                 className={`relative w-full aspect-square rounded-[14px] border-[2.5px] overflow-hidden transition-all duration-200 ${
@@ -488,7 +478,6 @@ export default function AppearanceScreen({ onBack }: AppearanceScreenProps) {
             ]).map((opt) => (
               <motion.button
                 key={opt.id}
-                whileTap={{ scale: 0.93 }}
                 onClick={() => setAnimationSpeed(opt.id)}
                 className={`py-2.5 rounded-[14px] text-[11px] font-semibold transition-all border ${
                   animationSpeed === opt.id
@@ -514,7 +503,6 @@ export default function AppearanceScreen({ onBack }: AppearanceScreenProps) {
             ]).map((opt) => (
               <motion.button
                 key={opt.id}
-                whileTap={{ scale: 0.93 }}
                 onClick={() => setCardSize(opt.id)}
                 className={`py-2.5 rounded-[14px] text-[11px] font-semibold transition-all border ${
                   cardSize === opt.id
@@ -575,7 +563,6 @@ export default function AppearanceScreen({ onBack }: AppearanceScreenProps) {
 
         {/* ── Reset ───────────────────────────────────────────── */}
         <motion.button
-          whileTap={{ scale: 0.97 }}
           onClick={() => setShowResetConfirm(true)}
           className="w-full py-3 rounded-[14px] bg-card/30 border border-border/50 text-[13px] font-semibold text-muted-foreground flex items-center justify-center gap-2 transition-colors active:bg-card/50"
         >
@@ -599,11 +586,11 @@ export default function AppearanceScreen({ onBack }: AppearanceScreenProps) {
                   <p className="text-sm text-muted-foreground">Toutes vos préférences d'apparence seront remises par défaut.</p>
                 </div>
                 <div className="flex gap-2">
-                  <motion.button whileTap={{ scale: 0.95 }} onClick={() => setShowResetConfirm(false)}
+                  <motion.button onClick={() => setShowResetConfirm(false)}
                     className="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-muted/30 text-muted-foreground hover:bg-muted/50 transition-colors">
                     Annuler
                   </motion.button>
-                  <motion.button whileTap={{ scale: 0.95 }} onClick={() => { resetPreferences(); setShowResetConfirm(false); }}
+                  <motion.button onClick={() => { resetPreferences(); setShowResetConfirm(false); }}
                     className="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20 transition-colors">
                     Réinitialiser
                   </motion.button>
