@@ -61,7 +61,10 @@ export default function App() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [pendingPayments, setPendingPayments] = useState<PendingPayment[]>([]);
   const [completedPayments, setCompletedPayments] = useState<PendingPayment[]>([]);
-  const [activeTab, setActiveTab] = useState<Tab>("home");
+  const [activeTab, setActiveTab] = useState<Tab>(() => {
+    const saved = localStorage.getItem("equilibra_active_tab");
+    return (saved === "home" || saved === "expenses" || saved === "balances" || saved === "stats" || saved === "profile" || saved === "history") ? saved : "home";
+  });
   const [showAddExpense, setShowAddExpense] = useState(false);
   const [duplicateFrom, setDuplicateFrom] = useState<Expense | null>(null);
   const [biometricEnabled, setBiometricEnabled] = useState<Record<string, boolean>>({});
@@ -230,6 +233,13 @@ export default function App() {
         if (data.currentMemberId) setCurrentMemberId(data.currentMemberId);
         if (data.completedPayments) setCompletedPayments(data.completedPayments);
         if (data.biometricEnabled) setBiometricEnabled(data.biometricEnabled);
+        if (data.currentMemberId && accessCode) {
+          if (data.biometricEnabled?.[data.currentMemberId]) {
+            setScreen("lock");
+          } else {
+            setScreen("main");
+          }
+        }
       }
     } catch {}
   }, []);
@@ -260,6 +270,10 @@ export default function App() {
     if (groupData.requireApproval !== undefined) setRequireApproval(groupData.requireApproval);
     if (groupData.pinCode) setGroupPin(groupData.pinCode);
   }, [groupData]);
+
+  useEffect(() => {
+    localStorage.setItem("equilibra_active_tab", activeTab);
+  }, [activeTab]);
 
   useEffect(() => {
     try {
