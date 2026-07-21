@@ -1,5 +1,7 @@
+import { useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { AlertTriangle, Trash2, RotateCcw, LogOut, X } from "lucide-react";
+import { haptics } from "../utils/haptics";
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -58,6 +60,10 @@ export function ConfirmDialog({
   const styles = variantStyles[variant];
   const Icon = iconMap[icon];
 
+  useEffect(() => {
+    if (open) haptics.warning();
+  }, [open]);
+
   return (
     <AnimatePresence>
       {open && (
@@ -98,13 +104,13 @@ export function ConfirmDialog({
             {/* Buttons */}
             <div className="flex gap-3">
               <button
-                onClick={onClose}
+                onClick={() => { haptics.light(); onClose(); }}
                 className="flex-1 bg-muted/30 text-foreground font-semibold py-3 rounded-2xl text-sm hover:bg-muted/50 transition-colors"
               >
                 {cancelLabel}
               </button>
               <button
-                onClick={() => { onConfirm(); onClose(); }}
+                onClick={() => { haptics.success(); onConfirm(); onClose(); }}
                 className={`flex-1 ${styles.btn} font-semibold py-3 rounded-2xl text-sm transition-colors`}
               >
                 {confirmLabel}

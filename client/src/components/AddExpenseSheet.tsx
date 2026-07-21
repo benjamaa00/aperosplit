@@ -1,11 +1,15 @@
 import { Toggle } from "./Toggle";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Check, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { toast } from "sonner";
 import type { Member, Expense, GroupCategory } from "../types";
 import { CATEGORY_SECTIONS, CATEGORIES } from "../constants";
 import { AvatarImg } from "./AvatarImg";
+import { haptics } from "../utils/haptics";
+import { SuccessAnimation } from "./success-animation";
+import { getAISuggestions } from "../utils/ai-suggestions";
+import { formatCurrency } from "../utils/currency";
 
 function AddExpenseSheet({
   members,
@@ -15,6 +19,8 @@ function AddExpenseSheet({
   customCategories,
   categories,
   currency,
+  duplicateFrom,
+  allExpenses,
 }: {
   members: Member[];
   currentMemberId: string;
@@ -23,6 +29,8 @@ function AddExpenseSheet({
   customCategories?: GroupCategory[];
   categories: GroupCategory[];
   currency?: string;
+  duplicateFrom?: Expense | null;
+  allExpenses?: Expense[];
 }) {
   const [step, setStep] = useState(0);
   const [amount, setAmount] = useState("");
@@ -34,7 +42,22 @@ function AddExpenseSheet({
   const [recurrenceInterval, setRecurrenceInterval] = useState<"weekly" | "monthly" | "yearly">("monthly");
   const [categorySearch, setCategorySearch] = useState("");
   const [expandedCategoryId, setExpandedCategoryId] = useState<string | null>(null);
+  const [showSuccess, setShowSuccess] = useState(false);
   const displayCurrency = currency || "MAD";
+
+  useEffect(() => {
+    if (!duplicateFrom) return;
+    setAmount(duplicateFrom.amount.toString());
+    setDescription(duplicateFrom.description);
+    setCategory({ name: duplicateFrom.category, emoji: duplicateFrom.categoryEmoji });
+    setPayerId(duplicateFrom.payerId);
+    setParticipants(duplicateFrom.participants.length > 0 ? [...duplicateFrom.participants] : members.map(m => m.id));
+    setIsRecurring(!!duplicateFrom.isRecurring);
+    if (duplicateFrom.recurrenceInterval) {
+      setRecurrenceInterval(duplicateFrom.recurrenceInterval as "weekly" | "monthly" | "yearly");
+    }
+    toast.info("Mode duplication", { description: "Modifiez les champs puis confirmez" });
+  }, [duplicateFrom]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggleParticipant = (id: string) => {
     setParticipants((prev) =>
@@ -61,7 +84,12 @@ function AddExpenseSheet({
       isRecurring,
       recurrenceInterval: isRecurring ? recurrenceInterval : undefined,
     });
-    onClose();
+    haptics.success();
+    setShowSuccess(true);
+    setTimeout(() => {
+      setShowSuccess(false);
+      onClose();
+    }, 1500);
   };
 
   const handleCategorySelect = (name: string, emoji: string) => {
@@ -98,6 +126,11 @@ function AddExpenseSheet({
   }, [categorySearch]);
 
   const useDynamic = activeCategories.length > 0;
+
+  const suggestions = useMemo(() => {
+    if (!description.trim()) return null;
+    return getAISuggestions(description, amount ? parseFloat(amount) : null, allExpenses || [], categories);
+  }, [description, amount, allExpenses, categories]);
 
   const steps = [
     {
@@ -296,6 +329,36 @@ function AddExpenseSheet({
           <p className="text-xs text-muted-foreground text-center">
             Laissez vide pour utiliser "{category.name}"
           </p>
+
+          {suggestions?.suggestedCategory && suggestions.confidence > 0.6 && suggestions.suggestedCategory.name !== category.name && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex items-center gap-2 px-3 py-2 rounded-xl bg-primary/5 border border-primary/20 text-xs"
+            >
+              <span className="text-primary font-medium">Suggestion:</span>
+              <button
+                onClick={() => setCategory({ name: suggestions.suggestedCategory!.name, emoji: suggestions.suggestedCategory!.emoji })}
+                className="flex items-center gap-1 hover:underline"
+              >
+                <span>{suggestions.suggestedCategory.emoji}</span>
+                <span>{suggestions.suggestedCategory.name}</span>
+              </button>
+            </motion.div>
+          )}
+
+          {suggestions?.duplicateWarning && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex items-center gap-2 px-3 py-2 rounded-xl bg-yellow-500/10 border border-yellow-500/20 text-xs"
+            >
+              <span className="text-yellow-600 font-medium">Doublon possible:</span>
+              <span className="text-muted-foreground">
+                {suggestions.duplicateWarning.description} - {formatCurrency(suggestions.duplicateWarning.amount)} le {new Date(suggestions.duplicateWarning.date).toLocaleDateString("fr-FR")}
+              </span>
+            </motion.div>
+          )}
         </div>
       ),
     },
@@ -512,6 +575,7 @@ function AddExpenseSheet({
           </div>
         </div>
       </motion.div>
+      <SuccessAnimation show={showSuccess} />
     </motion.div>
   );
 }

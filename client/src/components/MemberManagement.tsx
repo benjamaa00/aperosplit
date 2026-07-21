@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft, UserPlus, UserMinus, Shield, ShieldOff, ChevronRight, Check,
-  X, Clock, Eye, History, Search, MoreVertical, Crown, Users, UserCheck,
+  X, Clock, Search, Crown, Users, UserCheck,
   AlertTriangle, Copy, Share2, Link as LinkIcon, RefreshCw, Settings,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";

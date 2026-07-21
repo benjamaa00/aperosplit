@@ -1,4 +1,4 @@
-import { memo, useState } from "react";
+import { memo, useState, useRef, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus,
@@ -7,16 +7,19 @@ import {
   Users,
   UserCheck,
   Search,
-  ChevronDown,
-  ChevronUp,
   X,
   Receipt,
+  Copy,
+  MoreVertical,
+  Pencil,
 } from "lucide-react";
-import type { Member, Expense } from "../types";
+import { toast } from "sonner";
+import type { Member, Expense, GroupCategory } from "../types";
 import { formatCurrency, formatDate } from "../utils/currency";
 import { fadeUp } from "../constants";
 import { AvatarImg } from "../components/AvatarImg";
 import { EmptyState } from "../components/EmptyState";
+import { GlobalSearchScreen } from "../components/GlobalSearchScreen";
 
 type ModalState =
   | { type: null }
@@ -49,17 +52,20 @@ export const ExpensesTab = memo(function ExpensesTab({
   currentMemberId,
   onDelete,
   onAdd,
+  onDuplicate,
   onRequestPayment,
   onRequestGroupPayment,
   currency,
   pendingPayments,
   completedPayments,
+  categories,
 }: {
   expenses: Expense[];
   members: Member[];
   currentMemberId: string;
   onDelete: (id: string) => void;
   onAdd: () => void;
+  onDuplicate: (expense: Expense) => void;
   onRequestPayment: (
     toId: string,
     amount: number,
@@ -74,9 +80,14 @@ export const ExpensesTab = memo(function ExpensesTab({
   currency: string;
   pendingPayments: Array<{ id: string; expenseId?: string; toId: string; fromId: string; amount: number; status: string }>;
   completedPayments: Array<{ id: string; expenseId?: string; toId: string; fromId: string; amount: number; status: string }>;
+  categories: GroupCategory[];
 }) {
   const [search, setSearch] = useState("");
   const [modal, setModal] = useState<ModalState>({ type: null });
+  const [showGlobalSearch, setShowGlobalSearch] = useState(false);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+
+  const pendingDeletes = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
   const filtered = expenses
     .filter((e) =>
@@ -84,7 +95,41 @@ export const ExpensesTab = memo(function ExpensesTab({
     )
     .sort((a, b) => b.date - a.date);
 
+  useEffect(() => {
+    if (!openMenuId) return;
+    const handler = () => setOpenMenuId(null);
+    document.addEventListener("click", handler);
+    return () => document.removeEventListener("click", handler);
+  }, [openMenuId]);
+
+  useEffect(() => {
+    return () => {
+      pendingDeletes.current.forEach((t) => clearTimeout(t));
+    };
+  }, []);
+
   const close = () => setModal({ type: null });
+
+  const handleDeleteWithUndo = useCallback((expenseId: string) => {
+    const timer = setTimeout(() => {
+      onDelete(expenseId);
+      pendingDeletes.current.delete(expenseId);
+    }, 5000);
+    pendingDeletes.current.set(expenseId, timer);
+
+    toast("Depense supprimee", {
+      description: "Appuyez sur Annuler pour restaurer",
+      action: {
+        label: "Annuler",
+        onClick: () => {
+          const t = pendingDeletes.current.get(expenseId);
+          if (t) { clearTimeout(t); pendingDeletes.current.delete(expenseId); }
+          toast.success("Depense restauree");
+        },
+      },
+      duration: 5000,
+    });
+  }, [onDelete]);
 
   const openGroupModal = (exp: Expense) => {
     const otherIds = exp.participants.filter(
@@ -189,6 +234,14 @@ export const ExpensesTab = memo(function ExpensesTab({
           </motion.button>
         </div>
 
+        <button
+          onClick={() => setShowGlobalSearch(true)}
+          className="w-full flex items-center gap-3 px-4 py-3 bg-card/50 backdrop-blur-sm border border-border rounded-2xl text-sm text-muted-foreground"
+        >
+          <Search size={16} />
+          Rechercher...
+        </button>
+
         <div className="relative">
           <Search
             size={16}
@@ -196,7 +249,7 @@ export const ExpensesTab = memo(function ExpensesTab({
           />
           <input
             type="text"
-            placeholder="Rechercher une dépense..."
+            placeholder="Filtrer les depenses..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full bg-card/50 backdrop-blur-sm border border-border rounded-2xl pl-10 pr-4 py-3 text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/20 transition-all"
@@ -242,6 +295,7 @@ export const ExpensesTab = memo(function ExpensesTab({
                 p.status === "refused" || p.status === "disputed"
               ).length;
               const hasPayments = expensePayments.length > 0 || expenseCompletedPayments.length > 0;
+              const canModify = isPayer || getMember(currentMemberId)?.role === "admin";
 
               return (
                 <motion.div
@@ -268,10 +322,72 @@ export const ExpensesTab = memo(function ExpensesTab({
                         {formatDate(exp.date)}
                       </p>
                     </div>
-                    <div className="text-right shrink-0">
+                    <div className="text-right shrink-0 flex items-start gap-1">
                       <p className="text-base font-bold">
                         {formatCurrency(exp.amount, currency)}
                       </p>
+                      <div className="relative">
+                        <motion.button
+                          whileTap={{ scale: 0.85 }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setOpenMenuId(openMenuId === exp.id ? null : exp.id);
+                          }}
+                          className="w-7 h-7 rounded-full bg-muted/50 flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors"
+                        >
+                          <MoreVertical size={13} />
+                        </motion.button>
+                        <AnimatePresence>
+                          {openMenuId === exp.id && (
+                            <motion.div
+                              initial={{ opacity: 0, scale: 0.9, y: -4 }}
+                              animate={{ opacity: 1, scale: 1, y: 0 }}
+                              exit={{ opacity: 0, scale: 0.9, y: -4 }}
+                              transition={{ duration: 0.15 }}
+                              className="absolute right-0 top-8 z-50 min-w-[160px] bg-card border border-border rounded-xl shadow-xl overflow-hidden"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <button
+                                onClick={() => {
+                                  setOpenMenuId(null);
+                                  onDuplicate(exp);
+                                }}
+                                className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm hover:bg-muted/50 transition-colors"
+                              >
+                                <Copy size={14} className="text-muted-foreground" />
+                                Dupliquer
+                              </button>
+                              {canModify && (
+                                <button
+                                  onClick={() => {
+                                    setOpenMenuId(null);
+                                    onDuplicate(exp);
+                                  }}
+                                  className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm hover:bg-muted/50 transition-colors"
+                                >
+                                  <Pencil size={14} className="text-muted-foreground" />
+                                  Modifier
+                                </button>
+                              )}
+                              {canModify && (
+                                <>
+                                  <div className="h-px bg-border" />
+                                  <button
+                                    onClick={() => {
+                                      setOpenMenuId(null);
+                                      handleDeleteWithUndo(exp.id);
+                                    }}
+                                    className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-red-400 hover:bg-red-500/10 transition-colors"
+                                  >
+                                    <Trash2 size={14} />
+                                    Supprimer
+                                  </button>
+                                </>
+                              )}
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
                     </div>
                   </div>
 
@@ -419,18 +535,6 @@ export const ExpensesTab = memo(function ExpensesTab({
                             Demander remboursement
                           </motion.button>
                       )}
-                      {(isPayer ||
-                        getMember(currentMemberId)
-                          ?.role === "admin") && (
-                        <motion.button
-                          whileTap={{ scale: 0.85 }}
-                          whileHover={{ scale: 1.03 }}
-                          onClick={() => onDelete(exp.id)}
-                          className="w-7 h-7 rounded-full bg-red-500/10 text-red-400 flex items-center justify-center"
-                        >
-                          <Trash2 size={13} />
-                        </motion.button>
-                      )}
                     </div>
                   </div>
                 </motion.div>
@@ -439,6 +543,15 @@ export const ExpensesTab = memo(function ExpensesTab({
           )}
         </div>
       </motion.div>
+
+      <GlobalSearchScreen
+        isOpen={showGlobalSearch}
+        onClose={() => setShowGlobalSearch(false)}
+        expenses={expenses}
+        members={members}
+        categories={categories}
+        onExpenseClick={() => {}}
+      />
 
       <AnimatePresence>
         {modal.type === "group" && (

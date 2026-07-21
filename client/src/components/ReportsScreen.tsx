@@ -1,9 +1,9 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  ArrowLeft, Download, FileText, Calendar, Users, TrendingUp, TrendingDown,
-  BarChart3, PieChart as PieIcon, Filter, ChevronDown, Check, Printer,
-  ArrowUpRight, ArrowDownLeft, Clock, Search,
+  ArrowLeft, Download, FileText, Calendar, Users,
+  BarChart3, Check, Printer,
+  ArrowUpRight, ArrowDownLeft,
 } from "lucide-react";
 import {
   PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -143,23 +143,67 @@ export function ReportsScreen({ expenses, members, pendingPayments, completedPay
     URL.revokeObjectURL(url);
   };
 
-  const handleExportCSV = () => {
-    const quote = (s: string) => `"${s.replace(/"/g, '""')}"`;
-    const header = "Date,Description,Catégorie,Montant,Payer,Participants";
+  const handleExportCSV = useCallback(() => {
+    if (!filtered.length) return;
+
+    const BOM = "\uFEFF";
+    const headers = ["Date", "Description", "Montant", "Devise", "Paye par", "Categorie", "Repartition"];
+
     const rows = filtered.map(e => {
       const payer = members.find(m => m.id === e.payerId);
-      const parts = e.participants.map(id => members.find(m => m.id === id)?.name || id).join("+");
-      return `${quote(new Date(e.date).toISOString())},${quote(e.description)},${quote(e.category)},${quote(String(e.amount))},${quote(payer?.name || e.payerId)},${quote(parts)}`;
+      const splitType = e.participants.length > 1 ? "Partage" : "Individuel";
+      const date = new Date(e.date).toLocaleDateString("fr-FR");
+
+      return [
+        date,
+        `"${(e.description || "").replace(/"/g, '""')}"`,
+        e.amount.toFixed(2),
+        "MAD",
+        payer?.name || "Inconnu",
+        `${e.categoryEmoji || ""} ${e.category || ""}`.trim(),
+        `${e.participants.length} personne(s)`,
+        splitType,
+      ].join(",");
     });
-    const csv = [header, ...rows].join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
+
+    const csv = BOM + headers.join(",") + "\n" + rows.join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `equilibra_depenses_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `equilibra-depenses-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-  };
+  }, [filtered, members]);
+
+  const handlePrint = useCallback(() => {
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) return;
+
+    const total = filtered.reduce((sum, e) => sum + e.amount, 0);
+    const rows = filtered.map(e => {
+      const payer = members.find(m => m.id === e.payerId);
+      return `<tr>
+        <td style="padding:8px;border-bottom:1px solid #eee">${new Date(e.date).toLocaleDateString("fr-FR")}</td>
+        <td style="padding:8px;border-bottom:1px solid #eee">${e.description || "-"}</td>
+        <td style="padding:8px;border-bottom:1px solid #eee;text-align:right">${e.amount.toFixed(2)} MAD</td>
+        <td style="padding:8px;border-bottom:1px solid #eee">${payer?.name || "-"}</td>
+        <td style="padding:8px;border-bottom:1px solid #eee">${e.categoryEmoji || ""} ${e.category || "-"}</td>
+      </tr>`;
+    }).join("");
+
+    printWindow.document.write(`<!DOCTYPE html><html><head><title>Equilibra - Depenses</title>
+      <style>body{font-family:system-ui,sans-serif;padding:20px}table{width:100%;border-collapse:collapse}th{background:#f3f4f6;padding:8px;text-align:left;border-bottom:2px solid #d1d5db;font-size:12px}td{font-size:13px}.total{font-weight:bold;font-size:16px;margin-top:16px;text-align:right}</style>
+    </head><body>
+      <h1 style="font-size:20px">Equilibra - Rapport des depenses</h1>
+      <p style="color:#666;font-size:13px">Genere le ${new Date().toLocaleDateString("fr-FR")} a ${new Date().toLocaleTimeString("fr-FR")}</p>
+      <table><thead><tr><th>Date</th><th>Description</th><th style="text-align:right">Montant</th><th>Paye par</th><th>Categorie</th></tr></thead>
+      <tbody>${rows}</tbody></table>
+      <p class="total">Total: ${total.toFixed(2)} MAD</p>
+      <script>window.onload=function(){window.print();}<\/script>
+    </body></html>`);
+    printWindow.document.close();
+  }, [filtered, members]);
 
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-md mx-auto px-5 pt-12 space-y-5">
@@ -401,11 +445,15 @@ export function ReportsScreen({ expenses, members, pendingPayments, completedPay
       <div className="flex gap-2">
         <motion.button whileTap={{ scale: 0.97 }} onClick={handleExportPDF}
           className="flex-1 py-3.5 rounded-2xl bg-card/30 border border-border text-sm font-semibold flex items-center justify-center gap-2">
-          <FileText size={16} /> Exporter PDF
+          <FileText size={16} /> PDF
         </motion.button>
         <motion.button whileTap={{ scale: 0.97 }} onClick={handleExportCSV}
           className="flex-1 py-3.5 rounded-2xl bg-card/30 border border-border text-sm font-semibold flex items-center justify-center gap-2">
-          <Download size={16} /> Exporter CSV
+          <Download size={16} /> CSV
+        </motion.button>
+        <motion.button whileTap={{ scale: 0.97 }} onClick={handlePrint}
+          className="flex-1 py-3.5 rounded-2xl bg-card/30 border border-border text-sm font-semibold flex items-center justify-center gap-2">
+          <Printer size={16} /> Imprimer
         </motion.button>
       </div>
 

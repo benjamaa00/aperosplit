@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Fingerprint, Check } from "lucide-react";
-import { Member } from "../types";
+import type { Member } from "../types";
 import { fadeUp, spring } from "../constants";
 import { useHaptic } from "../hooks/useHaptic";
 import { AvatarImg } from "../components/AvatarImg";

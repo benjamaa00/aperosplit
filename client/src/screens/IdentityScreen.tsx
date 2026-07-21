@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Sparkles, RotateCcw } from "lucide-react";
-import { Member } from "../types";
+import type { Member } from "../types";
 import { fadeUp, spring } from "../constants";
 import { useHaptic } from "../hooks/useHaptic";
 import { AvatarImg } from "../components/AvatarImg";

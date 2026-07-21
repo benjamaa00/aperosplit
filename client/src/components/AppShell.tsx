@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { Home, Receipt, Scale, History, BarChart3, User } from "lucide-react";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { haptics } from "../utils/haptics";
 import type { Tab } from "../types";
 
 const navTabs: { id: Tab; Icon: typeof Home; label: string }[] = [
@@ -40,9 +41,7 @@ const AppShell = memo(({ children, activeTab, onTabChange }: AppShellProps) => {
 
   const handleTabChange = (tab: Tab) => {
     if (onTabChange) {
-      if (typeof navigator !== "undefined" && navigator.vibrate) {
-        try { navigator.vibrate(10); } catch {}
-      }
+      haptics.light();
       onTabChange(tab);
     }
   };

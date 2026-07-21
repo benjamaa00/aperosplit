@@ -704,3 +704,54 @@
     padding-right: env(safe-area-inset-right);
   }
 }
+
+/* Premium press states */
+button:active:not(:disabled),
+[role="button"]:active {
+  transform: scale(0.97);
+  transition: transform 0.1s ease;
+}
+
+/* Glass shimmer effect for cards */
+.glass-card-enhanced::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.03), transparent);
+  transition: left 0.6s ease;
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+.glass-card-enhanced:hover::before {
+  left: 100%;
+}
+
+/* Smooth page transitions */
+.page-enter {
+  animation: pageSlideIn 0.3s ease-out;
+}
+
+@keyframes pageSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Pulse glow for notifications */
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 0 0 var(--primary, #8b5cf6); }
+  50% { box-shadow: 0 0 0 6px transparent; }
+}
+
+.notification-pulse {
+  animation: pulseGlow 2s ease-in-out infinite;
+}

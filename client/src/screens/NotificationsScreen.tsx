@@ -2,7 +2,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { ArrowLeft, Bell } from "lucide-react";
 import { EmptyState } from "../components/EmptyState";
-import { Notification } from "../types";
+import type { Notification } from "../types";
 import { fadeUp } from "../constants";
 
 export function NotificationsScreen({ notifications, currentMemberId, onBack, onMarkRead, onMarkAllRead }: {

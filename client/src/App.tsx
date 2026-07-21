@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef, lazy, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Home, Receipt, Scale, History, BarChart3, User, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 
@@ -62,6 +62,7 @@ export default function App() {
   const [completedPayments, setCompletedPayments] = useState<PendingPayment[]>([]);
   const [activeTab, setActiveTab] = useState<Tab>("home");
   const [showAddExpense, setShowAddExpense] = useState(false);
+  const [duplicateFrom, setDuplicateFrom] = useState<Expense | null>(null);
   const [biometricEnabled, setBiometricEnabled] = useState<Record<string, boolean>>({});
   const [biometricAvailable, setBiometricAvailable] = useState(false);
   const [monthlyBudget, setMonthlyBudget] = useState<number>(() => {
@@ -777,10 +778,10 @@ export default function App() {
         <div className="min-h-screen pb-24 scrollbar-hidden overflow-y-auto">
           <AnimatePresence mode="wait">
             {activeTab === "home" && <HomeTab key="home" currentMember={currentMember} balance={myBalance} totalSpent={totalSpent} expenseCount={expenses.length} recentExpenses={recentExpenses} members={members} pendingPayments={myPendingPayments} completedPayments={myCompletedPayments} onConfirmPayment={confirmPayment} onRefusePayment={refusePayment} onResentPayment={resentPayment} onConfirmReceipt={confirmReceipt} onReportNotReceived={reportNotReceived} onMarkAsPaid={markAsPaid} onCancelPaymentRequest={cancelPaymentRequest} expenses={expenses} monthlyBudget={monthlyBudget} currency={currency} onUpdateBudget={updateBudget} />}
-            {activeTab === "expenses" && <ExpensesTab key="expenses" expenses={expenses} members={members} currentMemberId={currentMemberId} onDelete={deleteExpense} onAdd={() => setShowAddExpense(true)} onRequestPayment={requestPayment} onRequestGroupPayment={requestGroupPayment} currency={currency} pendingPayments={pendingPayments} completedPayments={completedPayments} />}
+            {activeTab === "expenses" && <ExpensesTab key="expenses" expenses={expenses} members={members} currentMemberId={currentMemberId} onDelete={deleteExpense} onAdd={() => { setDuplicateFrom(null); setShowAddExpense(true); }} onDuplicate={(exp) => { setDuplicateFrom(exp); setShowAddExpense(true); }} onRequestPayment={requestPayment} onRequestGroupPayment={requestGroupPayment} currency={currency} pendingPayments={pendingPayments} completedPayments={completedPayments} categories={getCategoriesQuery.data?.categories || []} />}
             {activeTab === "balances" && <BalancesTab key="balances" members={members} balances={balances} suggestedTransactions={suggestedTransactions} currentMemberId={currentMemberId} onRequestPayment={(toId: string, amount: number, note?: string) => requestPayment(toId, amount, undefined, note)} expenses={expenses} currency={currency} />}
             {activeTab === "history" && <Suspense key="history" fallback={<TabContentSkeleton />}><PaymentHistory payments={[...completedPayments, ...pendingPayments].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))} expenses={expenses} members={members} currentMemberId={currentMemberId} currency={currency} onConfirmPayment={confirmPayment} onRefusePayment={refusePayment} onResentPayment={resentPayment} onConfirmReceipt={confirmReceipt} onReportNotReceived={reportNotReceived} onMarkAsPaid={markAsPaid} onCancelPayment={cancelPaymentRequest} /></Suspense>}
-            {activeTab === "stats" && <StatsTab key="stats" expenses={expenses} members={members} currentMemberId={currentMemberId} pendingPayments={pendingPayments} completedPayments={completedPayments} monthlyBudget={monthlyBudget} currency={currency} />}
+            {activeTab === "stats" && <StatsTab key="stats" expenses={expenses} members={members} currentMemberId={currentMemberId} pendingPayments={pendingPayments} completedPayments={completedPayments} monthlyBudget={monthlyBudget} currency={currency} categories={getCategoriesQuery.data?.categories || []} />}
             {activeTab === "profile" && <ProfileTab key="profile" currentMember={currentMember} members={members} biometricEnabled={!!biometricEnabled[currentMemberId]} biometricAvailable={biometricAvailable} onToggleBiometric={toggleBiometric} onLogout={handleLogout} onRemoveMember={removeMember} isLocked={!!localStorage.getItem("equilibra_locked_member")} unreadCount={unreadCount} onOpenNotifications={goToNotifications} onOpenReports={goToReports} onOpenGroupSettings={goToGroupSettings} onOpenMembers={goToMembers} onOpenAppearance={goToAppearance} onOpenEditProfile={goToEditProfile} onOpenCategories={goToCategories} onResetAllData={handleResetAllData} onLeaveGroup={leaveGroup} currency={currency} onSetCurrency={updateCurrency} monthlyBudget={monthlyBudget} onSetBudget={updateBudget} pushNotifications={pushNotifications} onTogglePushNotifications={togglePushNotifications} autoReminders={autoReminders} onToggleReminders={toggleAutoReminders} reminderDelay={reminderDelay} onSetReminderDelay={(d: number) => setReminderDelay(d)} privacyMode={privacyMode} onTogglePrivacy={togglePrivacy} />}
           </AnimatePresence>
 
@@ -791,7 +792,7 @@ export default function App() {
             </motion.button>
           )}
 
-          {showAddExpense && <AddExpenseSheet members={members} currentMemberId={currentMemberId} onAdd={(e) => { addExpense(e); setShowAddExpense(false); }} onClose={() => setShowAddExpense(false)} currency={currency} categories={getCategoriesQuery.data?.categories || []} />}
+          {showAddExpense && <AddExpenseSheet members={members} currentMemberId={currentMemberId} onAdd={(e) => { addExpense(e); setShowAddExpense(false); setDuplicateFrom(null); }} onClose={() => { setShowAddExpense(false); setDuplicateFrom(null); }} currency={currency} categories={getCategoriesQuery.data?.categories || []} duplicateFrom={duplicateFrom} allExpenses={expenses} />}
         </div>
       </AppShell>
     );

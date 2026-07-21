@@ -18,6 +18,7 @@ import { TextAreaPrompt } from "./TextAreaPrompt";
 import { formatCurrency } from "../utils/currency";
 import { getStatusBorderHex, getStatusPill, getStatusLabel } from "../utils/statusColors";
 import { trpc } from "../lib/trpc";
+import { haptics } from "../utils/haptics";
 
 interface PendingPayment {
   id: string;
@@ -425,7 +426,7 @@ export const PaymentRequestCard = memo(function PaymentRequestCard({
               <>
                 <motion.button
                   whileTap={{ scale: 0.95 }}
-                  onClick={() => onMarkAsPaid(payment.id)}
+                  onClick={() => { haptics.success(); onMarkAsPaid(payment.id); }}
                   className="flex-1 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 glass-card-enhanced text-emerald-400 hover:bg-emerald-500/15 transition-colors"
                 >
                   <Check size={13} />
@@ -433,7 +434,7 @@ export const PaymentRequestCard = memo(function PaymentRequestCard({
                 </motion.button>
                 <motion.button
                   whileTap={{ scale: 0.95 }}
-                  onClick={() => setShowRefuseModal(true)}
+                  onClick={() => { haptics.medium(); setShowRefuseModal(true); }}
                   className="flex-1 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 glass-card-enhanced text-red-400 border border-red-500/20 hover:bg-red-500/15 transition-colors"
                 >
                   <X size={13} />
@@ -448,7 +449,7 @@ export const PaymentRequestCard = memo(function PaymentRequestCard({
               attempts < 3 && (
                 <motion.button
                   whileTap={{ scale: 0.95 }}
-                  onClick={() => onResentPayment(payment.id)}
+                  onClick={() => { haptics.light(); onResentPayment(payment.id); }}
                   className="flex-1 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 glass-card-enhanced text-amber-400 hover:bg-amber-500/15 transition-colors"
                 >
                   <RefreshCw size={13} />
@@ -469,7 +470,7 @@ export const PaymentRequestCard = memo(function PaymentRequestCard({
               <>
                 <motion.button
                   whileTap={{ scale: 0.95 }}
-                  onClick={() => onConfirmReceipt(payment.id)}
+                  onClick={() => { haptics.success(); onConfirmReceipt(payment.id); }}
                   className="flex-1 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 glass-card-enhanced text-emerald-400 hover:bg-emerald-500/15 transition-colors"
                 >
                   <CircleCheckBig size={13} />
@@ -477,7 +478,7 @@ export const PaymentRequestCard = memo(function PaymentRequestCard({
                 </motion.button>
                 <motion.button
                   whileTap={{ scale: 0.95 }}
-                  onClick={() => setShowNotReceivedModal(true)}
+                  onClick={() => { haptics.medium(); setShowNotReceivedModal(true); }}
                   className="flex-1 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 glass-card-enhanced text-red-400 border border-red-500/20 hover:bg-red-500/15 transition-colors"
                 >
                   <AlertTriangle size={13} />
@@ -498,7 +499,7 @@ export const PaymentRequestCard = memo(function PaymentRequestCard({
               <>
                 <motion.button
                   whileTap={{ scale: 0.95 }}
-                  onClick={() => onConfirmReceipt(payment.id)}
+                  onClick={() => { haptics.success(); onConfirmReceipt(payment.id); }}
                   className="flex-1 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 glass-card-enhanced text-emerald-400 hover:bg-emerald-500/15 transition-colors"
                 >
                   <CircleCheckBig size={13} />
@@ -506,7 +507,7 @@ export const PaymentRequestCard = memo(function PaymentRequestCard({
                 </motion.button>
                 <motion.button
                   whileTap={{ scale: 0.95 }}
-                  onClick={() => setShowNotReceivedModal(true)}
+                  onClick={() => { haptics.medium(); setShowNotReceivedModal(true); }}
                   className="flex-1 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 glass-card-enhanced text-red-400 border border-red-500/20 hover:bg-red-500/15 transition-colors"
                 >
                   <AlertTriangle size={13} />
@@ -519,7 +520,7 @@ export const PaymentRequestCard = memo(function PaymentRequestCard({
             {payment.status === "disputed" && isToCurrentUser && (
               <motion.button
                 whileTap={{ scale: 0.95 }}
-                onClick={() => onMarkAsPaid(payment.id)}
+                onClick={() => { haptics.light(); onMarkAsPaid(payment.id); }}
                 className="flex-1 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 glass-card-enhanced text-blue-400 hover:bg-blue-500/15 transition-colors"
               >
                 <Banknote size={13} />
@@ -531,7 +532,7 @@ export const PaymentRequestCard = memo(function PaymentRequestCard({
             {payment.status === "refused" && isFromCurrentUser && attempts < 3 && (
               <motion.button
                 whileTap={{ scale: 0.95 }}
-                onClick={() => onResentPayment(payment.id)}
+                onClick={() => { haptics.light(); onResentPayment(payment.id); }}
                 className="flex-1 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 glass-card-enhanced text-amber-400 hover:bg-amber-500/15 transition-colors"
               >
                 <RefreshCw size={13} />

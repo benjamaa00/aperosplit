@@ -15,14 +15,13 @@ if ("serviceWorker" in navigator) {
   window.addEventListener("load", async () => {
     try {
       const registration = await navigator.serviceWorker.register("/sw.js");
-      console.log("Service Worker registered:", registration);
 
       // Force update to clear old cache
       if (registration.waiting) {
         registration.waiting.postMessage({ type: "SKIP_WAITING" });
       }
     } catch (error) {
-      console.log("Service Worker registration failed:", error);
+      console.error("Service Worker registration failed:", error);
     }
   });
 

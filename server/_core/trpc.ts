@@ -70,6 +70,21 @@ export const adminProcedure = t.procedure.use(
   }),
 );
 
+function findMemberId(obj: any): string | undefined {
+  if (!obj || typeof obj !== "object") return undefined;
+  if (typeof obj.memberId === "string" && obj.memberId) return obj.memberId;
+  if (typeof obj.json?.memberId === "string" && obj.json.memberId) return obj.json.memberId;
+  if (typeof obj.input?.memberId === "string" && obj.input.memberId) return obj.input.memberId;
+  for (const key of Object.keys(obj)) {
+    const v = obj[key];
+    if (v && typeof v === "object") {
+      const found = findMemberId(v);
+      if (found) return found;
+    }
+  }
+  return undefined;
+}
+
 export const groupAdminProcedure = t.procedure.use(
   t.middleware(async opts => {
     const { ctx, next } = opts;
@@ -78,8 +93,11 @@ export const groupAdminProcedure = t.procedure.use(
       throw new TRPCError({ code: "UNAUTHORIZED", message: "APEROSPLIT_ACCESS_REQUIRED" });
     }
 
-    const rawInput = ctx.req.body ? (typeof ctx.req.body === 'string' ? JSON.parse(ctx.req.body) : ctx.req.body) : {};
-    const memberId = rawInput?.memberId ?? rawInput?.input?.memberId;
+    let rawBody: any = {};
+    try {
+      rawBody = ctx.req.body ? (typeof ctx.req.body === "string" ? JSON.parse(ctx.req.body) : ctx.req.body) : {};
+    } catch {}
+    const memberId = findMemberId(rawBody);
     if (!memberId) {
       throw new TRPCError({ code: "BAD_REQUEST", message: "memberId is required for admin check" });
     }

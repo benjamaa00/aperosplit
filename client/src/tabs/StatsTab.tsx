@@ -4,12 +4,13 @@ import { BarChart3, TrendingUp, TrendingDown } from "lucide-react";
 import { EmptyState } from "../components/EmptyState";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line, ResponsiveContainer, Tooltip as RechartsTooltip } from "recharts";
 import { MemberSelect } from "../components/MemberSelect";
-import type { Member, Expense, PendingPayment } from "../types";
+import { AdvancedAnalytics } from "../components/AdvancedAnalytics";
+import type { Member, Expense, PendingPayment, GroupCategory } from "../types";
 import { formatCurrency } from "../utils/currency";
 import { fadeUp } from "../constants";
 import { AvatarImg } from "../components/AvatarImg";
 
-export const StatsTab = memo(function StatsTab({ expenses, members, currentMemberId, pendingPayments, completedPayments, monthlyBudget, currency }: {
+export const StatsTab = memo(function StatsTab({ expenses, members, currentMemberId, pendingPayments, completedPayments, monthlyBudget, currency, categories }: {
   expenses: Expense[];
   members: Member[];
   currentMemberId: string;
@@ -17,6 +18,7 @@ export const StatsTab = memo(function StatsTab({ expenses, members, currentMembe
   completedPayments: PendingPayment[];
   monthlyBudget: number;
   currency: string;
+  categories: GroupCategory[];
 }) {
   type Period = "week" | "month" | "year" | "all";
   const [period, setPeriod] = useState<Period>("month");
@@ -352,6 +354,14 @@ export const StatsTab = memo(function StatsTab({ expenses, members, currentMembe
               </div>
             </div>
           )}
+
+          {/* Analyses avancees */}
+          <div className="mt-2">
+            <div className="flex items-center gap-2 mb-3">
+              <h3 className="text-sm font-semibold">Analyses avancees</h3>
+            </div>
+            <AdvancedAnalytics expenses={expenses} members={members} categories={categories} currency={currency} />
+          </div>
         </>
       )}
 
