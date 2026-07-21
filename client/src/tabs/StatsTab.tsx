@@ -1,6 +1,7 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, memo } from "react";
 import { motion } from "framer-motion";
 import { BarChart3, TrendingUp, TrendingDown } from "lucide-react";
+import { EmptyState } from "../components/EmptyState";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line, ResponsiveContainer, Tooltip as RechartsTooltip } from "recharts";
 import { MemberSelect } from "../components/MemberSelect";
 import type { Member, Expense, PendingPayment } from "../types";
@@ -8,7 +9,7 @@ import { formatCurrency } from "../utils/currency";
 import { fadeUp } from "../constants";
 import { AvatarImg } from "../components/AvatarImg";
 
-export function StatsTab({ expenses, members, currentMemberId, pendingPayments, completedPayments, monthlyBudget, currency }: {
+export const StatsTab = memo(function StatsTab({ expenses, members, currentMemberId, pendingPayments, completedPayments, monthlyBudget, currency }: {
   expenses: Expense[];
   members: Member[];
   currentMemberId: string;
@@ -114,20 +115,19 @@ export function StatsTab({ expenses, members, currentMemberId, pendingPayments, 
 
   const averagePerPerson = members.length > 0 ? memberCurrentTotal / members.length : 0;
   const topCategory = categoryData[0] || null;
-  const biggestSpender = [...memberBarData].sort((a, b) => b.total - a.total)[0] || null;
+  const biggestSpender = useMemo(() => [...memberBarData].sort((a, b) => b.total - a.total)[0] || null, [memberBarData]);
   const budgetUsed = monthlyBudget > 0 ? (currentTotal / monthlyBudget) * 100 : 0;
-  const currentMonthTotal = expenses.filter(e => {
+  const currentMonthTotal = useMemo(() => expenses.filter(e => {
     const d = new Date(e.date);
     return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-  }).reduce((s, e) => s + e.amount, 0);
+  }).reduce((s, e) => s + e.amount, 0), [expenses, now]);
 
   const totalPayments = pendingPayments.length + completedPayments.length;
   const completedCount = completedPayments.length;
   const pendingCount = pendingPayments.filter(p => p.status === "pending").length;
-  const disputedCount = pendingPayments.filter(p => p.status === "disputed").length;
 
   return (
-    <motion.div {...fadeUp} className="max-w-md mx-auto px-5 pt-12 space-y-5">
+    <motion.div {...fadeUp} className="max-w-md mx-auto px-5 pt-12 space-y-5 scrollbar-hidden">
       <div className="pointer-events-none absolute -top-20 -right-24 h-64 w-64 rounded-full bg-primary/20 blur-3xl" />
       <div className="pointer-events-none absolute top-64 -left-28 h-56 w-56 rounded-full bg-violet-500/10 blur-3xl" />
 
@@ -170,10 +170,11 @@ export function StatsTab({ expenses, members, currentMemberId, pendingPayments, 
       </div>
 
       {memberExpenses.length === 0 ? (
-        <div className="text-center py-16 text-muted-foreground text-sm">
-          <div className="mb-4"><BarChart3 size={40} className="text-muted-foreground/30" /></div>
-          <p>Aucune dépense pour cette période</p>
-        </div>
+        <EmptyState
+          icon={BarChart3}
+          title="Pas de statistiques"
+          description="Ajoutez des depenses pour voir vos statistiques."
+        />
       ) : (
         <>
           {/* Main Stats Cards */}
@@ -356,4 +357,5 @@ export function StatsTab({ expenses, members, currentMemberId, pendingPayments, 
       <div className="h-8" />
     </motion.div>
   );
-}
+});
+StatsTab.displayName = "StatsTab";

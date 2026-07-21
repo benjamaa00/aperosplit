@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { ArrowLeft, Bell } from "lucide-react";
+import { EmptyState } from "../components/EmptyState";
 import { Notification } from "../types";
 import { fadeUp } from "../constants";
 
@@ -61,14 +62,11 @@ export function NotificationsScreen({ notifications, currentMemberId, onBack, on
 
       {/* Notification List */}
       {filtered.length === 0 ? (
-        <div className="text-center py-20">
-          <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="w-24 h-24 mx-auto mb-5 rounded-full bg-muted/30 flex items-center justify-center">
-            <Bell size={40} className="text-muted-foreground/30" />
-          </motion.div>
-          <p className="text-muted-foreground text-sm">
-            {filter === "unread" ? "Tout est lu !" : "Aucune notification"}
-          </p>
-        </div>
+        <EmptyState
+          icon={Bell}
+          title="Aucune notification"
+          description="Vous etes a jour ! Les notifications de paiement et d'activite apparaitront ici."
+        />
       ) : (
         <div className="space-y-5">
           {filtered.map((notif, i) => (

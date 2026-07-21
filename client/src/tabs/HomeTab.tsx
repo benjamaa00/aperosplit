@@ -1,6 +1,8 @@
 import { memo, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { TrendingUp, TrendingDown, Receipt } from "lucide-react";
+import { EmptyState } from "../components/EmptyState";
+import { TabContentSkeleton } from "../components/SkeletonLoaders";
 import { PaymentRequestCard } from "../components/PaymentRequestCard";
 import type { Member, Expense, PendingPayment } from "../types";
 import { formatCurrency, formatDate } from "../utils/currency";
@@ -50,6 +52,10 @@ export const HomeTab = memo(function HomeTab({
   currency: string;
   onUpdateBudget: (budget: number) => void;
 }) {
+  if (!currentMember) {
+    return <TabContentSkeleton />;
+  }
+
   const [showBudgetPrompt, setShowBudgetPrompt] = useState(false);
   const breakdown = useMemo(() => 
     calculateMemberBreakdown(currentMember.id, expenses, members),
@@ -338,10 +344,11 @@ export const HomeTab = memo(function HomeTab({
         <h3 className="text-sm font-semibold mb-3">Activité récente</h3>
         <div className="space-y-2">
           {recentExpenses.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground text-sm">
-              <Receipt size={36} className="text-muted-foreground/30 mb-3" />
-              Aucune dépense pour le moment
-            </div>
+            <EmptyState
+              icon={Receipt}
+              title="Pas encore de depenses"
+              description="Les dernieres depenses du groupe apparaîtront ici."
+            />
           ) : (
             recentExpenses.map((exp, i) => {
               const payer = members.find((m) => m.id === exp.payerId);

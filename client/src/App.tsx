@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef, lazy, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Home, Receipt, Scale, History, BarChart3, User, Plus } from "lucide-react";
 import { trpc } from "@/lib/trpc";
@@ -29,15 +29,18 @@ import { ProfileTab } from "./tabs/ProfileTab";
 import { AppShell } from "./components/AppShell";
 import { ThemeToaster } from "./components/ThemeToaster";
 import { AddExpenseSheet } from "./components/AddExpenseSheet";
-import { PaymentHistory } from "./components/PaymentHistory";
-import { SettingsScreen } from "./components/SettingsScreen";
-import AppearanceScreen from "./components/AppearanceScreen";
-import { MemberManagement } from "./components/MemberManagement";
-import { ReportsScreen } from "./components/ReportsScreen";
 import { RegisterScreen } from "./components/RegisterScreen";
 import { InviteScreen } from "./components/InviteScreen";
-import { EditProfileScreen } from "./components/EditProfileScreen";
-import { CategoryManagementScreen } from "./components/CategoryManagementScreen";
+import { SplashScreen } from "./components/SplashScreen";
+import { TabContentSkeleton } from "./components/SkeletonLoaders";
+
+const AppearanceScreen = lazy(() => import("./components/AppearanceScreen"));
+const CategoryManagementScreen = lazy(() => import("./components/CategoryManagementScreen").then(m => ({ default: m.CategoryManagementScreen })));
+const ReportsScreen = lazy(() => import("./components/ReportsScreen").then(m => ({ default: m.ReportsScreen })));
+const MemberManagement = lazy(() => import("./components/MemberManagement").then(m => ({ default: m.MemberManagement })));
+const SettingsScreen = lazy(() => import("./components/SettingsScreen").then(m => ({ default: m.SettingsScreen })));
+const PaymentHistory = lazy(() => import("./components/PaymentHistory").then(m => ({ default: m.PaymentHistory })));
+const EditProfileScreen = lazy(() => import("./components/EditProfileScreen").then(m => ({ default: m.EditProfileScreen })));
 
 const isNetlify = import.meta.env.VITE_NETLIFY === "true";
 
@@ -76,6 +79,7 @@ export default function App() {
   const [inviteToken, setInviteToken] = useState<string | null>(null);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [showSplash, setShowSplash] = useState(true);
 
   const { permission: notificationPermission, requestPermission, showNotification } = useNotifications();
   const haptic = useHaptic();
@@ -694,17 +698,17 @@ export default function App() {
   } else if (screen === "notificationSettings") {
     content = <AppShell><NotificationSettingsScreen settings={{ pushEnabled: pushNotifications, emailEnabled: false, reminderFrequency: reminderDelay.toString() + "h" }} onBack={goToMain} onSave={handleNotificationSettingsSave} /></AppShell>;
   } else if (screen === "groupSettings" || screen === "settings") {
-    content = <AppShell><SettingsScreen monthlyBudget={monthlyBudget} onSetBudget={updateBudget} currency={currency} onSetCurrency={updateCurrency} autoReminders={autoReminders} onToggleReminders={toggleAutoReminders} privacyMode={privacyMode} onTogglePrivacy={togglePrivacy} offlineMode={offlineMode} onToggleOffline={toggleOfflineMode} pushNotifications={pushNotifications} onTogglePushNotifications={togglePushNotifications} reminderDelay={reminderDelay} onSetReminderDelay={(d: number) => setReminderDelay(d)} onClearData={handleClearData} biometricEnabled={!!biometricEnabled[currentMemberId]} onToggleBiometric={toggleBiometric} onBack={goToMain} /></AppShell>;
+    content = <AppShell><Suspense fallback={<TabContentSkeleton />}><SettingsScreen monthlyBudget={monthlyBudget} onSetBudget={updateBudget} currency={currency} onSetCurrency={updateCurrency} autoReminders={autoReminders} onToggleReminders={toggleAutoReminders} privacyMode={privacyMode} onTogglePrivacy={togglePrivacy} offlineMode={offlineMode} onToggleOffline={toggleOfflineMode} pushNotifications={pushNotifications} onTogglePushNotifications={togglePushNotifications} reminderDelay={reminderDelay} onSetReminderDelay={(d: number) => setReminderDelay(d)} onClearData={handleClearData} biometricEnabled={!!biometricEnabled[currentMemberId]} onToggleBiometric={toggleBiometric} onBack={goToMain} /></Suspense></AppShell>;
   } else if (screen === "members") {
-    content = <AppShell><MemberManagement members={members} currentMemberId={currentMemberId} expenses={expenses} pendingRequests={pendingMembers.map(m => ({ id: `pending_${m.id}`, memberId: m.id, memberName: m.name, memberAvatar: m.avatar, requestedAt: 0 }))} onChangeRole={(id, role) => { setMembers((prev) => prev.map((m) => m.id === id ? { ...m, role } : m)); changeMemberRoleMutation.mutate({ memberId: id, role: role as "admin" | "member" }); }} onRemoveMember={removeMember} onAddMember={() => addMember("Nouveau", "👤")} onApproveMember={approveMember} onRefuseMember={refuseMemberCb} onBack={goToMain} onUpdateGroupSettings={(settings) => { updateGroupSettingsMutation.mutate(settings); toast.success("Paramètres mis à jour"); }} onResetAllData={handleResetAllData} groupName="Équilibra Groupe" groupRequireApproval={requireApproval} /></AppShell>;
+    content = <AppShell><Suspense fallback={<TabContentSkeleton />}><MemberManagement members={members} currentMemberId={currentMemberId} expenses={expenses} pendingRequests={pendingMembers.map(m => ({ id: `pending_${m.id}`, memberId: m.id, memberName: m.name, memberAvatar: m.avatar, requestedAt: 0 }))} onChangeRole={(id, role) => { setMembers((prev) => prev.map((m) => m.id === id ? { ...m, role } : m)); changeMemberRoleMutation.mutate({ memberId: id, role: role as "admin" | "member" }); }} onRemoveMember={removeMember} onAddMember={() => addMember("Nouveau", "👤")} onApproveMember={approveMember} onRefuseMember={refuseMemberCb} onBack={goToMain} onUpdateGroupSettings={(settings) => { updateGroupSettingsMutation.mutate(settings); toast.success("Paramètres mis à jour"); }} onResetAllData={handleResetAllData} groupName="Équilibra Groupe" groupRequireApproval={requireApproval} /></Suspense></AppShell>;
   } else if (screen === "appearance") {
-    content = <AppShell><AppearanceScreen onBack={goToMain} /></AppShell>;
+    content = <AppShell><Suspense fallback={<TabContentSkeleton />}><AppearanceScreen onBack={goToMain} /></Suspense></AppShell>;
   } else if (screen === "editProfile" && currentMember) {
-    content = <AppShell><EditProfileScreen currentName={currentMember.name} currentAvatar={currentMember.avatar} onSave={handleUpdateProfile} onBack={goToMain} saving={profileSaving} /></AppShell>;
+    content = <AppShell><Suspense fallback={<TabContentSkeleton />}><EditProfileScreen currentName={currentMember.name} currentAvatar={currentMember.avatar} onSave={handleUpdateProfile} onBack={goToMain} saving={profileSaving} /></Suspense></AppShell>;
   } else if (screen === "reports") {
-    content = <AppShell><ReportsScreen expenses={expenses} members={members} pendingPayments={pendingPayments} completedPayments={completedPayments} monthlyBudget={monthlyBudget} onBack={goToMain} /></AppShell>;
+    content = <AppShell><Suspense fallback={<TabContentSkeleton />}><ReportsScreen expenses={expenses} members={members} pendingPayments={pendingPayments} completedPayments={completedPayments} monthlyBudget={monthlyBudget} onBack={goToMain} /></Suspense></AppShell>;
   } else if (screen === "categoryManagement") {
-    content = <AppShell><CategoryManagementScreen currentMemberId={currentMemberId} onBack={goToMain} /></AppShell>;
+    content = <AppShell><Suspense fallback={<TabContentSkeleton />}><CategoryManagementScreen currentMemberId={currentMemberId} onBack={goToMain} /></Suspense></AppShell>;
   } else if (!currentMember) {
     content = <AppShell><div className="flex items-center justify-center h-screen"><p className="text-muted-foreground">Chargement...</p></div></AppShell>;
   } else {
@@ -713,28 +717,16 @@ export default function App() {
     const myBalance = balances[currentMemberId] || 0;
 
     content = (
-      <AppShell>
+      <AppShell activeTab={activeTab} onTabChange={setActiveTab}>
         <div className="min-h-screen pb-24 scrollbar-hidden overflow-y-auto">
           <AnimatePresence mode="wait">
             {activeTab === "home" && <HomeTab key="home" currentMember={currentMember} balance={myBalance} totalSpent={totalSpent} expenseCount={expenses.length} recentExpenses={recentExpenses} members={members} pendingPayments={myPendingPayments} completedPayments={myCompletedPayments} onConfirmPayment={confirmPayment} onRefusePayment={refusePayment} onResentPayment={resentPayment} onConfirmReceipt={confirmReceipt} onReportNotReceived={reportNotReceived} onMarkAsPaid={markAsPaid} onCancelPaymentRequest={cancelPaymentRequest} expenses={expenses} monthlyBudget={monthlyBudget} currency={currency} onUpdateBudget={updateBudget} />}
             {activeTab === "expenses" && <ExpensesTab key="expenses" expenses={expenses} members={members} currentMemberId={currentMemberId} onDelete={deleteExpense} onAdd={() => setShowAddExpense(true)} onRequestPayment={requestPayment} onRequestGroupPayment={requestGroupPayment} currency={currency} pendingPayments={pendingPayments} completedPayments={completedPayments} />}
             {activeTab === "balances" && <BalancesTab key="balances" members={members} balances={balances} suggestedTransactions={suggestedTransactions} currentMemberId={currentMemberId} onRequestPayment={(toId: string, amount: number, note?: string) => requestPayment(toId, amount, undefined, note)} expenses={expenses} currency={currency} />}
-            {activeTab === "history" && <PaymentHistory key="history" payments={[...completedPayments, ...pendingPayments].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))} expenses={expenses} members={members} currentMemberId={currentMemberId} currency={currency} onConfirmPayment={confirmPayment} onRefusePayment={refusePayment} onResentPayment={resentPayment} onConfirmReceipt={confirmReceipt} onReportNotReceived={reportNotReceived} onMarkAsPaid={markAsPaid} onCancelPayment={cancelPaymentRequest} />}
+            {activeTab === "history" && <Suspense key="history" fallback={<TabContentSkeleton />}><PaymentHistory payments={[...completedPayments, ...pendingPayments].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))} expenses={expenses} members={members} currentMemberId={currentMemberId} currency={currency} onConfirmPayment={confirmPayment} onRefusePayment={refusePayment} onResentPayment={resentPayment} onConfirmReceipt={confirmReceipt} onReportNotReceived={reportNotReceived} onMarkAsPaid={markAsPaid} onCancelPayment={cancelPaymentRequest} /></Suspense>}
             {activeTab === "stats" && <StatsTab key="stats" expenses={expenses} members={members} currentMemberId={currentMemberId} pendingPayments={pendingPayments} completedPayments={completedPayments} monthlyBudget={monthlyBudget} currency={currency} />}
             {activeTab === "profile" && <ProfileTab key="profile" currentMember={currentMember} members={members} biometricEnabled={!!biometricEnabled[currentMemberId]} biometricAvailable={biometricAvailable} onToggleBiometric={toggleBiometric} onLogout={handleLogout} onRemoveMember={removeMember} isLocked={!!localStorage.getItem("equilibra_locked_member")} unreadCount={unreadCount} onOpenNotifications={goToNotifications} onOpenReports={goToReports} onOpenGroupSettings={goToGroupSettings} onOpenMembers={goToMembers} onOpenAppearance={goToAppearance} onOpenEditProfile={goToEditProfile} onOpenCategories={goToCategories} onResetAllData={handleResetAllData} onLeaveGroup={leaveGroup} currency={currency} onSetCurrency={updateCurrency} monthlyBudget={monthlyBudget} onSetBudget={updateBudget} pushNotifications={pushNotifications} onTogglePushNotifications={togglePushNotifications} autoReminders={autoReminders} onToggleReminders={toggleAutoReminders} reminderDelay={reminderDelay} onSetReminderDelay={(d: number) => setReminderDelay(d)} privacyMode={privacyMode} onTogglePrivacy={togglePrivacy} />}
           </AnimatePresence>
-
-          {/* Bottom Navigation */}
-          <nav className="fixed bottom-0 inset-x-0 z-40 bg-card/80 backdrop-blur-xl border-t border-border">
-            <div className="max-w-md mx-auto flex items-center justify-around py-2">
-              {([["home", Home, "Accueil"], ["expenses", Receipt, "Dépenses"], ["balances", Scale, "Soldes"], ["history", History, "Historique"], ["stats", BarChart3, "Stats"], ["profile", User, "Profil"]] as [Tab, typeof Home, string][]).map(([tab, Icon, label]) => (
-                <motion.button key={tab} whileTap={{ scale: 0.9 }} onClick={() => setActiveTab(tab)} className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition-colors ${activeTab === tab ? "text-primary" : "text-muted-foreground"}`}>
-                  <Icon size={20} strokeWidth={activeTab === tab ? 2.5 : 1.5} />
-                  <span className="text-[10px] font-medium">{label}</span>
-                </motion.button>
-              ))}
-            </div>
-          </nav>
 
           {/* Floating Add Button */}
           {activeTab === "expenses" && (
@@ -749,5 +741,13 @@ export default function App() {
     );
   }
 
-  return <ThemeProvider memberId={currentMemberId}><ThemeToaster />{content}</ThemeProvider>;
+  return (
+    <>
+      {showSplash && <SplashScreen onComplete={() => setShowSplash(false)} />}
+      <ThemeProvider memberId={currentMemberId}>
+        <ThemeToaster />
+        {content}
+      </ThemeProvider>
+    </>
+  );
 }

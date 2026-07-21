@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { memo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus,
@@ -10,11 +10,13 @@ import {
   ChevronDown,
   ChevronUp,
   X,
+  Receipt,
 } from "lucide-react";
 import type { Member, Expense } from "../types";
 import { formatCurrency, formatDate } from "../utils/currency";
 import { fadeUp } from "../constants";
 import { AvatarImg } from "../components/AvatarImg";
+import { EmptyState } from "../components/EmptyState";
 
 type ModalState =
   | { type: null }
@@ -41,7 +43,7 @@ type ModalState =
       note: string;
     };
 
-export function ExpensesTab({
+export const ExpensesTab = memo(function ExpensesTab({
   expenses,
   members,
   currentMemberId,
@@ -203,10 +205,11 @@ export function ExpensesTab({
 
         <div className="space-y-3">
           {filtered.length === 0 ? (
-            <div className="text-center py-16 text-muted-foreground text-sm">
-              <div className="mb-3"><Search size={36} className="text-muted-foreground/30" /></div>
-              Aucune dépense trouvée
-            </div>
+            <EmptyState
+              icon={Receipt}
+              title="Aucune depense"
+              description="Ajoutez votre premiere depense pour commencer a suivre les finances du groupe."
+            />
           ) : (
             filtered.map((exp, i) => {
               const payer = getMember(exp.payerId);
@@ -766,4 +769,5 @@ export function ExpensesTab({
       </AnimatePresence>
     </>
   );
-}
+});
+ExpensesTab.displayName = "ExpensesTab";

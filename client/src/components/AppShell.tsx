@@ -1,19 +1,96 @@
-import { ReactNode } from "react";
-import { Toaster } from "sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { useThemeContext } from "../contexts/ThemeContext";
+import { memo, useRef, useEffect, useState, type ReactNode } from "react";
+import { motion } from "framer-motion";
+import { Home, Receipt, Scale, History, BarChart3, User } from "lucide-react";
 import ErrorBoundary from "./ErrorBoundary";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import type { Tab } from "../types";
 
-function AppShell({ children }: { children: ReactNode }) {
-  const { theme } = useThemeContext();
+const navTabs: { id: Tab; Icon: typeof Home; label: string }[] = [
+  { id: "home", Icon: Home, label: "Accueil" },
+  { id: "expenses", Icon: Receipt, label: "Dépenses" },
+  { id: "balances", Icon: Scale, label: "Soldes" },
+  { id: "history", Icon: History, label: "Historique" },
+  { id: "stats", Icon: BarChart3, label: "Stats" },
+  { id: "profile", Icon: User, label: "Profil" },
+];
+
+interface AppShellProps {
+  children: ReactNode;
+  activeTab?: Tab;
+  onTabChange?: (tab: Tab) => void;
+}
+
+const AppShell = memo(({ children, activeTab, onTabChange }: AppShellProps) => {
+  const tabRefs = useRef<Map<Tab, HTMLButtonElement>>(new Map());
+  const navRef = useRef<HTMLDivElement>(null);
+  const [pill, setPill] = useState({ left: 0, width: 0 });
+
+  useEffect(() => {
+    if (!activeTab || !tabRefs.current.has(activeTab)) return;
+    const el = tabRefs.current.get(activeTab)!;
+    const navEl = navRef.current;
+    if (!el || !navEl) return;
+    const elRect = el.getBoundingClientRect();
+    const navRect = navEl.getBoundingClientRect();
+    setPill({
+      left: elRect.left - navRect.left,
+      width: elRect.width,
+    });
+  }, [activeTab]);
+
+  const handleTabChange = (tab: Tab) => {
+    if (onTabChange) {
+      if (typeof navigator !== "undefined" && navigator.vibrate) {
+        try { navigator.vibrate(10); } catch {}
+      }
+      onTabChange(tab);
+    }
+  };
+
   return (
     <ErrorBoundary>
       <TooltipProvider>
-        <Toaster position="top-center" richColors theme={theme} />
         {children}
+        {activeTab && onTabChange && (
+          <nav className="fixed bottom-0 inset-x-0 z-40 bg-card/80 backdrop-blur-xl border-t border-border">
+            <div
+              ref={navRef}
+              className="max-w-md mx-auto relative flex items-center justify-around py-2"
+            >
+              <motion.div
+                className="absolute top-1 h-8 rounded-full bg-primary/10"
+                animate={{ left: pill.left, width: pill.width }}
+                transition={{ type: "spring", stiffness: 400, damping: 30 }}
+              />
+              {navTabs.map(({ id, Icon, label }) => {
+                const isActive = activeTab === id;
+                return (
+                  <motion.button
+                    key={id}
+                    ref={(el) => {
+                      if (el) tabRefs.current.set(id, el);
+                    }}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={() => handleTabChange(id)}
+                    className={`relative z-10 flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition-colors duration-200 ${
+                      isActive
+                        ? "text-primary font-semibold"
+                        : "text-muted-foreground"
+                    }`}
+                  >
+                    <Icon size={20} strokeWidth={isActive ? 2.5 : 1.5} />
+                    <span className="text-[10px] font-medium">{label}</span>
+                  </motion.button>
+                );
+              })}
+            </div>
+          </nav>
+        )}
       </TooltipProvider>
     </ErrorBoundary>
   );
-}
+});
+
+AppShell.displayName = "AppShell";
 
 export { AppShell };

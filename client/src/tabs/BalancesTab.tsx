@@ -1,6 +1,7 @@
-import { useState, useMemo } from "react";
+import { memo, useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronRight, ChevronDown, ArrowUpRight, X, Sparkles, Send, MessageSquare } from "lucide-react";
+import { ChevronRight, ChevronDown, ArrowUpRight, X, Sparkles, Send, MessageSquare, Scale } from "lucide-react";
+import { EmptyState } from "../components/EmptyState";
 import type { Member, Expense } from "../types";
 import { formatCurrency } from "../utils/currency";
 import { calculateMemberBreakdown } from "../utils/debts";
@@ -86,7 +87,7 @@ function RequestSheet({ member, amount, currency, onClose, onConfirm }: RequestS
   );
 }
 
-export function BalancesTab({
+export const BalancesTab = memo(function BalancesTab({
   members,
   balances,
   suggestedTransactions,
@@ -350,7 +351,7 @@ export function BalancesTab({
         })}
       </div>
 
-      {suggestedTransactions.length > 0 && (
+      {suggestedTransactions.length > 0 ? (
         <div>
           <h3 className="text-sm font-semibold mb-1 flex items-center gap-2">
             <Sparkles size={14} className="text-primary" />
@@ -411,6 +412,12 @@ export function BalancesTab({
             })}
           </div>
         </div>
+      ) : (
+        <EmptyState
+          icon={Scale}
+          title="Tout est equilibre"
+          description="Aucune dette en cours. Profitez de votre temps ensemble !"
+        />
       )}
 
       <AnimatePresence>
@@ -429,4 +436,5 @@ export function BalancesTab({
       </AnimatePresence>
     </motion.div>
   );
-}
+});
+BalancesTab.displayName = "BalancesTab";
