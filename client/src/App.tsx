@@ -82,6 +82,9 @@ export default function App() {
 
   const currentMember = useMemo(() => members.find((m) => m.id === currentMemberId), [members, currentMemberId]);
   const pendingMembers = useMemo(() => members.filter(m => m.status === "pending"), [members]);
+  const recentExpenses = useMemo(() => [...expenses].sort((a, b) => b.date - a.date).slice(0, 5), [expenses]);
+  const myPendingPayments = useMemo(() => pendingPayments.filter((p) => (p.toId === currentMemberId || p.fromId === currentMemberId) && (p.status === "pending" || p.status === "late" || p.status === "refused" || p.status === "disputed" || p.status === "paid" || p.status === "accepted")), [pendingPayments, currentMemberId]);
+  const myCompletedPayments = useMemo(() => completedPayments.filter((p) => p.toId === currentMemberId || p.fromId === currentMemberId), [completedPayments, currentMemberId]);
 
   // tRPC
   const initGroup = trpc.equilibra.initGroup.useMutation();
@@ -708,9 +711,6 @@ export default function App() {
     // ─── Main View ─────────────────────────────────────────────
     const totalSpent = expenses.reduce((s, e) => s + e.amount, 0);
     const myBalance = balances[currentMemberId] || 0;
-    const recentExpenses = useMemo(() => [...expenses].sort((a, b) => b.date - a.date).slice(0, 5), [expenses]);
-    const myPendingPayments = useMemo(() => pendingPayments.filter((p) => (p.toId === currentMemberId || p.fromId === currentMemberId) && (p.status === "pending" || p.status === "late" || p.status === "refused" || p.status === "disputed" || p.status === "paid" || p.status === "accepted")), [pendingPayments, currentMemberId]);
-    const myCompletedPayments = useMemo(() => completedPayments.filter((p) => p.toId === currentMemberId || p.fromId === currentMemberId), [completedPayments, currentMemberId]);
 
     content = (
       <AppShell>
