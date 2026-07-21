@@ -612,7 +612,7 @@ export default function App() {
         await refetch();
         return { success: true, memberId: result.memberId, accessPin: result.accessPin || "" };
       }
-      return { success: false };
+      return { success: false, error: (result as any)?.error || "Erreur lors de l'ajout" };
     } catch { return { success: false }; }
   }, [isNetlify, addMemberDirectMutation, refetch]);
 

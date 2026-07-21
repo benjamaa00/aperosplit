@@ -517,17 +517,26 @@ export const equilibraRouter = router({
       return await validateInviteToken(input.token);
     }),
 
-  addMemberDirect: groupAdminProcedure
+  addMemberDirect: groupProcedure
     .input(z.object({
       memberId: z.string().min(1).max(128),
       name: z.string().trim().min(1).max(80),
       avatar: z.string().min(1).max(50000).optional(),
     }))
     .mutation(async ({ input }) => {
-      const memberId = `member_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+      const { getDb } = await import("../db");
+      const db = await getDb();
+      if (!db) return { success: false, error: "Le serveur demarre, reessayez dans quelques secondes" };
+
+      const memberResult = await db.query(`SELECT role FROM group_members WHERE id = $1`, [input.memberId]);
+      if (!memberResult.rows[0] || memberResult.rows[0].role !== "admin") {
+        return { success: false, error: "Seuls les administrateurs peuvent ajouter des membres" };
+      }
+
+      const newMemberId = `member_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
       const avatar = input.avatar || `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50" fill="%236366f1"/><text x="50" y="55" text-anchor="middle" fill="white" font-size="36" font-family="sans-serif">${input.name.charAt(0).toUpperCase()}</text></svg>`)}`;
-      await addMembers(GROUP_ID, [{ id: memberId, name: input.name, avatar, role: "member", status: "active" }]);
-      return { success: true, memberId, name: input.name, accessPin: ENV.groupAccessPin || undefined };
+      await addMembers(GROUP_ID, [{ id: newMemberId, name: input.name, avatar, role: "member", status: "active" }]);
+      return { success: true, memberId: newMemberId, accessPin: ENV.groupAccessPin || undefined };
     }),
 
   getGroupAccessPin: groupAdminProcedure

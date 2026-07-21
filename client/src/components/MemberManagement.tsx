@@ -45,7 +45,7 @@ interface MemberManagementProps {
   expenses: Expense[];
   onRemoveMember: (id: string) => void;
   onAddMember?: () => void;
-  onAddMemberDirect?: (name: string) => Promise<{ success: boolean; memberId?: string; accessPin?: string }>;
+  onAddMemberDirect?: (name: string) => Promise<{ success: boolean; memberId?: string; accessPin?: string; error?: string }>;
   onChangeRole?: (id: string, role: string) => void;
   onApproveMember?: (id: string) => void;
   onRefuseMember?: (id: string) => void;
@@ -308,7 +308,7 @@ export function MemberManagement({
         setAddMemberName("");
         setShowAddMember(false);
       } else {
-        toast.error("Erreur lors de l'ajout");
+        toast.error(result?.error || "Erreur lors de l'ajout");
       }
     } catch {
       toast.error("Erreur de connexion");
