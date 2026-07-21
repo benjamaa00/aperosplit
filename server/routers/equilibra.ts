@@ -3,6 +3,7 @@ import { groupProcedure, groupAdminProcedure, publicProcedure, router } from "..
 import { storagePut } from "../storage";
 import { invokeLLM } from "../_core/llm";
 import { randomUUID } from "node:crypto";
+import { ENV } from "../_core/env";
 import {
   getOrCreateGroup,
   getGroupData,
@@ -461,7 +462,7 @@ export const equilibraRouter = router({
       return { success: true, group };
     }),
 
-  joinGroupByPin: groupProcedure
+  joinGroupByPin: publicProcedure
     .input(
       z.object({
         groupId: z.string().min(1).max(128),
@@ -478,7 +479,7 @@ export const equilibraRouter = router({
       return result;
     }),
 
-  joinGroupByInvite: groupProcedure
+  joinGroupByInvite: publicProcedure
     .input(
       z.object({
         token: z.string().min(1).max(128),
@@ -491,6 +492,9 @@ export const equilibraRouter = router({
       const result = await joinGroupByInvite(input.token, {
         id: input.memberId, name: input.memberName, avatar: input.memberAvatar,
       });
+      if (result.success) {
+        return { ...result, accessPin: ENV.groupAccessPin || undefined };
+      }
       return result;
     }),
 

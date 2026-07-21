@@ -373,8 +373,13 @@ export default function App() {
       const lockedMember = members.find((m) => m.id === stored);
       if (!lockedMember) { localStorage.removeItem("equilibra_locked_member"); } else { showNotification("Accès verrouillé", `Compte verrouillé sur ${lockedMember.name}`); return; }
     }
-    handleSwitchAccount(id);
-  }, [handleSwitchAccount, members, showNotification]);
+    setCurrentMemberId(id);
+    if (biometricEnabled[id] && biometricAvailable) {
+      setScreen("lock");
+    } else {
+      setScreen("main");
+    }
+  }, [members, showNotification, biometricEnabled, biometricAvailable]);
 
   const handleBiometricUnlock = useCallback(async () => {
     try {
@@ -561,6 +566,9 @@ export default function App() {
     if (!isNetlify && inviteToken) {
       try {
         const r = await joinGroupByInviteMutation.mutateAsync({ token: inviteToken, memberId: newMember.id, memberName: name, memberAvatar: avatar });
+        if ((r as any)?.accessPin) {
+          localStorage.setItem("equilibra_access", (r as any).accessPin);
+        }
         if (r?.requiresApproval) { setScreen("identity"); toast.info("Votre demande est en attente d'approbation par l'admin."); return; }
       } catch {}
     }
@@ -706,6 +714,9 @@ export default function App() {
       try {
         const r = await joinGroupByInviteMutation.mutateAsync({ token: inviteToken!, memberId, memberName: name, memberAvatar: avatar });
         if (r?.success) {
+          if ((r as any).accessPin) {
+            localStorage.setItem("equilibra_access", (r as any).accessPin);
+          }
           await refetch();
           const status = r.requiresApproval ? "pending" : "active";
           const newMember: Member = { id: memberId, name, avatar, role: "member", status };
