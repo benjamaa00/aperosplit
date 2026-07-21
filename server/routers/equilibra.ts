@@ -519,6 +519,7 @@ export const equilibraRouter = router({
 
   addMemberDirect: groupAdminProcedure
     .input(z.object({
+      memberId: z.string().min(1).max(128),
       name: z.string().trim().min(1).max(80),
       avatar: z.string().min(1).max(50000).optional(),
     }))
@@ -530,6 +531,7 @@ export const equilibraRouter = router({
     }),
 
   getGroupAccessPin: groupAdminProcedure
+    .input(z.object({ memberId: z.string().min(1).max(128) }))
     .query(async () => {
       return { pin: ENV.groupAccessPin || "" };
     }),

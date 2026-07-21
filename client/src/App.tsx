@@ -607,7 +607,7 @@ export default function App() {
       return { success: true, memberId, accessPin: "" };
     }
     try {
-      const result = await addMemberDirectMutation.mutateAsync({ name });
+      const result = await addMemberDirectMutation.mutateAsync({ memberId: currentMemberId, name });
       if (result?.success) {
         await refetch();
         return { success: true, memberId: result.memberId, accessPin: result.accessPin || "" };
