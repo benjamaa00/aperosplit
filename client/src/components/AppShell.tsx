@@ -51,13 +51,16 @@ const AppShell = memo(({ children, activeTab, onTabChange }: AppShellProps) => {
       <TooltipProvider>
         {children}
         {activeTab && onTabChange && (
-          <nav className="fixed bottom-0 inset-x-0 z-40 bg-card/80 backdrop-blur-xl border-t border-border">
+          <nav className="fixed bottom-0 inset-x-0 z-40">
+            <div className="absolute inset-0 bg-card/70 backdrop-blur-2xl" />
+            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+            <div className="absolute inset-0 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)]" />
             <div
               ref={navRef}
-              className="max-w-md mx-auto relative flex items-center justify-around py-2"
+              className="max-w-md mx-auto relative flex items-center justify-around py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]"
             >
               <motion.div
-                className="absolute top-1 h-8 rounded-full bg-primary/10"
+                className="absolute top-1 h-8 rounded-full bg-white/[0.08] shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)]"
                 animate={{ left: pill.left, width: pill.width }}
                 transition={{ type: "spring", stiffness: 400, damping: 30 }}
               />

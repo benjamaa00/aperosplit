@@ -80,18 +80,10 @@ export function InviteScreen({ inviteToken, onJoinByInvite, onBack }: InviteScre
   }, [onJoinByInvite]);
 
   return (
-    <div className="min-h-screen bg-background relative overflow-hidden">
+      <div className="min-h-screen bg-background relative overflow-hidden">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <motion.div
-          animate={{ scale: [1, 1.2, 1], opacity: [0.15, 0.35, 0.15] }}
-          transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute top-1/3 left-1/3 w-96 h-96 bg-primary/10 rounded-full blur-3xl"
-        />
-        <motion.div
-          animate={{ scale: [1, 1.3, 1], opacity: [0.1, 0.25, 0.1] }}
-          transition={{ duration: 7, repeat: Infinity, ease: "easeInOut", delay: 2 }}
-          className="absolute bottom-1/3 right-1/3 w-80 h-80 bg-primary/5 rounded-full blur-3xl"
-        />
+        <div className="absolute top-1/3 left-1/3 w-96 h-96 bg-primary/[0.07] rounded-full blur-3xl" />
+        <div className="absolute bottom-1/3 right-1/3 w-80 h-80 bg-primary/[0.04] rounded-full blur-3xl" />
       </div>
 
       <AnimatePresence mode="wait">

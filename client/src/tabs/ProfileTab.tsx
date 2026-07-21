@@ -179,11 +179,7 @@ export const ProfileTab = memo(function ProfileTab({
             <div className="w-24 h-24 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border-2 border-primary/30 shadow-2xl shadow-primary/20 backdrop-blur-sm mb-4">
               <AvatarImg avatar={currentMember.avatar} size="text-6xl" />
             </div>
-            <motion.div
-              animate={{ scale: [1, 1.1, 1] }}
-              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-              className="absolute inset-0 rounded-full bg-primary/10 blur-xl -z-10"
-            />
+            <div className="absolute inset-0 rounded-full bg-primary/[0.08] blur-xl -z-10" />
             {currentMember.role === "admin" && (
               <motion.div
                 initial={{ scale: 0 }}

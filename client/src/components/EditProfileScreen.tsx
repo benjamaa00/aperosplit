@@ -123,11 +123,7 @@ export function EditProfileScreen({ currentName, currentAvatar, onSave, onBack, 
                 <span className="text-6xl">👤</span>
               )}
             </div>
-            <motion.div
-              animate={{ scale: [1, 1.15, 1] }}
-              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-              className="absolute inset-0 rounded-full bg-primary/10 blur-xl -z-10"
-            />
+            <div className="absolute inset-0 rounded-full bg-primary/[0.08] blur-xl -z-10" />
           </div>
         </div>
 
