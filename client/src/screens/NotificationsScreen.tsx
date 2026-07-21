@@ -1,99 +1,96 @@
 import { useState } from "react";
-import { motion } from "framer-motion";
 import { ArrowLeft, Bell } from "lucide-react";
 import { EmptyState } from "../components/EmptyState";
 import type { Notification } from "../types";
-import { fadeUp } from "../constants";
-
 export function NotificationsScreen({ notifications, currentMemberId, onBack, onMarkRead, onMarkAllRead }: {
-  notifications: Notification[];
-  currentMemberId: string;
-  onBack: () => void;
-  onMarkRead: (id: string) => void;
-  onMarkAllRead: () => void;
+ notifications: Notification[];
+ currentMemberId: string;
+ onBack: () => void;
+ onMarkRead: (id: string) => void;
+ onMarkAllRead: () => void;
 }) {
-  const unread = notifications.filter(n => !n.read).length;
-  const [filter, setFilter] = useState<"all" | "unread">("all");
+ const unread = notifications.filter(n => !n.read).length;
+ const [filter, setFilter] = useState<"all" | "unread">("all");
 
-  const filtered = filter === "unread" ? notifications.filter(n => !n.read) : notifications;
+ const filtered = filter === "unread" ? notifications.filter(n => !n.read) : notifications;
 
-  const getIcon = (type: string) => {
-    switch (type) {
-      case "payment_request": return "💸";
-      case "payment_accepted": return "✅";
-      case "payment_refused": return "❌";
-      case "payment_reminder": return "⏰";
-      case "expense_added": return "🧾";
-      case "member_joined": return "👥";
-      case "member_expelled": return "🚪";
-      default: return "🔔";
-    }
-  };
+ const getIcon = (type: string) => {
+ switch (type) {
+ case "payment_request": return "💸";
+ case "payment_accepted": return "✅";
+ case "payment_refused": return "❌";
+ case "payment_reminder": return "⏰";
+ case "expense_added": return "🧾";
+ case "member_joined": return "👥";
+ case "member_expelled": return "🚪";
+ default: return "🔔";
+ }
+ };
 
-  return (
-    <motion.div {...fadeUp} className="max-w-md mx-auto px-5 pt-12 space-y-5">
-      <div className="flex items-center gap-3">
-        <motion.button onClick={onBack}
-          className="w-10 h-10 rounded-2xl bg-card/30 border border-border flex items-center justify-center">
-          <ArrowLeft size={20} />
-        </motion.button>
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold tracking-tight">Notifications</h1>
-          <p className="text-sm text-muted-foreground">{unread} non lues</p>
-        </div>
-        {unread > 0 && (
-          <motion.button onClick={onMarkAllRead}
-            className="text-xs text-primary font-semibold px-4 py-2 rounded-2xl bg-primary/10 border border-primary/20">
-            Tout lire
-          </motion.button>
-        )}
-      </div>
+ return (
+ <div  className="max-w-md mx-auto px-5 pt-12 space-y-5">
+ <div className="flex items-center gap-3">
+ <button onClick={onBack}
+ className="w-10 h-10 rounded-2xl bg-card/30 border border-border flex items-center justify-center">
+ <ArrowLeft size={20} />
+ </button>
+ <div className="flex-1">
+ <h1 className="text-2xl font-bold tracking-tight">Notifications</h1>
+ <p className="text-sm text-muted-foreground">{unread} non lues</p>
+ </div>
+ {unread > 0 && (
+ <button onClick={onMarkAllRead}
+ className="text-xs text-primary font-semibold px-4 py-2 rounded-2xl bg-primary/10 border border-primary/20">
+ Tout lire
+ </button>
+ )}
+ </div>
 
-      {/* Filter */}
-      <div className="flex gap-2 bg-card/30 border border-border rounded-2xl p-1">
-        {(["all", "unread"] as const).map(f => (
-          <button key={f} onClick={() => setFilter(f)}
-            className={`flex-1 py-2.5 rounded-xl text-xs font-semibold transition-all ${filter === f ? "bg-primary text-primary-foreground shadow-lg shadow-primary/30" : "text-muted-foreground"}`}>
-            {f === "all" ? "Toutes" : "Non lues"}
-            {f === "unread" && unread > 0 && <span className="ml-1.5 text-[10px]">({unread})</span>}
-          </button>
-        ))}
-      </div>
+ {/* Filter */}
+ <div className="flex gap-2 bg-card/30 border border-border rounded-2xl p-1">
+ {(["all", "unread"] as const).map(f => (
+ <button key={f} onClick={() => setFilter(f)}
+ className={`flex-1 py-2.5 rounded-xl text-xs font-semibold transition-all ${filter === f ? "bg-primary text-primary-foreground shadow-lg shadow-primary/30" : "text-muted-foreground"}`}>
+ {f === "all" ? "Toutes" : "Non lues"}
+ {f === "unread" && unread > 0 && <span className="ml-1.5 text-[10px]">({unread})</span>}
+ </button>
+ ))}
+ </div>
 
-      {/* Notification List */}
-      {filtered.length === 0 ? (
-        <EmptyState
-          icon={Bell}
-          title="Aucune notification"
-          description="Vous etes a jour ! Les notifications de paiement et d'activite apparaitront ici."
-        />
-      ) : (
-        <div className="space-y-5">
-          {filtered.map((notif, i) => (
-            <motion.div key={notif.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}
-              onClick={() => !notif.read && onMarkRead(notif.id)}
-              className={`glass-card-enhanced rounded-2xl p-4 flex items-start gap-3 hover:bg-primary/5 transition-colors duration-200 cursor-pointer ${!notif.read ? "border-primary/20 bg-primary/5" : ""}`}>
-              <div className="w-10 h-10 rounded-xl bg-muted/30 flex items-center justify-center text-xl shrink-0">
-                {getIcon(notif.type)}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className={`text-sm font-semibold truncate ${notif.read ? "text-muted-foreground" : ""}`}>
-                    {notif.title}
-                  </p>
-                  {!notif.read && <div className="w-2 h-2 rounded-full bg-primary shrink-0" />}
-                </div>
-                <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{notif.message}</p>
-                <p className="text-[10px] text-muted-foreground/60 mt-1.5">
-                  {new Date(notif.createdAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
-                </p>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      )}
+ {/* Notification List */}
+ {filtered.length === 0 ? (
+ <EmptyState
+ icon={Bell}
+ title="Aucune notification"
+ description="Vous etes a jour ! Les notifications de paiement et d'activite apparaitront ici."
+ />
+ ) : (
+ <div className="space-y-5">
+ {filtered.map((notif, i) => (
+ <div key={notif.id} 
+ onClick={() => !notif.read && onMarkRead(notif.id)}
+ className={`glass-card-enhanced rounded-2xl p-4 flex items-start gap-3 hover:bg-primary/5 transition-colors duration-200 cursor-pointer ${!notif.read ? "border-primary/20 bg-primary/5" : ""}`}>
+ <div className="w-10 h-10 rounded-xl bg-muted/30 flex items-center justify-center text-xl shrink-0">
+ {getIcon(notif.type)}
+ </div>
+ <div className="flex-1 min-w-0">
+ <div className="flex items-center gap-2">
+ <p className={`text-sm font-semibold truncate ${notif.read ? "text-muted-foreground" : ""}`}>
+ {notif.title}
+ </p>
+ {!notif.read && <div className="w-2 h-2 rounded-full bg-primary shrink-0" />}
+ </div>
+ <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{notif.message}</p>
+ <p className="text-[10px] text-muted-foreground/60 mt-1.5">
+ {new Date(notif.createdAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+ </p>
+ </div>
+ </div>
+ ))}
+ </div>
+ )}
 
-      <div className="h-8" />
-    </motion.div>
-  );
+ <div className="h-8" />
+ </div>
+ );
 }
