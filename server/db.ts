@@ -4,21 +4,20 @@ import type { User } from "./drizzle/schema";
 
 const { Pool } = pg;
 let pool: InstanceType<typeof Pool> | undefined;
-let useJsonStorage = false;
+let dbUrlMissing = false;
 
 function getPool() {
-  if (useJsonStorage) return null;
+  if (dbUrlMissing) return null;
   if (pool) return pool;
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) {
     console.warn("[DB] DATABASE_URL not configured, falling back to JSON storage");
-    useJsonStorage = true;
+    dbUrlMissing = true;
     return null;
   }
-  // Validate connection string format
   if (!connectionString.startsWith('postgresql://') && !connectionString.startsWith('postgres://')) {
     console.warn("[DB] Invalid DATABASE_URL format, falling back to JSON storage");
-    useJsonStorage = true;
+    dbUrlMissing = true;
     return null;
   }
   try {
@@ -33,8 +32,8 @@ function getPool() {
     });
     return pool;
   } catch (error) {
-    console.warn("[DB] Failed to create database pool, falling back to JSON storage:", error);
-    useJsonStorage = true;
+    console.warn("[DB] Failed to create pool:", error);
+    pool = undefined;
     return null;
   }
 }
@@ -292,14 +291,12 @@ export function initializeDatabase(): Promise<void> {
         `);
       } catch {}
     } catch (error) {
-      console.error("[DB] Database initialization failed, switching to JSON storage:", error);
-      useJsonStorage = true;
+      console.error("[DB] Database initialization failed:", error);
       pool = undefined;
       initialization = undefined;
     }
   })().catch(error => {
     console.error("[DB] Database initialization error:", error);
-    useJsonStorage = true;
     pool = undefined;
     initialization = undefined;
     throw error;
@@ -307,30 +304,29 @@ export function initializeDatabase(): Promise<void> {
   return initialization;
 }
 
-let dbReadyRetries = 0;
-const MAX_DB_RETRIES = 5;
-
 async function ready() {
   const dbPool = getPool();
   if (!dbPool) return null;
   try {
     await initializeDatabase();
-    dbReadyRetries = 0;
     return dbPool;
   } catch (error) {
-    dbReadyRetries++;
-    if (dbReadyRetries < MAX_DB_RETRIES) {
-      console.warn(`[DB] Connection failed (attempt ${dbReadyRetries}/${MAX_DB_RETRIES}), retrying in 2s...`);
-      await new Promise(r => setTimeout(r, 2000));
-      pool = undefined;
-      initialization = undefined;
-      return ready();
-    }
-    console.error("[DB] Database ready check failed after retries, using JSON storage:", error);
-    useJsonStorage = true;
+    console.error("[DB] Connection failed, retrying in 2s:", error);
     pool = undefined;
     initialization = undefined;
-    return null;
+    await new Promise(r => setTimeout(r, 2000));
+    const retryPool = getPool();
+    if (!retryPool) return null;
+    try {
+      initialization = undefined;
+      await initializeDatabase();
+      return retryPool;
+    } catch (error2) {
+      console.error("[DB] Retry also failed:", error2);
+      pool = undefined;
+      initialization = undefined;
+      return null;
+    }
   }
 }
 

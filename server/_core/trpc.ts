@@ -103,13 +103,9 @@ export const groupAdminProcedure = t.procedure.use(
     }
 
     const { getDb } = await import("../db");
-    let db = await getDb();
+    const db = await getDb();
     if (!db) {
-      await new Promise(r => setTimeout(r, 2000));
-      db = await getDb();
-    }
-    if (!db) {
-      throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      throw new TRPCError({ code: "SERVICE_UNAVAILABLE", message: "Le serveur demarre, reessayez dans quelques secondes" });
     }
 
     const result = await db.query(`SELECT role FROM group_members WHERE id = $1`, [memberId]);
