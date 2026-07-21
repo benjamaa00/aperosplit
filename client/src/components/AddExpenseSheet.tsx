@@ -194,6 +194,7 @@ function AddExpenseSheet({
             filteredDynamicCategories.map((cat) => {
               const hasSubs = cat.subcategories.length > 0;
               const isExpanded = expandedCategoryId === cat.id;
+              const catColor = cat.color || "#6b7280";
               return (
                 <div key={cat.id}>
                   <motion.button
@@ -207,20 +208,29 @@ function AddExpenseSheet({
                     }}
                     className={`w-full flex items-center gap-3 p-3.5 rounded-2xl transition-all duration-200 ${
                       category.name === cat.name && !hasSubs
-                        ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25 ring-2 ring-primary/40"
+                        ? "text-primary-foreground shadow-lg ring-2 ring-primary/40"
                         : "bg-card/60 border border-border/50 hover:bg-card hover:border-border"
                     }`}
+                    style={category.name === cat.name && !hasSubs ? { backgroundColor: catColor, boxShadow: `0 4px 20px ${catColor}40` } : {}}
                   >
-                    <span className="text-2xl shrink-0">{cat.emoji}</span>
-                    <span className="text-[13px] font-semibold flex-1 text-left">{cat.name}</span>
+                    <div
+                      className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-xl"
+                      style={{ backgroundColor: category.name === cat.name && !hasSubs ? "rgba(255,255,255,0.2)" : `${catColor}18` }}
+                    >
+                      {cat.emoji}
+                    </div>
+                    <span className={`text-[13px] font-semibold flex-1 text-left ${category.name === cat.name && !hasSubs ? "text-primary-foreground" : "text-foreground"}`}>{cat.name}</span>
                     {hasSubs && (
-                      <motion.div animate={{ rotate: isExpanded ? 90 : 0 }}>
-                        <ChevronRight size={14} className="text-muted-foreground" />
-                      </motion.div>
+                      <div className="flex items-center gap-1">
+                        <span className="text-[10px] text-muted-foreground">{cat.subcategories.length}</span>
+                        <motion.div animate={{ rotate: isExpanded ? 90 : 0 }}>
+                          <ChevronRight size={14} className="text-muted-foreground" />
+                        </motion.div>
+                      </div>
                     )}
                     {!hasSubs && category.name === cat.name && (
-                      <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="w-5 h-5 rounded-full bg-primary-foreground/20 flex items-center justify-center">
-                        <Check size={10} className="text-primary-foreground" />
+                      <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="w-5 h-5 rounded-full bg-white/25 flex items-center justify-center">
+                        <Check size={10} className="text-white" />
                       </motion.div>
                     )}
                   </motion.button>
@@ -247,17 +257,23 @@ function AddExpenseSheet({
                                   onClick={() => handleCategorySelect(sub.name, sub.emoji || cat.emoji)}
                                   className={`flex items-center gap-2 p-3 rounded-xl transition-all ${
                                     isSelected
-                                      ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25 ring-2 ring-primary/40"
+                                      ? "text-primary-foreground shadow-lg ring-2 ring-primary/40"
                                       : "bg-card/40 border border-border/40 hover:bg-card/70"
                                   }`}
+                                  style={isSelected ? { backgroundColor: catColor, boxShadow: `0 2px 12px ${catColor}30` } : {}}
                                 >
-                                  <span className="text-lg shrink-0">{sub.emoji || cat.emoji}</span>
+                                  <div
+                                    className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 text-sm"
+                                    style={{ backgroundColor: isSelected ? "rgba(255,255,255,0.2)" : `${catColor}12` }}
+                                  >
+                                    {sub.emoji || cat.emoji}
+                                  </div>
                                   <span className={`text-xs font-semibold text-left ${isSelected ? "text-primary-foreground" : "text-foreground"}`}>
                                     {sub.name}
                                   </span>
                                   {isSelected && (
-                                    <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="w-4 h-4 rounded-full bg-primary-foreground/20 flex items-center justify-center ml-auto">
-                                      <Check size={8} className="text-primary-foreground" />
+                                    <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="w-4 h-4 rounded-full bg-white/25 flex items-center justify-center ml-auto">
+                                      <Check size={8} className="text-white" />
                                     </motion.div>
                                   )}
                                 </motion.button>
@@ -280,6 +296,7 @@ function AddExpenseSheet({
                 <div className="grid grid-cols-2 gap-2.5">
                   {section.items.map((item) => {
                     const isSelected = category.name === item.name && category.emoji === item.emoji;
+                    const itemColor = (item as any).color || "#6b7280";
                     return (
                       <motion.button
                         key={item.name}
@@ -287,11 +304,17 @@ function AddExpenseSheet({
                         onClick={() => handleCategorySelect(item.name, item.emoji)}
                         className={`relative flex items-center gap-3 p-3.5 rounded-2xl transition-all duration-200 ${
                           isSelected
-                            ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25 ring-2 ring-primary/40"
+                            ? "text-primary-foreground shadow-lg ring-2 ring-primary/40"
                             : "bg-card/60 border border-border/50 hover:bg-card hover:border-border active:bg-card/80"
                         }`}
+                        style={isSelected ? { backgroundColor: itemColor, boxShadow: `0 4px 20px ${itemColor}40` } : {}}
                       >
-                        <span className="text-2xl shrink-0">{item.emoji}</span>
+                        <div
+                          className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-xl"
+                          style={{ backgroundColor: isSelected ? "rgba(255,255,255,0.2)" : `${itemColor}18` }}
+                        >
+                          {item.emoji}
+                        </div>
                         <span className={`text-[13px] font-semibold leading-tight text-left ${isSelected ? "text-primary-foreground" : "text-foreground"}`}>
                           {item.name}
                         </span>
@@ -299,9 +322,9 @@ function AddExpenseSheet({
                           <motion.div
                             initial={{ scale: 0 }}
                             animate={{ scale: 1 }}
-                            className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary-foreground/20 flex items-center justify-center"
+                            className="absolute top-2 right-2 w-5 h-5 rounded-full bg-white/25 flex items-center justify-center"
                           >
-                            <Check size={10} className="text-primary-foreground" />
+                            <Check size={10} className="text-white" />
                           </motion.div>
                         )}
                       </motion.button>

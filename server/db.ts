@@ -768,44 +768,50 @@ export async function deleteExpenseCategory(categoryId: string) {
 }
 
 const DEFAULT_CATEGORIES = [
-  { name: "Restaurants & Restauration", emoji: "🍽️", color: "#f97316", subcategories: [
-    "Restaurant", "Brasserie", "Snack", "Fast-food", "Pizzeria", "Burger", "Tacos", "Kebab", "Shawarma", "Sushi", "Ramen", "Grill", "Steakhouse", "Buffet", "Crêperie", "Café", "Salon de thé", "Glacier", "Pâtisserie", "Boulangerie", "Food Truck", "Livraison Uber Eats", "Livraison Glovo"
+  { name: "Restaurants", emoji: "🍽️", color: "#f97316", subcategories: [
+    { name: "Restaurant", emoji: "🍝" }, { name: "Brasserie", emoji: "🍺" }, { name: "Snack", emoji: "🌯" }, { name: "Fast-food", emoji: "🍔" }, { name: "Pizzeria", emoji: "🍕" }, { name: "Burger", emoji: "🍔" }, { name: "Tacos", emoji: "🌮" }, { name: "Kebab", emoji: "🥙" }, { name: "Shawarma", emoji: "🌯" }, { name: "Sushi", emoji: "🍣" }, { name: "Ramen", emoji: "🍜" }, { name: "Grill", emoji: "🥩" }, { name: "Steakhouse", emoji: "🥩" }, { name: "Buffet", emoji: "🫕" }, { name: "Crêperie", emoji: "🥞" }, { name: "Café", emoji: "☕" }, { name: "Salon de thé", emoji: "🍵" }, { name: "Glacier", emoji: "🍦" }, { name: "Pâtisserie", emoji: "🧁" }, { name: "Boulangerie", emoji: "🥐" }, { name: "Food Truck", emoji: "🚚" }, { name: "Uber Eats", emoji: "🛵" }, { name: "Glovo", emoji: "🛵" }
   ]},
   { name: "Courses", emoji: "🛒", color: "#22c55e", subcategories: [
-    "Supermarché", "Hypermarché", "Épicerie", "Fruits", "Légumes", "Boucherie", "Poissonnerie", "Pain", "Viennoiseries", "Gâteaux", "Chips", "Bonbons", "Chocolats", "Boissons", "Eau", "Soda", "Jus", "Café", "Thé", "Glaçons", "Charbon", "Vaisselle jetable", "Assiettes en plastique", "Gobelets", "Tasses", "Verres", "Couverts jetables", "Serviettes", "Papier aluminium", "Film alimentaire", "Sacs-poubelle"
+    { name: "Supermarché", emoji: "🏪" }, { name: "Hypermarché", emoji: "🏬" }, { name: "Épicerie", emoji: "🥫" }, { name: "Fruits", emoji: "🍎" }, { name: "Légumes", emoji: "🥬" }, { name: "Boucherie", emoji: "🥩" }, { name: "Poissonnerie", emoji: "🐟" }, { name: "Pain", emoji: "🍞" }, { name: "Viennoiseries", emoji: "🥐" }, { name: "Gâteaux", emoji: "🎂" }, { name: "Chips", emoji: "🍟" }, { name: "Bonbons", emoji: "🍬" }, { name: "Chocolats", emoji: "🍫" }, { name: "Boissons", emoji: "🥤" }, { name: "Eau", emoji: "💧" }, { name: "Soda", emoji: "🥤" }, { name: "Jus", emoji: "🧃" }, { name: "Café", emoji: "☕" }, { name: "Thé", emoji: "🍵" }, { name: "Charbon", emoji: "🪨" }, { name: "Vaisselle jetable", emoji: "🍽️" }, { name: "Gobelets", emoji: "🥤" }, { name: "Serviettes", emoji: "🧻" }, { name: "Papier aluminium", emoji: "🫙" }, { name: "Sacs-poubelle", emoji: "🗑️" }
   ]},
-  { name: "Soirées & Fêtes", emoji: "🍻", color: "#a855f7", subcategories: [
-    "Apéro", "Bière", "Vin", "Cocktails", "Champagne", "Boissons sans alcool", "Snacks apéritifs", "Pizza", "Barbecue", "Chicha", "Décoration", "Ballons", "Bougies", "Sono", "DJ", "Location salle"
+  { name: "Soirées & Fêtes", emoji: "🥂", color: "#a855f7", subcategories: [
+    { name: "Apéro", emoji: "🍷" }, { name: "Bière", emoji: "🍺" }, { name: "Vin", emoji: "🍷" }, { name: "Cocktails", emoji: "🍸" }, { name: "Champagne", emoji: "🍾" }, { name: "Boissons sans alcool", emoji: "🥤" }, { name: "Snacks apéritifs", emoji: "🍿" }, { name: "Pizza", emoji: "🍕" }, { name: "Barbecue", emoji: "🍖" }, { name: "Chicha", emoji: "💨" }, { name: "Décoration", emoji: "🎀" }, { name: "Ballons", emoji: "🎈" }, { name: "Bougies", emoji: "🕯️" }, { name: "Sono", emoji: "🔊" }, { name: "DJ", emoji: "🎧" }, { name: "Location salle", emoji: "🏛️" }
   ]},
-  { name: "Loisirs", emoji: "🎬", color: "#3b82f6", subcategories: [
-    "Cinéma", "Bowling", "Billard", "Escape Game", "Laser Game", "Karting", "Paintball", "Parc d'attractions", "Salle d'arcade", "Réalité virtuelle", "Concert", "Festival", "Musée", "Zoo", "Aquarium", "Match", "Piscine", "Plage", "Camping"
+  { name: "Loisirs", emoji: "🎭", color: "#3b82f6", subcategories: [
+    { name: "Cinéma", emoji: "🎬" }, { name: "Bowling", emoji: "🎳" }, { name: "Billard", emoji: "🎱" }, { name: "Escape Game", emoji: "🔐" }, { name: "Laser Game", emoji: "🔫" }, { name: "Karting", emoji: "🏎️" }, { name: "Paintball", emoji: "🎯" }, { name: "Parc d'attractions", emoji: "🎢" }, { name: "Salle d'arcade", emoji: "🕹️" }, { name: "Réalité virtuelle", emoji: "🥽" }, { name: "Concert", emoji: "🎵" }, { name: "Festival", emoji: "🎪" }, { name: "Musée", emoji: "🏛️" }, { name: "Zoo", emoji: "🦁" }, { name: "Aquarium", emoji: "🐠" }, { name: "Match", emoji: "⚽" }, { name: "Piscine", emoji: "🏊" }, { name: "Plage", emoji: "🏖️" }, { name: "Camping", emoji: "⛺" }
   ]},
   { name: "Voyages", emoji: "✈️", color: "#06b6d4", subcategories: [
-    "Hôtel", "Airbnb", "Auberge", "Camping", "Billet d'avion", "Train", "Bus", "Taxi", "Location voiture", "Essence", "Péage", "Parking", "Ferry", "Excursion", "Guide", "Souvenirs"
+    { name: "Hôtel", emoji: "🏨" }, { name: "Airbnb", emoji: "🏡" }, { name: "Auberge", emoji: "🛏️" }, { name: "Camping", emoji: "⛺" }, { name: "Billet d'avion", emoji: "✈️" }, { name: "Train", emoji: "🚆" }, { name: "Bus", emoji: "🚌" }, { name: "Taxi", emoji: "🚕" }, { name: "Location voiture", emoji: "🚙" }, { name: "Essence", emoji: "⛽" }, { name: "Péage", emoji: "🛣️" }, { name: "Parking", emoji: "🅿️" }, { name: "Ferry", emoji: "⛴️" }, { name: "Excursion", emoji: "🗺️" }, { name: "Guide", emoji: "🧭" }, { name: "Souvenirs", emoji: "🛍️" }
   ]},
   { name: "Transport", emoji: "🚗", color: "#eab308", subcategories: [
-    "Essence", "Diesel", "Recharge électrique", "Parking", "Péage", "Taxi", "Uber", "Bolt", "Tram", "Métro", "Bus", "Train", "Location voiture"
+    { name: "Essence", emoji: "⛽" }, { name: "Diesel", emoji: "⛽" }, { name: "Recharge électrique", emoji: "🔌" }, { name: "Parking", emoji: "🅿️" }, { name: "Péage", emoji: "🛣️" }, { name: "Taxi", emoji: "🚕" }, { name: "Uber", emoji: "📱" }, { name: "Bolt", emoji: "⚡" }, { name: "Tram", emoji: "🚊" }, { name: "Métro", emoji: "🚇" }, { name: "Bus", emoji: "🚌" }, { name: "Train", emoji: "🚆" }, { name: "Location voiture", emoji: "🚙" }
   ]},
-  { name: "Maison partagée", emoji: "🏠", color: "#ec4899", subcategories: [
-    "Loyer", "Électricité", "Eau", "Gaz", "Internet", "Meubles", "Décoration", "Produits ménagers", "Produits de nettoyage", "Réparations"
+  { name: "Maison", emoji: "🏠", color: "#ec4899", subcategories: [
+    { name: "Loyer", emoji: "🏠" }, { name: "Électricité", emoji: "💡" }, { name: "Eau", emoji: "🚿" }, { name: "Gaz", emoji: "🔥" }, { name: "Internet", emoji: "📶" }, { name: "Meubles", emoji: "🛋️" }, { name: "Décoration", emoji: "🖼️" }, { name: "Produits ménagers", emoji: "🧹" }, { name: "Nettoyage", emoji: "🧽" }, { name: "Réparations", emoji: "🔧" }
   ]},
-  { name: "Shopping collectif", emoji: "🛍️", color: "#f43f5e", subcategories: [
-    "Vêtements de groupe", "Accessoires", "Électronique", "Jeux vidéo", "Livres", "Souvenirs", "Cadeaux", "Achat commun"
+  { name: "Shopping", emoji: "🛍️", color: "#f43f5e", subcategories: [
+    { name: "Vêtements", emoji: "👕" }, { name: "Accessoires", emoji: "💍" }, { name: "Électronique", emoji: "💻" }, { name: "Jeux vidéo", emoji: "🎮" }, { name: "Livres", emoji: "📚" }, { name: "Souvenirs", emoji: "🎁" }, { name: "Cadeaux", emoji: "🎀" }, { name: "Achat commun", emoji: "🤝" }
   ]},
-  { name: "Jeux", emoji: "🎮", color: "#8b5cf6", subcategories: [
-    "Jeux de société", "Jeux vidéo", "Cartes", "Poker", "Fléchettes", "Baby-foot", "Console"
+  { name: "Jeux & Sports", emoji: "🎮", color: "#8b5cf6", subcategories: [
+    { name: "Jeux de société", emoji: "🎲" }, { name: "Jeux vidéo", emoji: "🎮" }, { name: "Cartes", emoji: "🃏" }, { name: "Poker", emoji: "♠️" }, { name: "Fléchettes", emoji: "🎯" }, { name: "Baby-foot", emoji: "⚽" }, { name: "Console", emoji: "🕹️" }, { name: "Sport", emoji: "⚽" }, { name: "Salle de sport", emoji: "🏋️" }
   ]},
-  { name: "Animaux partagés", emoji: "🐶", color: "#f59e0b", subcategories: [
-    "Nourriture", "Accessoires", "Vétérinaire"
+  { name: "Animaux", emoji: "🐶", color: "#f59e0b", subcategories: [
+    { name: "Nourriture", emoji: "🦴" }, { name: "Accessoires", emoji: "🦮" }, { name: "Vétérinaire", emoji: "🏥" }, { name: "Toilettage", emoji: "✂️" }
   ]},
   { name: "Cadeaux & Cagnottes", emoji: "🎁", color: "#e11d48", subcategories: [
-    "Cadeau anniversaire", "Cadeau mariage", "Cadeau naissance", "Cadeau surprise", "Cagnotte", "Pot de départ"
+    { name: "Cadeau anniversaire", emoji: "🎂" }, { name: "Cadeau mariage", emoji: "💒" }, { name: "Cadeau naissance", emoji: "👶" }, { name: "Cadeau surprise", emoji: "🎉" }, { name: "Cagnotte", emoji: "💰" }, { name: "Pot de départ", emoji: "🥂" }
   ]},
-  { name: "Abonnements partagés", emoji: "📱", color: "#6366f1", subcategories: [
-    "Netflix", "Spotify", "Disney+", "Prime Video", "Apple Music", "ChatGPT", "Hébergement web", "Cloud", "Abonnement sportif", "Abonnement logiciel"
+  { name: "Abonnements", emoji: "📱", color: "#6366f1", subcategories: [
+    { name: "Netflix", emoji: "🎬" }, { name: "Spotify", emoji: "🎵" }, { name: "Disney+", emoji: "✨" }, { name: "Prime Video", emoji: "📦" }, { name: "Apple Music", emoji: "🎶" }, { name: "ChatGPT", emoji: "🤖" }, { name: "Hébergement web", emoji: "🌐" }, { name: "Cloud", emoji: "☁️" }, { name: "Sport", emoji: "🏋️" }, { name: "Logiciel", emoji: "💻" }
   ]},
-  { name: "Divers", emoji: "📦", color: "#64748b", subcategories: [
-    "Frais partagés", "Dépense imprévue", "Contribution commune", "Achat collectif", "Autres"
+  { name: "Santé", emoji: "🏥", color: "#10b981", subcategories: [
+    { name: "Médecin", emoji: "🩺" }, { name: "Pharmacie", emoji: "💊" }, { name: "Dentiste", emoji: "🦷" }, { name: "Optique", emoji: "👓" }, { name: "Analyses", emoji: "🧬" }, { name: "Assurance", emoji: "🛡️" }
+  ]},
+  { name: "Éducation", emoji: "🎓", color: "#0ea5e9", subcategories: [
+    { name: "Cours", emoji: "📖" }, { name: "Livres", emoji: "📚" }, { name: "Frais de scolarité", emoji: "🎓" }, { name: "Formations", emoji: "💡" }, { name: "Matériel", emoji: "✏️" }
+  ]},
+  { name: "Divers", emoji: "✨", color: "#64748b", subcategories: [
+    { name: "Frais partagés", emoji: "🤝" }, { name: "Dépense imprévue", emoji: "⚡" }, { name: "Contribution commune", emoji: "🤲" }, { name: "Achat collectif", emoji: "🛒" }, { name: "Dons", emoji: "💖" }, { name: "Autres", emoji: "📦" }
   ]},
 ];
 
@@ -925,13 +931,13 @@ export async function seedDefaultCategories(groupId: string, createdBy: string) 
        ON CONFLICT (id) DO NOTHING`,
       [catId, groupId, cat.name, cat.emoji, cat.color, 0, createdBy]
     );
-    for (const subName of cat.subcategories) {
+    for (const sub of cat.subcategories) {
       const subId = `sub_def_${Math.random().toString(36).slice(2, 10)}`;
       await db.query(
-        `INSERT INTO expense_subcategories (id, category_id, group_id, name, sort_order, is_active)
-         VALUES ($1, $2, $3, $4, 0, TRUE)
+        `INSERT INTO expense_subcategories (id, category_id, group_id, name, emoji, sort_order, is_active)
+         VALUES ($1, $2, $3, $4, $5, 0, TRUE)
          ON CONFLICT (id) DO NOTHING`,
-        [subId, catId, groupId, subName]
+        [subId, catId, groupId, sub.name, sub.emoji]
       );
     }
   }

@@ -755,3 +755,24 @@ button:active:not(:disabled),
 .notification-pulse {
   animation: pulseGlow 2s ease-in-out infinite;
 }
+
+/* Category selection shimmer */
+@keyframes categoryShimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+.category-selected {
+  background-size: 200% 100%;
+  animation: categoryShimmer 3s ease-in-out infinite;
+}
+
+/* Subcategory grid stagger */
+.subcategory-enter {
+  animation: subcatPop 0.2s ease-out backwards;
+}
+
+@keyframes subcatPop {
+  from { opacity: 0; transform: scale(0.9) translateY(4px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
