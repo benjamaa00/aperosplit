@@ -271,11 +271,14 @@ export const HomeTab = memo(function HomeTab({
       {/* Pending Payments */}
       {pendingPayments.length > 0 ? (
         <div>
-          <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-            Remboursements
-          </h3>
-          <div className="space-y-2">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+              Remboursements en attente
+            </h3>
+            <span className="text-[11px] text-muted-foreground font-medium bg-muted/30 px-2.5 py-0.5 rounded-full">{pendingPayments.length}</span>
+          </div>
+          <div className="space-y-3">
             {pendingPayments.map((p) => (
               <PaymentRequestCard
                 key={p.id}
@@ -305,39 +308,46 @@ export const HomeTab = memo(function HomeTab({
       {/* Completed Payments History */}
       {completedPayments.length > 0 ? (
         <div>
-          <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-emerald-400" />
-            Historique des remboursements
-          </h3>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-emerald-400" />
+              Remboursements confirmés
+            </h3>
+            <span className="text-[11px] text-muted-foreground font-medium bg-muted/30 px-2.5 py-0.5 rounded-full">{completedPayments.length}</span>
+          </div>
           <div className="space-y-2">
-            {completedPayments.slice(0, 5).map((p) => {
+            {completedPayments.slice(0, 5).map((p, i) => {
               const from = members.find((m) => m.id === p.fromId);
               const to = members.find((m) => m.id === p.toId);
               
               return (
                 <motion.div
                   key={p.id}
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  className="bg-card/30 hover:bg-card/60 transition-colors duration-200 backdrop-blur-sm border border-border rounded-2xl p-3 flex items-center justify-between opacity-70"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.04 }}
+                  className="glass-card-enhanced rounded-[1.25rem] p-3.5 flex items-center gap-3"
                 >
-                  <div className="flex items-center gap-3">
-                    <AvatarImg avatar={from?.avatar ?? ""} size="text-xl" />
-                    <div>
-                      <p className="text-xs font-medium">
-                        {from?.name} → {to?.name}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {p.respondedAt ? formatDate(p.respondedAt) : ""}
-                      </p>
-                    </div>
+                  <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 border border-emerald-500/15 flex items-center justify-center flex-shrink-0">
+                    <CheckCircle2 size={18} className="text-emerald-500" />
                   </div>
-                  <p className="text-sm font-bold text-emerald-400">{formatCurrency(p.amount, currency)}</p>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <AvatarImg avatar={from?.avatar ?? ""} size="text-sm" />
+                      <span className="text-[11px] text-muted-foreground">→</span>
+                      <AvatarImg avatar={to?.avatar ?? ""} size="text-sm" />
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                      {from?.name} → {to?.name}
+                      {p.respondedAt && ` · ${formatDate(p.respondedAt)}`}
+                    </p>
+                  </div>
+                  <p className="text-sm font-bold text-emerald-400 flex-shrink-0">{formatCurrency(p.amount, currency)}</p>
                 </motion.div>
               );
             })}
             {completedPayments.length > 5 && (
-              <p className="text-xs text-muted-foreground text-center pt-1">
+              <p className="text-xs text-muted-foreground text-center pt-2">
                 + {completedPayments.length - 5} autres remboursements
               </p>
             )}
@@ -347,7 +357,7 @@ export const HomeTab = memo(function HomeTab({
         <EmptyState
           icon={CheckCircle2}
           title="Aucun remboursement"
-          description="L'historique des remboursements confirmes apparaitra ici."
+          description="L'historique des remboursements confirmés apparaitra ici."
         />
       )}
 
