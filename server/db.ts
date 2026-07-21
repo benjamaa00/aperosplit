@@ -307,14 +307,26 @@ export function initializeDatabase(): Promise<void> {
   return initialization;
 }
 
+let dbReadyRetries = 0;
+const MAX_DB_RETRIES = 5;
+
 async function ready() {
   const dbPool = getPool();
   if (!dbPool) return null;
   try {
     await initializeDatabase();
+    dbReadyRetries = 0;
     return dbPool;
   } catch (error) {
-    console.error("[DB] Database ready check failed, using JSON storage:", error);
+    dbReadyRetries++;
+    if (dbReadyRetries < MAX_DB_RETRIES) {
+      console.warn(`[DB] Connection failed (attempt ${dbReadyRetries}/${MAX_DB_RETRIES}), retrying in 2s...`);
+      await new Promise(r => setTimeout(r, 2000));
+      pool = undefined;
+      initialization = undefined;
+      return ready();
+    }
+    console.error("[DB] Database ready check failed after retries, using JSON storage:", error);
     useJsonStorage = true;
     pool = undefined;
     initialization = undefined;

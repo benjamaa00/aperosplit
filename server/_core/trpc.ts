@@ -103,7 +103,11 @@ export const groupAdminProcedure = t.procedure.use(
     }
 
     const { getDb } = await import("../db");
-    const db = await getDb();
+    let db = await getDb();
+    if (!db) {
+      await new Promise(r => setTimeout(r, 2000));
+      db = await getDb();
+    }
     if (!db) {
       throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
     }
