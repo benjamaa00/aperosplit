@@ -160,6 +160,17 @@
   html {
     transition: background-color 200ms ease, color 200ms ease;
   }
+  /* Focus visible for keyboard navigation */
+  :focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  :focus:not(:focus-visible) {
+    outline: none;
+  }
+
   /* Hide Recharts internal scrollbars */
   .recharts-wrapper, .recharts-surface {
     overflow: hidden !important;
@@ -681,5 +692,15 @@
   }
   .skeleton::after {
     animation: none;
+  }
+}
+
+/* iOS safe area */
+@supports (padding-top: env(safe-area-inset-top)) {
+  .splash-screen {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
   }
 }

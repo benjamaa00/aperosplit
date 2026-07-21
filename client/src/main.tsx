@@ -6,6 +6,7 @@ import { createRoot } from "react-dom/client";
 import superjson from "superjson";
 
 import App from "./App";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import { getLoginUrl } from "./const";
 import "./index.css";
 
@@ -31,7 +32,17 @@ if ("serviceWorker" in navigator) {
   });
 }
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 15000,
+      gcTime: 300000,
+      refetchOnWindowFocus: false,
+      retry: 2,
+      retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 8000),
+    },
+  },
+});
 
 const redirectToLoginIfUnauthorized = (error: unknown) => {
   if (!(error instanceof TRPCClientError)) {
@@ -136,7 +147,9 @@ if (!rootElement) {
 createRoot(rootElement).render(
   <trpc.Provider client={trpcClient} queryClient={queryClient}>
     <QueryClientProvider client={queryClient}>
-      <App />
+      <ErrorBoundary>
+        <App />
+      </ErrorBoundary>
     </QueryClientProvider>
   </trpc.Provider>
 );

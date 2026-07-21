@@ -1,7 +1,7 @@
 import { memo, useRef, useEffect, useState, type ReactNode } from "react";
 import { motion } from "framer-motion";
 import { Home, Receipt, Scale, History, BarChart3, User } from "lucide-react";
-import ErrorBoundary from "./ErrorBoundary";
+import { ErrorBoundary } from "./ErrorBoundary";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import type { Tab } from "../types";
 
@@ -72,6 +72,7 @@ const AppShell = memo(({ children, activeTab, onTabChange }: AppShellProps) => {
                     }}
                     whileTap={{ scale: 0.9 }}
                     onClick={() => handleTabChange(id)}
+                    aria-label={label}
                     className={`relative z-10 flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition-colors duration-200 ${
                       isActive
                         ? "text-primary font-semibold"

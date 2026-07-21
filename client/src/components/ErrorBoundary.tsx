@@ -1,9 +1,9 @@
-import { cn } from "@/lib/utils";
-import { AlertTriangle, RotateCcw } from "lucide-react";
-import { Component, ReactNode } from "react";
+import { Component, type ReactNode } from "react";
+import { RefreshCw } from "lucide-react";
 
 interface Props {
   children: ReactNode;
+  fallback?: ReactNode;
 }
 
 interface State {
@@ -11,52 +11,53 @@ interface State {
   error: Error | null;
 }
 
-class ErrorBoundary extends Component<Props, State> {
-  constructor(props: Props) {
-    super(props);
-    this.state = { hasError: false, error: null };
-  }
+export class ErrorBoundary extends Component<Props, State> {
+  state: State = { hasError: false, error: null };
 
   static getDerivedStateFromError(error: Error): State {
     return { hasError: true, error };
   }
 
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    console.error("[ErrorBoundary]", error, info.componentStack);
+  }
+
   render() {
     if (this.state.hasError) {
+      if (this.props.fallback) return this.props.fallback;
       return (
-        <div className="flex items-center justify-center min-h-screen p-8 bg-background">
-          <div className="flex flex-col items-center w-full max-w-2xl p-8">
-            <AlertTriangle
-              size={48}
-              className="text-destructive mb-6 flex-shrink-0"
-            />
-
-            <h2 className="text-xl mb-4">An unexpected error occurred.</h2>
-
-            <div className="p-4 w-full rounded bg-muted overflow-auto mb-6">
-              <pre className="text-sm text-muted-foreground whitespace-break-spaces">
-                {this.state.error?.stack}
-              </pre>
-            </div>
-
+        <div className="flex flex-col items-center justify-center h-[80dvh] px-8 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-destructive/10 flex items-center justify-center mb-6">
+            <span className="text-2xl">⚠️</span>
+          </div>
+          <h2 className="text-lg font-bold mb-2">Une erreur est survenue</h2>
+          <p className="text-sm text-muted-foreground mb-6 max-w-xs">
+            Quelque chose ne s'est pas bien passe. Vous pouvez reessayer ou revenir en arriere.
+          </p>
+          <div className="flex gap-3">
             <button
-              onClick={() => window.location.reload()}
-              className={cn(
-                "flex items-center gap-2 px-4 py-2 rounded-lg",
-                "bg-primary text-primary-foreground",
-                "hover:opacity-90 cursor-pointer"
-              )}
+              onClick={() => {
+                this.setState({ hasError: false, error: null });
+                window.location.reload();
+              }}
+              className="px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold flex items-center gap-2"
             >
-              <RotateCcw size={16} />
-              Reload Page
+              <RefreshCw size={14} />
+              Reessayer
+            </button>
+            <button
+              onClick={() => {
+                this.setState({ hasError: false, error: null });
+                window.history.back();
+              }}
+              className="px-5 py-2.5 rounded-xl bg-secondary text-secondary-foreground text-sm font-semibold"
+            >
+              Retour
             </button>
           </div>
         </div>
       );
     }
-
     return this.props.children;
   }
 }
-
-export default ErrorBoundary;

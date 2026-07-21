@@ -209,6 +209,7 @@ export const ExpensesTab = memo(function ExpensesTab({
               icon={Receipt}
               title="Aucune depense"
               description="Ajoutez votre premiere depense pour commencer a suivre les finances du groupe."
+              action={{ label: "Ajouter une depense", onClick: () => onAdd() }}
             />
           ) : (
             filtered.map((exp, i) => {

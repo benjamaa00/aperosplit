@@ -348,6 +348,7 @@ export const HomeTab = memo(function HomeTab({
               icon={Receipt}
               title="Pas encore de depenses"
               description="Les dernieres depenses du groupe apparaîtront ici."
+              action={{ label: "Ajouter une depense", onClick: () => {} }}
             />
           ) : (
             recentExpenses.map((exp, i) => {

@@ -432,6 +432,7 @@ function AddExpenseSheet({
                     if (step === 1) setCategorySearch("");
                     setStep(step > 1 ? step - 1 : 0);
                   }}
+                  aria-label="Retour"
                   className="w-8 h-8 rounded-full bg-secondary/50 flex items-center justify-center"
                 >
                   <ChevronLeft size={16} />
@@ -442,6 +443,7 @@ function AddExpenseSheet({
             <motion.button
               whileTap={{ scale: 0.85 }}
               onClick={onClose}
+              aria-label="Fermer"
               className="w-8 h-8 rounded-full bg-secondary/50 flex items-center justify-center"
             >
               <X size={16} />

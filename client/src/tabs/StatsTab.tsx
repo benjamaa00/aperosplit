@@ -127,7 +127,7 @@ export const StatsTab = memo(function StatsTab({ expenses, members, currentMembe
   const pendingCount = pendingPayments.filter(p => p.status === "pending").length;
 
   return (
-    <motion.div {...fadeUp} className="max-w-md mx-auto px-5 pt-12 space-y-5 scrollbar-hidden">
+    <motion.div {...fadeUp} className="max-w-md mx-auto px-5 pt-16 space-y-5 scrollbar-hidden">
       <div className="pointer-events-none absolute -top-20 -right-24 h-64 w-64 rounded-full bg-primary/20 blur-3xl" />
       <div className="pointer-events-none absolute top-64 -left-28 h-56 w-56 rounded-full bg-violet-500/10 blur-3xl" />
 
@@ -174,6 +174,7 @@ export const StatsTab = memo(function StatsTab({ expenses, members, currentMembe
           icon={BarChart3}
           title="Pas de statistiques"
           description="Ajoutez des depenses pour voir vos statistiques."
+          action={{ label: "Ajouter une depense", onClick: () => {} }}
         />
       ) : (
         <>

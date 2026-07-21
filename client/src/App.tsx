@@ -80,6 +80,8 @@ export default function App() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showSplash, setShowSplash] = useState(true);
+  const [serverWaking, setServerWaking] = useState(false);
+  const [serverWakeRetries, setServerWakeRetries] = useState(0);
 
   const { permission: notificationPermission, requestPermission, showNotification } = useNotifications();
   const haptic = useHaptic();
@@ -117,11 +119,33 @@ export default function App() {
   const updateMemberProfileMutation = trpc.equilibra.updateMemberProfile.useMutation();
   const updateMemberBiometricMutation = trpc.equilibra.updateMemberBiometric.useMutation();
 
-  const { data: groupData, refetch } = trpc.equilibra.getGroupData.useQuery(undefined, { enabled: !isNetlify, refetchInterval: 10000, retry: 2, refetchOnWindowFocus: true });
-  const getNotificationsQuery = trpc.equilibra.getNotifications.useQuery({ memberId: currentMemberId }, { enabled: !!currentMemberId && !isNetlify, refetchInterval: 5000 });
-  const getCategoriesQuery = trpc.equilibra.getCategories.useQuery(undefined, { enabled: !isNetlify });
+  const { data: groupData, refetch, isLoading: isGroupLoading, isError: isGroupError, error: groupError } = trpc.equilibra.getGroupData.useQuery(undefined, {
+    enabled: !isNetlify,
+    refetchInterval: 10000,
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
+    refetchOnWindowFocus: true,
+    staleTime: 30000,
+    gcTime: 300000,
+  });
+  const getNotificationsQuery = trpc.equilibra.getNotifications.useQuery({ memberId: currentMemberId }, { enabled: !!currentMemberId && !isNetlify, refetchInterval: 5000, staleTime: 5000 });
+  const getCategoriesQuery = trpc.equilibra.getCategories.useQuery(undefined, { enabled: !isNetlify, staleTime: 60000, gcTime: 600000 });
 
   // ─── Effects ───────────────────────────────────────────────
+  useEffect(() => {
+    if (isNetlify || !isGroupError) return;
+    setServerWaking(true);
+    const timer = setTimeout(() => {
+      setServerWakeRetries(prev => prev + 1);
+      refetch();
+    }, Math.min(3000 * (serverWakeRetries + 1), 15000));
+    return () => clearTimeout(timer);
+  }, [isGroupError, serverWakeRetries, isNetlify, refetch]);
+
+  useEffect(() => {
+    if (groupData) setServerWaking(false);
+  }, [groupData]);
+
   useEffect(() => {
     if (notificationPermission === "default") {
       const handler = () => { requestPermission(); };
@@ -713,6 +737,38 @@ export default function App() {
     content = <AppShell><div className="flex items-center justify-center h-screen"><p className="text-muted-foreground">Chargement...</p></div></AppShell>;
   } else {
     // ─── Main View ─────────────────────────────────────────────
+    if (serverWaking && !groupData) {
+      content = (
+        <AppShell>
+          <div className="flex flex-col items-center justify-center h-[80dvh] px-8 text-center">
+            <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-6">
+              <svg className="w-8 h-8 text-primary animate-pulse" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <path d="M5 12.55a11 11 0 0 1 14.08 0" />
+                <path d="M1.42 9a16 16 0 0 1 21.16 0" />
+                <path d="M8.53 16.11a6 6 0 0 1 6.95 0" />
+                <circle cx="12" cy="20" r="1" />
+              </svg>
+            </div>
+            <h2 className="text-lg font-bold mb-2">Connexion au serveur...</h2>
+            <p className="text-sm text-muted-foreground mb-1">
+              {serverWakeRetries < 2 
+                ? "Le serveur se connecte, patientez un instant."
+                : "Le serveur demarre, cela peut prendre quelques secondes."}
+            </p>
+            <p className="text-xs text-muted-foreground/50 mt-4">
+              Tentative {serverWakeRetries + 1}/3
+            </p>
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={() => { setServerWakeRetries(prev => prev + 1); refetch(); }}
+              className="mt-6 px-6 py-3 rounded-xl bg-primary text-primary-foreground text-sm font-semibold"
+            >
+              Reessayer
+            </motion.button>
+          </div>
+        </AppShell>
+      );
+    } else {
     const totalSpent = expenses.reduce((s, e) => s + e.amount, 0);
     const myBalance = balances[currentMemberId] || 0;
 
@@ -739,6 +795,7 @@ export default function App() {
         </div>
       </AppShell>
     );
+    }
   }
 
   return (

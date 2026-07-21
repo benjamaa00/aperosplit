@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { motion } from "framer-motion";
 import { spring } from "../constants";
 
@@ -7,7 +8,7 @@ interface ToggleProps {
   disabled?: boolean;
 }
 
-export const Toggle = ({ enabled, onToggle, disabled }: ToggleProps) => (
+export const Toggle = memo(({ enabled, onToggle, disabled }: ToggleProps) => (
   <motion.button
     whileTap={disabled ? undefined : { scale: 0.95 }}
     onClick={() => { if (!disabled) onToggle(); }}
@@ -21,4 +22,5 @@ export const Toggle = ({ enabled, onToggle, disabled }: ToggleProps) => (
       className="absolute top-1 w-6 h-6 rounded-full bg-white shadow-md"
     />
   </motion.button>
-);
+));
+Toggle.displayName = "Toggle";
