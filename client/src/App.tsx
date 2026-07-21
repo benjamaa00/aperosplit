@@ -120,6 +120,7 @@ export default function App() {
   const updateNotificationSettingsMutation = trpc.equilibra.updateNotificationSettings.useMutation();
   const updateMemberProfileMutation = trpc.equilibra.updateMemberProfile.useMutation();
   const updateMemberBiometricMutation = trpc.equilibra.updateMemberBiometric.useMutation();
+  const addMemberDirectMutation = trpc.equilibra.addMemberDirect.useMutation();
 
   const { data: groupData, refetch, isLoading: isGroupLoading, isError: isGroupError, error: groupError } = trpc.equilibra.getGroupData.useQuery(undefined, {
     enabled: !isNetlify,
@@ -598,6 +599,23 @@ export default function App() {
     if (!isNetlify) { refuseMemberMutation.mutateAsync({ memberId: id, refusedBy: currentMemberId }).then(() => refetch()).catch(() => {}); }
   }, [currentMemberId, refuseMemberMutation, refetch, isNetlify]);
 
+  const handleAddMemberDirect = useCallback(async (name: string) => {
+    if (isNetlify) {
+      const memberId = `member_${Date.now()}`;
+      const avatar = prepareAvatar(memberId, "👤");
+      setMembers((prev) => [...prev, { id: memberId, name, avatar, role: "member", status: "active" }]);
+      return { success: true, memberId, accessPin: "" };
+    }
+    try {
+      const result = await addMemberDirectMutation.mutateAsync({ name });
+      if (result?.success) {
+        await refetch();
+        return { success: true, memberId: result.memberId, accessPin: result.accessPin || "" };
+      }
+      return { success: false };
+    } catch { return { success: false }; }
+  }, [isNetlify, addMemberDirectMutation, refetch]);
+
   const leaveGroup = useCallback(async () => {
     if (currentMember?.role === "admin") { toast.error("L'admin ne peut pas quitter. Transférez d'abord le rôle admin."); return; }
     const prevMembers = members;
@@ -737,7 +755,7 @@ export default function App() {
   } else if (screen === "groupSettings" || screen === "settings") {
     content = <AppShell><ErrorBoundary><Suspense fallback={<TabContentSkeleton />}><SettingsScreen monthlyBudget={monthlyBudget} onSetBudget={updateBudget} currency={currency} onSetCurrency={updateCurrency} autoReminders={autoReminders} onToggleReminders={toggleAutoReminders} privacyMode={privacyMode} onTogglePrivacy={togglePrivacy} offlineMode={offlineMode} onToggleOffline={toggleOfflineMode} pushNotifications={pushNotifications} onTogglePushNotifications={togglePushNotifications} reminderDelay={reminderDelay} onSetReminderDelay={(d: number) => setReminderDelay(d)} onClearData={handleClearData} biometricEnabled={!!biometricEnabled[currentMemberId]} onToggleBiometric={toggleBiometric} onBack={goToMain} /></Suspense></ErrorBoundary></AppShell>;
   } else if (screen === "members") {
-    content = <AppShell><ErrorBoundary><Suspense fallback={<TabContentSkeleton />}><MemberManagement members={members} currentMemberId={currentMemberId} expenses={expenses} pendingRequests={pendingMembers.map(m => ({ id: `pending_${m.id}`, memberId: m.id, memberName: m.name, memberAvatar: m.avatar, requestedAt: 0 }))} onChangeRole={(id, role) => { setMembers((prev) => prev.map((m) => m.id === id ? { ...m, role } : m)); changeMemberRoleMutation.mutate({ memberId: id, role: role as "admin" | "member" }); }} onRemoveMember={removeMember} onAddMember={() => addMember("Nouveau", "👤")} onApproveMember={approveMember} onRefuseMember={refuseMemberCb} onBack={goToMain} onUpdateGroupSettings={(settings) => { updateGroupSettingsMutation.mutate(settings); toast.success("Paramètres mis à jour"); }} onResetAllData={handleResetAllData} groupName="Équilibra Groupe" groupRequireApproval={requireApproval} /></Suspense></ErrorBoundary></AppShell>;
+    content = <AppShell><ErrorBoundary><Suspense fallback={<TabContentSkeleton />}><MemberManagement members={members} currentMemberId={currentMemberId} expenses={expenses} pendingRequests={pendingMembers.map(m => ({ id: `pending_${m.id}`, memberId: m.id, memberName: m.name, memberAvatar: m.avatar, requestedAt: 0 }))} onChangeRole={(id, role) => { setMembers((prev) => prev.map((m) => m.id === id ? { ...m, role } : m)); changeMemberRoleMutation.mutate({ memberId: id, role: role as "admin" | "member" }); }} onRemoveMember={removeMember} onAddMember={() => addMember("Nouveau", "👤")} onAddMemberDirect={handleAddMemberDirect} onApproveMember={approveMember} onRefuseMember={refuseMemberCb} onBack={goToMain} onUpdateGroupSettings={(settings) => { updateGroupSettingsMutation.mutate(settings); toast.success("Paramètres mis à jour"); }} onResetAllData={handleResetAllData} groupName="Équilibra Groupe" groupRequireApproval={requireApproval} /></Suspense></ErrorBoundary></AppShell>;
   } else if (screen === "appearance") {
     content = <AppShell><ErrorBoundary><Suspense fallback={<TabContentSkeleton />}><AppearanceScreen onBack={goToMain} /></Suspense></ErrorBoundary></AppShell>;
   } else if (screen === "editProfile" && currentMember) {

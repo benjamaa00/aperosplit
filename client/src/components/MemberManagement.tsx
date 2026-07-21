@@ -1,10 +1,11 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft, UserPlus, UserMinus, Shield, ShieldOff, ChevronRight, Check,
   X, Clock, Search, Crown, Users, UserCheck,
-  AlertTriangle, Copy, Share2, Link as LinkIcon, RefreshCw, Settings,
+  AlertTriangle, Copy, Share2, RefreshCw, Settings, Eye, EyeOff, Loader2,
 } from "lucide-react";
+import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { AvatarImg } from "./AvatarImg";
 import { Toggle } from "./Toggle";
@@ -44,6 +45,7 @@ interface MemberManagementProps {
   expenses: Expense[];
   onRemoveMember: (id: string) => void;
   onAddMember?: () => void;
+  onAddMemberDirect?: (name: string) => Promise<{ success: boolean; memberId?: string; accessPin?: string }>;
   onChangeRole?: (id: string, role: string) => void;
   onApproveMember?: (id: string) => void;
   onRefuseMember?: (id: string) => void;
@@ -253,7 +255,7 @@ function MemberDetail({ selectedMember, currentMemberId, memberStats, memberRece
 }
 
 export function MemberManagement({
-  members, currentMemberId, expenses, onRemoveMember, onAddMember,
+  members, currentMemberId, expenses, onRemoveMember, onAddMember, onAddMemberDirect,
   onChangeRole, onApproveMember, onRefuseMember, pendingRequests = [], onBack,
   onUpdateGroupSettings, onResetAllData, groupName = "Équilibra Groupe", groupRequireApproval = false,
 }: MemberManagementProps) {
@@ -262,37 +264,11 @@ export function MemberManagement({
   const [search, setSearch] = useState("");
   const [showConfirmExpel, setShowConfirmExpel] = useState<string | null>(null);
   const [showRoleMenu, setShowRoleMenu] = useState<string | null>(null);
-  const [showInvite, setShowInvite] = useState(false);
-
-  const generateInviteMutation = trpc.equilibra.generateInvite.useMutation();
-  const [inviteTokenValue, setInviteTokenValue] = useState<string | null>(null);
-
-  const handleGenerateInvite = async () => {
-    try {
-      const result = await generateInviteMutation.mutateAsync({});
-      if (result?.token) {
-        setInviteTokenValue(result.token);
-      }
-    } catch {
-      // silent
-    }
-  };
-
-  useEffect(() => {
-    if (showInvite && !inviteTokenValue) {
-      handleGenerateInvite();
-    }
-  }, [showInvite]);
-
-  const inviteUrl = inviteTokenValue ? `${window.location.origin}?invite=${inviteTokenValue}` : "";
-  const handleCopyInvite = async () => {
-    try { await navigator.clipboard.writeText(inviteUrl); } catch {}
-  };
-  const handleShareInvite = async () => {
-    if (navigator.share) {
-      try { await navigator.share({ title: "Équilibra Groupe", text: "Rejoins notre groupe !", url: inviteUrl }); } catch {}
-    } else { handleCopyInvite(); }
-  };
+  const [showAddMember, setShowAddMember] = useState(false);
+  const [addMemberName, setAddMemberName] = useState("");
+  const [addMemberLoading, setAddMemberLoading] = useState(false);
+  const [addMemberResult, setAddMemberResult] = useState<{ name: string; accessPin: string } | null>(null);
+  const [showPin, setShowPin] = useState(false);
 
   const fmt = formatCurrency;
 
@@ -320,6 +296,40 @@ export function MemberManagement({
 
   const isAdmin = (id: string) => members.find(m => m.id === id)?.role === "admin";
 
+  const handleAddMember = async () => {
+    if (!addMemberName.trim() || !onAddMemberDirect) return;
+    setAddMemberLoading(true);
+    try {
+      const result = await onAddMemberDirect(addMemberName.trim());
+      if (result?.success && result.accessPin) {
+        setAddMemberResult({ name: addMemberName.trim(), accessPin: result.accessPin });
+      } else if (result?.success) {
+        toast.success(`${addMemberName.trim()} a été ajouté au groupe`);
+        setAddMemberName("");
+        setShowAddMember(false);
+      } else {
+        toast.error("Erreur lors de l'ajout");
+      }
+    } catch {
+      toast.error("Erreur de connexion");
+    } finally {
+      setAddMemberLoading(false);
+    }
+  };
+
+  const handleCopyPin = async (pin: string) => {
+    try { await navigator.clipboard.writeText(pin); toast.success("Code copié !"); } catch {}
+  };
+
+  const handleSharePin = async (name: string, pin: string) => {
+    const text = `Rejoins le groupe Équilibra !\nCode d'accès : ${pin}`;
+    if (navigator.share) {
+      try { await navigator.share({ title: "Équilibra", text }); } catch {}
+    } else {
+      handleCopyPin(pin);
+    }
+  };
+
   const fadeSlide = { initial: { opacity: 0, x: 20 }, animate: { opacity: 1, x: 0 }, exit: { opacity: 0, x: -20 } };
 
   return (
@@ -335,7 +345,7 @@ export function MemberManagement({
           <p className="text-sm text-muted-foreground">{members.length} membres</p>
         </div>
         {isAdmin(currentMemberId) && (
-          <motion.button whileTap={{ scale: 0.9 }} onClick={() => setShowInvite(true)}
+          <motion.button whileTap={{ scale: 0.9 }} onClick={() => { setShowAddMember(true); setAddMemberName(""); setAddMemberResult(null); setShowPin(false); }}
             className="w-10 h-10 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center shadow-lg shadow-primary/30">
             <UserPlus size={20} />
           </motion.button>
@@ -530,42 +540,93 @@ export function MemberManagement({
         })()}
       </AnimatePresence>
 
-      {/* Invite Modal */}
+      {/* Add Member Modal */}
       <AnimatePresence>
-        {showInvite && (
+        {showAddMember && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] px-6"
-            onClick={() => setShowInvite(false)}>
+            onClick={() => { if (!addMemberLoading) { setShowAddMember(false); setAddMemberResult(null); } }}>
             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
               onClick={e => e.stopPropagation()}
               className="glass-card-enhanced rounded-[1.25rem] p-6 w-full max-w-sm shadow-2xl">
-              <div className="w-14 h-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center mx-auto mb-4">
-                <UserPlus size={24} className="text-primary" />
-              </div>
-              <h3 className="text-lg font-bold text-center">Inviter un membre</h3>
-              <p className="text-sm text-muted-foreground text-center mt-2">Partagez ce lien pour rejoindre le groupe</p>
-              <div className="mt-4 bg-background/50 rounded-xl p-3 flex items-center gap-2">
-                <LinkIcon size={14} className="text-muted-foreground shrink-0" />
-                <p className="text-xs text-muted-foreground truncate flex-1">{inviteUrl}</p>
-                <motion.button whileTap={{ scale: 0.9 }} onClick={() => { setInviteTokenValue(null); handleGenerateInvite(); }}
-                  className="w-7 h-7 rounded-lg bg-card/30 border border-border flex items-center justify-center shrink-0">
-                  <RefreshCw size={12} className="text-muted-foreground" />
-                </motion.button>
-              </div>
-              <div className="flex gap-2 mt-4">
-                <motion.button whileTap={{ scale: 0.97 }} onClick={handleCopyInvite}
-                  className="flex-1 py-3 rounded-2xl bg-primary text-primary-foreground text-sm font-semibold flex items-center justify-center gap-2">
-                  <Copy size={16} /> Copier
-                </motion.button>
-                <motion.button whileTap={{ scale: 0.97 }} onClick={handleShareInvite}
-                  className="flex-1 py-3 rounded-2xl bg-card/30 border border-border text-sm font-semibold flex items-center justify-center gap-2">
-                  <Share2 size={16} /> Partager
-                </motion.button>
-              </div>
-              <motion.button whileTap={{ scale: 0.97 }} onClick={() => setShowInvite(false)}
-                className="w-full py-3 rounded-2xl bg-card/30 border border-border text-sm font-semibold text-muted-foreground mt-2">
-                Fermer
-              </motion.button>
+
+              {!addMemberResult ? (
+                <>
+                  <div className="w-14 h-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center mx-auto mb-4">
+                    <UserPlus size={24} className="text-primary" />
+                  </div>
+                  <h3 className="text-lg font-bold text-center">Ajouter un membre</h3>
+                  <p className="text-sm text-muted-foreground text-center mt-2">
+                    Ajoutez directement un nouveau membre au groupe
+                  </p>
+                  <input
+                    type="text"
+                    placeholder="Nom du nouveau membre"
+                    value={addMemberName}
+                    onChange={e => setAddMemberName(e.target.value)}
+                    onKeyDown={e => e.key === "Enter" && handleAddMember()}
+                    disabled={addMemberLoading}
+                    className="w-full px-4 py-3.5 rounded-2xl bg-background/50 border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 mt-5 disabled:opacity-50"
+                    maxLength={80}
+                    autoFocus
+                  />
+                  <div className="flex gap-2 mt-4">
+                    <motion.button whileTap={{ scale: 0.97 }} onClick={() => { setShowAddMember(false); setAddMemberResult(null); }}
+                      className="flex-1 py-3 rounded-2xl bg-card/30 border border-border text-sm font-semibold" disabled={addMemberLoading}>
+                      Annuler
+                    </motion.button>
+                    <motion.button whileTap={{ scale: 0.97 }} onClick={handleAddMember}
+                      disabled={!addMemberName.trim() || addMemberLoading}
+                      className="flex-1 py-3 rounded-2xl bg-primary text-primary-foreground text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-50">
+                      {addMemberLoading ? <><Loader2 size={16} className="animate-spin" /> Ajout...</> : <><Check size={16} /> Ajouter</>}
+                    </motion.button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}
+                    transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                    className="w-14 h-14 rounded-2xl bg-green-500/10 border border-green-500/20 flex items-center justify-center mx-auto mb-4">
+                    <Check size={24} className="text-green-500" />
+                  </motion.div>
+                  <h3 className="text-lg font-bold text-center">{addMemberResult.name} ajouté !</h3>
+                  <p className="text-sm text-muted-foreground text-center mt-2">
+                    Partagez le code d'accès avec {addMemberResult.name} pour qu'il puisse rejoindre le groupe
+                  </p>
+                  <div className="mt-5 bg-background/50 rounded-2xl p-4 border border-border">
+                    <p className="text-[11px] text-muted-foreground font-semibold mb-2">Code d'accès du groupe</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-lg font-bold tracking-widest flex-1 text-center">
+                        {showPin ? addMemberResult.accessPin : "••••••"}
+                      </p>
+                      <motion.button whileTap={{ scale: 0.9 }} onClick={() => setShowPin(!showPin)}
+                        className="w-9 h-9 rounded-xl bg-card/30 border border-border flex items-center justify-center">
+                        {showPin ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </motion.button>
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground text-center mt-3">
+                    Le membre ouvre l'app → entre ce code → sélectionne son nom
+                  </p>
+                  <div className="flex gap-2 mt-4">
+                    <motion.button whileTap={{ scale: 0.97 }}
+                      onClick={() => handleSharePin(addMemberResult.name, addMemberResult.accessPin)}
+                      className="flex-1 py-3 rounded-2xl bg-card/30 border border-border text-sm font-semibold flex items-center justify-center gap-2">
+                      <Share2 size={16} /> Partager
+                    </motion.button>
+                    <motion.button whileTap={{ scale: 0.97 }}
+                      onClick={() => { handleCopyPin(addMemberResult.accessPin); }}
+                      className="flex-1 py-3 rounded-2xl bg-primary text-primary-foreground text-sm font-semibold flex items-center justify-center gap-2">
+                      <Copy size={16} /> Copier le code
+                    </motion.button>
+                  </div>
+                  <motion.button whileTap={{ scale: 0.97 }}
+                    onClick={() => { setShowAddMember(false); setAddMemberResult(null); setShowPin(false); }}
+                    className="w-full py-3 rounded-2xl bg-card/30 border border-border text-sm font-semibold text-muted-foreground mt-2">
+                    Fermer
+                  </motion.button>
+                </>
+              )}
             </motion.div>
           </motion.div>
         )}
