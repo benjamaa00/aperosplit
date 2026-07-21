@@ -129,10 +129,7 @@ export const StatsTab = memo(function StatsTab({ expenses, members, currentMembe
   const pendingCount = pendingPayments.filter(p => p.status === "pending").length;
 
   return (
-    <motion.div {...fadeUp} className="max-w-md mx-auto px-5 pt-16 space-y-5 scrollbar-hidden">
-      <div className="pointer-events-none absolute -top-20 -right-24 h-64 w-64 rounded-full bg-primary/20 blur-3xl" />
-      <div className="pointer-events-none absolute top-64 -left-28 h-56 w-56 rounded-full bg-violet-500/10 blur-3xl" />
-
+    <motion.div {...fadeUp} className="max-w-md mx-auto px-5 pt-16 pb-24 space-y-5 scrollbar-hidden">
       <motion.header initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} className="glass-card-enhanced relative overflow-hidden rounded-[1.25rem] p-6">
         <div className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-white/60 to-transparent" />
         <div className="relative flex items-start justify-between gap-4">
