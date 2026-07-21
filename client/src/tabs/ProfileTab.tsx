@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { memo, useState } from "react";
 import { motion } from "framer-motion";
-import { Fingerprint, Moon, Sun, Sparkles, Copy, Share2, X, DollarSign, Bell, BarChart3, Users, Settings, Shield, Trash2, Clock, Loader2, QrCode, ChevronRight, Pencil } from "lucide-react";
+import { Fingerprint, Moon, Sun, Sparkles, Copy, Share2, X, DollarSign, Bell, BarChart3, Users, Settings, Shield, Trash2, Clock, Loader2, QrCode, ChevronRight, Pencil, Tag } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useThemeContext } from "../contexts/ThemeContext";
 import { trpc } from "../lib/trpc";
@@ -12,7 +12,30 @@ import { ConfirmDialog } from "../components/ConfirmDialog";
 import { AvatarImg } from "../components/AvatarImg";
 import { Toggle } from "../components/Toggle";
 
-export function ProfileTab({
+function SettingRow({ icon, iconBg, title, subtitle, children }: {
+  icon: React.ReactNode;
+  iconBg: string;
+  title: string;
+  subtitle?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="p-4 flex items-center justify-between">
+      <div className="flex items-center gap-3">
+        <div className={`w-10 h-10 rounded-xl ${iconBg} flex items-center justify-center border border-primary/20`}>
+          {icon}
+        </div>
+        <div>
+          <p className="text-sm font-semibold">{title}</p>
+          {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
+        </div>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+export const ProfileTab = memo(function ProfileTab({
   currentMember,
   members,
   biometricEnabled,
@@ -43,6 +66,7 @@ export function ProfileTab({
   onTogglePrivacy,
   onOpenAppearance,
   onOpenEditProfile,
+  onOpenCategories,
 }: {
   currentMember: Member;
   members: Member[];
@@ -74,6 +98,7 @@ export function ProfileTab({
   onTogglePrivacy: () => void;
   onOpenAppearance?: () => void;
   onOpenEditProfile?: () => void;
+  onOpenCategories?: () => void;
 }) {
   const { theme, toggleTheme } = useThemeContext();
   const shareUrl = window.location.origin;
@@ -130,27 +155,6 @@ export function ProfileTab({
     { code: "EUR", symbol: "€", label: "Euro" },
     { code: "USD", symbol: "$", label: "Dollar américain" },
   ];
-
-  const SettingRow = ({ icon, iconBg, title, subtitle, children }: {
-    icon: React.ReactNode;
-    iconBg: string;
-    title: string;
-    subtitle?: string;
-    children: React.ReactNode;
-  }) => (
-    <div className="p-4 flex items-center justify-between">
-      <div className="flex items-center gap-3">
-        <div className={`w-10 h-10 rounded-xl ${iconBg} flex items-center justify-center border border-primary/20`}>
-          {icon}
-        </div>
-        <div>
-          <p className="text-sm font-semibold">{title}</p>
-          {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
-        </div>
-      </div>
-      {children}
-    </div>
-  );
 
   return (
     <motion.div {...fadeUp} className="max-w-md mx-auto px-5 pt-16 space-y-6">
@@ -408,6 +412,24 @@ export function ProfileTab({
                 <div>
                   <p className="text-sm font-semibold">Apparence & Thèmes</p>
                   <p className="text-xs text-muted-foreground">Thèmes, dégradés, arrière-plans, personnalisation</p>
+                </div>
+              </div>
+              <ChevronRight size={16} className="text-muted-foreground/50" />
+            </motion.button>
+          )}
+          {onOpenCategories && currentMember.role === "admin" && (
+            <motion.button
+              whileTap={{ scale: 0.98 }}
+              onClick={() => { haptic("light"); onOpenCategories(); }}
+              className="w-full p-4 flex items-center justify-between bg-card/50 border border-border rounded-2xl"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20">
+                  <Tag size={20} className="text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold">Catégories</p>
+                  <p className="text-xs text-muted-foreground">Gérer les catégories de dépenses</p>
                 </div>
               </div>
               <ChevronRight size={16} className="text-muted-foreground/50" />
@@ -719,4 +741,5 @@ export function ProfileTab({
       <div className="h-8" />
     </motion.div>
   );
-}
+});
+ProfileTab.displayName = "ProfileTab";

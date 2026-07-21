@@ -246,6 +246,29 @@ export function initializeDatabase(): Promise<void> {
       try {
         await pool!.query(`ALTER TABLE payments ADD COLUMN IF NOT EXISTS comment TEXT`);
       } catch {}
+      // Enhance expense_categories
+      try { await pool!.query(`ALTER TABLE expense_categories ADD COLUMN IF NOT EXISTS icon VARCHAR(32)`); } catch {}
+      try { await pool!.query(`ALTER TABLE expense_categories ADD COLUMN IF NOT EXISTS color VARCHAR(16)`); } catch {}
+      try { await pool!.query(`ALTER TABLE expense_categories ADD COLUMN IF NOT EXISTS sort_order INTEGER NOT NULL DEFAULT 0`); } catch {}
+      try { await pool!.query(`ALTER TABLE expense_categories ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE`); } catch {}
+      try { await pool!.query(`ALTER TABLE expense_categories ADD COLUMN IF NOT EXISTS created_by VARCHAR(128)`); } catch {}
+      try { await pool!.query(`ALTER TABLE expense_categories ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`); } catch {}
+      try {
+        await pool!.query(`
+          CREATE TABLE IF NOT EXISTS expense_subcategories (
+            id VARCHAR(128) PRIMARY KEY,
+            category_id VARCHAR(128) NOT NULL REFERENCES expense_categories(id) ON DELETE CASCADE,
+            group_id VARCHAR(128) NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+            name VARCHAR(64) NOT NULL,
+            emoji VARCHAR(8),
+            sort_order INTEGER NOT NULL DEFAULT 0,
+            is_active BOOLEAN NOT NULL DEFAULT TRUE,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+          );
+          CREATE INDEX IF NOT EXISTS subcategories_category_idx ON expense_subcategories(category_id);
+        `);
+      } catch {}
     } catch (error) {
       console.error("[DB] Database initialization failed, switching to JSON storage:", error);
       useJsonStorage = true;
@@ -343,15 +366,21 @@ export async function getGroupData(groupId: string) {
     };
   }
   await getOrCreateGroup(groupId);
-  const [group, members, expenses, payments, history, categories] = await Promise.all([
+  const [group, members, expenses, payments, history, categories, subcategories] = await Promise.all([
     db.query(`SELECT id, name, share_url AS "shareUrl", pin_code AS "pinCode", require_approval AS "requireApproval" FROM groups WHERE id = $1`, [groupId]),
     db.query(`SELECT id, name, avatar, role, status, user_id AS "userId", biometric_enabled AS "biometricEnabled", credential_id AS "credentialId", joined_at AS "joinedAt" FROM group_members WHERE group_id = $1 ORDER BY joined_at`, [groupId]),
     db.query(`SELECT id, group_id AS "groupId", description, amount, category, payer_id AS "payerId", participants, photo_url AS "photoUrl", category_emoji AS "categoryEmoji", status, is_recurring AS "isRecurring", recurrence_interval AS "recurrenceInterval", recurrence_end_date AS "recurrenceEndDate", validated_by AS "validatedBy", date, created_at AS "createdAt" FROM expenses WHERE group_id = $1 ORDER BY date`, [groupId]),
     db.query(`SELECT id, group_id AS "groupId", from_id AS "fromId", from_name AS "fromName", to_id AS "toId", to_name AS "toName", amount, original_amount AS "originalAmount", status, expense_id AS "expenseId", notification_count AS "notificationCount", attempt_count AS "attemptCount", is_group_request AS "isGroupRequest", request_group_id AS "requestGroupId", request_note AS "requestNote", accept_note AS "acceptNote", paid_at AS "paidAt", confirmed_at AS "confirmedAt", dispute_note AS "disputeNote", date, responded_at AS "respondedAt", created_at AS "createdAt" FROM payments WHERE group_id = $1 ORDER BY created_at DESC`, [groupId]),
     db.query(`SELECT id, group_id AS "groupId", type, author_id AS "authorId", description, amount, from_id AS "fromId", to_id AS "toId", date FROM activity_history WHERE group_id = $1 ORDER BY date DESC LIMIT 200`, [groupId]),
-    db.query(`SELECT id, name, emoji, is_default AS "isDefault" FROM expense_categories WHERE group_id = $1 ORDER BY is_default DESC, name`, [groupId]),
+    db.query(`SELECT id, name, emoji, icon, color, sort_order AS "sortOrder", is_active AS "isActive", is_default AS "isDefault", created_by AS "createdBy", created_at AS "createdAt", updated_at AS "updatedAt" FROM expense_categories WHERE group_id = $1 ORDER BY sort_order, name`, [groupId]),
+    db.query(`SELECT id, category_id AS "categoryId", group_id AS "groupId", name, emoji, sort_order AS "sortOrder", is_active AS "isActive", created_at AS "createdAt", updated_at AS "updatedAt" FROM expense_subcategories WHERE group_id = $1 ORDER BY sort_order, name`, [groupId]),
   ]);
   const memberList = members.rows;
+  const subMap: Record<string, any[]> = {};
+  for (const sub of subcategories.rows) {
+    if (!subMap[sub.categoryId]) subMap[sub.categoryId] = [];
+    subMap[sub.categoryId].push(sub);
+  }
   return {
     group: { ...group.rows[0], shareUrl: JSON.stringify(memberList) },
     members: memberList,
@@ -362,7 +391,7 @@ export async function getGroupData(groupId: string) {
       ...payments.rows.filter(payment => ["completed","refused"].includes(payment.status)),
       ...history.rows,
     ],
-    categories: categories.rows,
+    categories: categories.rows.map((cat: any) => ({ ...cat, subcategories: subMap[cat.id] || [] })),
   };
 }
 
@@ -731,6 +760,176 @@ export async function deleteExpenseCategory(categoryId: string) {
   const db = await ready();
   if (!db) return false;
   return (await db.query(`DELETE FROM expense_categories WHERE id = $1 AND is_default = FALSE`, [categoryId])).rowCount === 1;
+}
+
+const DEFAULT_CATEGORIES = [
+  { name: "Restaurants & Restauration", emoji: "🍽️", color: "#f97316", subcategories: [
+    "Restaurant", "Brasserie", "Snack", "Fast-food", "Pizzeria", "Burger", "Tacos", "Kebab", "Shawarma", "Sushi", "Ramen", "Grill", "Steakhouse", "Buffet", "Crêperie", "Café", "Salon de thé", "Glacier", "Pâtisserie", "Boulangerie", "Food Truck", "Livraison Uber Eats", "Livraison Glovo"
+  ]},
+  { name: "Courses", emoji: "🛒", color: "#22c55e", subcategories: [
+    "Supermarché", "Hypermarché", "Épicerie", "Fruits", "Légumes", "Boucherie", "Poissonnerie", "Pain", "Viennoiseries", "Gâteaux", "Chips", "Bonbons", "Chocolats", "Boissons", "Eau", "Soda", "Jus", "Café", "Thé", "Glaçons", "Charbon", "Vaisselle jetable", "Assiettes en plastique", "Gobelets", "Tasses", "Verres", "Couverts jetables", "Serviettes", "Papier aluminium", "Film alimentaire", "Sacs-poubelle"
+  ]},
+  { name: "Soirées & Fêtes", emoji: "🍻", color: "#a855f7", subcategories: [
+    "Apéro", "Bière", "Vin", "Cocktails", "Champagne", "Boissons sans alcool", "Snacks apéritifs", "Pizza", "Barbecue", "Chicha", "Décoration", "Ballons", "Bougies", "Sono", "DJ", "Location salle"
+  ]},
+  { name: "Loisirs", emoji: "🎬", color: "#3b82f6", subcategories: [
+    "Cinéma", "Bowling", "Billard", "Escape Game", "Laser Game", "Karting", "Paintball", "Parc d'attractions", "Salle d'arcade", "Réalité virtuelle", "Concert", "Festival", "Musée", "Zoo", "Aquarium", "Match", "Piscine", "Plage", "Camping"
+  ]},
+  { name: "Voyages", emoji: "✈️", color: "#06b6d4", subcategories: [
+    "Hôtel", "Airbnb", "Auberge", "Camping", "Billet d'avion", "Train", "Bus", "Taxi", "Location voiture", "Essence", "Péage", "Parking", "Ferry", "Excursion", "Guide", "Souvenirs"
+  ]},
+  { name: "Transport", emoji: "🚗", color: "#eab308", subcategories: [
+    "Essence", "Diesel", "Recharge électrique", "Parking", "Péage", "Taxi", "Uber", "Bolt", "Tram", "Métro", "Bus", "Train", "Location voiture"
+  ]},
+  { name: "Maison partagée", emoji: "🏠", color: "#ec4899", subcategories: [
+    "Loyer", "Électricité", "Eau", "Gaz", "Internet", "Meubles", "Décoration", "Produits ménagers", "Produits de nettoyage", "Réparations"
+  ]},
+  { name: "Shopping collectif", emoji: "🛍️", color: "#f43f5e", subcategories: [
+    "Vêtements de groupe", "Accessoires", "Électronique", "Jeux vidéo", "Livres", "Souvenirs", "Cadeaux", "Achat commun"
+  ]},
+  { name: "Jeux", emoji: "🎮", color: "#8b5cf6", subcategories: [
+    "Jeux de société", "Jeux vidéo", "Cartes", "Poker", "Fléchettes", "Baby-foot", "Console"
+  ]},
+  { name: "Animaux partagés", emoji: "🐶", color: "#f59e0b", subcategories: [
+    "Nourriture", "Accessoires", "Vétérinaire"
+  ]},
+  { name: "Cadeaux & Cagnottes", emoji: "🎁", color: "#e11d48", subcategories: [
+    "Cadeau anniversaire", "Cadeau mariage", "Cadeau naissance", "Cadeau surprise", "Cagnotte", "Pot de départ"
+  ]},
+  { name: "Abonnements partagés", emoji: "📱", color: "#6366f1", subcategories: [
+    "Netflix", "Spotify", "Disney+", "Prime Video", "Apple Music", "ChatGPT", "Hébergement web", "Cloud", "Abonnement sportif", "Abonnement logiciel"
+  ]},
+  { name: "Divers", emoji: "📦", color: "#64748b", subcategories: [
+    "Frais partagés", "Dépense imprévue", "Contribution commune", "Achat collectif", "Autres"
+  ]},
+];
+
+export async function getGroupCategories(groupId: string) {
+  const db = await ready();
+  if (!db) return [];
+  const [catResult, subResult] = await Promise.all([
+    db.query(
+      `SELECT id, group_id AS "groupId", name, emoji, icon, color, sort_order AS "sortOrder", is_active AS "isActive", is_default AS "isDefault", created_by AS "createdBy", created_at AS "createdAt", updated_at AS "updatedAt"
+       FROM expense_categories WHERE group_id = $1 ORDER BY sort_order, name`,
+      [groupId]
+    ),
+    db.query(
+      `SELECT id, category_id AS "categoryId", group_id AS "groupId", name, emoji, sort_order AS "sortOrder", is_active AS "isActive", created_at AS "createdAt", updated_at AS "updatedAt"
+       FROM expense_subcategories WHERE group_id = $1 ORDER BY sort_order, name`,
+      [groupId]
+    ),
+  ]);
+  const subMap: Record<string, any[]> = {};
+  for (const sub of subResult.rows) {
+    if (!subMap[sub.categoryId]) subMap[sub.categoryId] = [];
+    subMap[sub.categoryId].push(sub);
+  }
+  return catResult.rows.map((cat: any) => ({
+    ...cat,
+    subcategories: subMap[cat.id] || [],
+  }));
+}
+
+export async function createGroupCategory(groupId: string, data: { name: string; emoji: string; icon?: string; color?: string; sortOrder?: number }, createdBy: string) {
+  const db = await ready();
+  if (!db) return { id: `cat_${Date.now()}`, name: data.name, emoji: data.emoji };
+  const id = `cat_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  await db.query(
+    `INSERT INTO expense_categories (id, group_id, name, emoji, icon, color, sort_order, created_by)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+    [id, groupId, data.name, data.emoji, data.icon ?? null, data.color ?? null, data.sortOrder ?? 0, createdBy]
+  );
+  return { id, groupId, name: data.name, emoji: data.emoji, icon: data.icon ?? null, color: data.color ?? null, sortOrder: data.sortOrder ?? 0, isActive: true, isDefault: false, createdBy, subcategories: [] };
+}
+
+export async function updateGroupCategory(categoryId: string, data: { name?: string; emoji?: string; icon?: string; color?: string; sortOrder?: number; isActive?: boolean }) {
+  const db = await ready();
+  if (!db) return false;
+  const setClauses: string[] = [];
+  const params: any[] = [];
+  let idx = 1;
+  if (data.name !== undefined) { setClauses.push(`name = $${idx++}`); params.push(data.name); }
+  if (data.emoji !== undefined) { setClauses.push(`emoji = $${idx++}`); params.push(data.emoji); }
+  if (data.icon !== undefined) { setClauses.push(`icon = $${idx++}`); params.push(data.icon); }
+  if (data.color !== undefined) { setClauses.push(`color = $${idx++}`); params.push(data.color); }
+  if (data.sortOrder !== undefined) { setClauses.push(`sort_order = $${idx++}`); params.push(data.sortOrder); }
+  if (data.isActive !== undefined) { setClauses.push(`is_active = $${idx++}`); params.push(data.isActive); }
+  if (setClauses.length === 0) return false;
+  setClauses.push(`updated_at = NOW()`);
+  params.push(categoryId);
+  return (await db.query(`UPDATE expense_categories SET ${setClauses.join(', ')} WHERE id = $${idx}`, params)).rowCount === 1;
+}
+
+export async function deleteGroupCategory(categoryId: string) {
+  const db = await ready();
+  if (!db) return false;
+  const used = await db.query(`SELECT COUNT(*) AS cnt FROM expenses WHERE category = (SELECT name FROM expense_categories WHERE id = $1)`, [categoryId]);
+  if (parseInt(used.rows[0]?.cnt || "0") > 0) return false;
+  return (await db.query(`DELETE FROM expense_categories WHERE id = $1 AND is_active = FALSE`, [categoryId])).rowCount === 1;
+}
+
+export async function archiveGroupCategory(categoryId: string) {
+  const db = await ready();
+  if (!db) return false;
+  return (await db.query(`UPDATE expense_categories SET is_active = FALSE, updated_at = NOW() WHERE id = $1`, [categoryId])).rowCount === 1;
+}
+
+export async function createSubcategory(categoryId: string, groupId: string, data: { name: string; emoji?: string; sortOrder?: number }) {
+  const db = await ready();
+  if (!db) return { id: `sub_${Date.now()}`, name: data.name };
+  const id = `sub_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  await db.query(
+    `INSERT INTO expense_subcategories (id, category_id, group_id, name, emoji, sort_order) VALUES ($1, $2, $3, $4, $5, $6)`,
+    [id, categoryId, groupId, data.name, data.emoji ?? null, data.sortOrder ?? 0]
+  );
+  return { id, categoryId, groupId, name: data.name, emoji: data.emoji ?? null, sortOrder: data.sortOrder ?? 0, isActive: true };
+}
+
+export async function updateSubcategory(subcategoryId: string, data: { name?: string; emoji?: string; sortOrder?: number; isActive?: boolean }) {
+  const db = await ready();
+  if (!db) return false;
+  const setClauses: string[] = [];
+  const params: any[] = [];
+  let idx = 1;
+  if (data.name !== undefined) { setClauses.push(`name = $${idx++}`); params.push(data.name); }
+  if (data.emoji !== undefined) { setClauses.push(`emoji = $${idx++}`); params.push(data.emoji); }
+  if (data.sortOrder !== undefined) { setClauses.push(`sort_order = $${idx++}`); params.push(data.sortOrder); }
+  if (data.isActive !== undefined) { setClauses.push(`is_active = $${idx++}`); params.push(data.isActive); }
+  if (setClauses.length === 0) return false;
+  setClauses.push(`updated_at = NOW()`);
+  params.push(subcategoryId);
+  return (await db.query(`UPDATE expense_subcategories SET ${setClauses.join(', ')} WHERE id = $${idx}`, params)).rowCount === 1;
+}
+
+export async function deleteSubcategory(subcategoryId: string) {
+  const db = await ready();
+  if (!db) return false;
+  return (await db.query(`DELETE FROM expense_subcategories WHERE id = $1`, [subcategoryId])).rowCount === 1;
+}
+
+export async function seedDefaultCategories(groupId: string, createdBy: string) {
+  const db = await ready();
+  if (!db) return;
+  const existing = await db.query(`SELECT COUNT(*) AS cnt FROM expense_categories WHERE group_id = $1`, [groupId]);
+  if (parseInt(existing.rows[0]?.cnt || "0") > 0) return;
+  for (const cat of DEFAULT_CATEGORIES) {
+    const catId = `cat_def_${Math.random().toString(36).slice(2, 10)}`;
+    await db.query(
+      `INSERT INTO expense_categories (id, group_id, name, emoji, color, sort_order, is_active, is_default, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6, TRUE, TRUE, $7)
+       ON CONFLICT (id) DO NOTHING`,
+      [catId, groupId, cat.name, cat.emoji, cat.color, 0, createdBy]
+    );
+    for (const subName of cat.subcategories) {
+      const subId = `sub_def_${Math.random().toString(36).slice(2, 10)}`;
+      await db.query(
+        `INSERT INTO expense_subcategories (id, category_id, group_id, name, sort_order, is_active)
+         VALUES ($1, $2, $3, $4, 0, TRUE)
+         ON CONFLICT (id) DO NOTHING`,
+        [subId, catId, groupId, subName]
+      );
+    }
+  }
 }
 
 export async function addNotification(memberId: string, groupId: string, type: string, title: string, message: string, data?: any) {

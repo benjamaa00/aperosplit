@@ -69,3 +69,33 @@ export const adminProcedure = t.procedure.use(
     });
   }),
 );
+
+export const groupAdminProcedure = t.procedure.use(
+  t.middleware(async opts => {
+    const { ctx, next } = opts;
+
+    if (!hasGroupAccess(ctx)) {
+      throw new TRPCError({ code: "UNAUTHORIZED", message: "APEROSPLIT_ACCESS_REQUIRED" });
+    }
+
+    const rawInput = ctx.req.body ? (typeof ctx.req.body === 'string' ? JSON.parse(ctx.req.body) : ctx.req.body) : {};
+    const memberId = rawInput?.memberId ?? rawInput?.input?.memberId;
+    if (!memberId) {
+      throw new TRPCError({ code: "BAD_REQUEST", message: "memberId is required for admin check" });
+    }
+
+    const { getDb } = await import("../db");
+    const db = await getDb();
+    if (!db) {
+      throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+    }
+
+    const result = await db.query(`SELECT role FROM group_members WHERE id = $1`, [memberId]);
+    const member = result.rows[0];
+    if (!member || member.role !== 'admin') {
+      throw new TRPCError({ code: "FORBIDDEN", message: NOT_ADMIN_ERR_MSG });
+    }
+
+    return next({ ctx });
+  }),
+);

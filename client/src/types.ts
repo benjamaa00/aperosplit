@@ -61,12 +61,28 @@ export interface Notification {
   createdAt: string;
 }
 
-export interface GroupCategory {
+export interface Subcategory {
   id: string;
+  categoryId: string;
   name: string;
-  emoji: string;
-  isDefault: boolean;
+  emoji?: string;
+  sortOrder: number;
+  isActive: boolean;
 }
 
-export type Screen = "identity" | "lock" | "main" | "register" | "invite" | "access" | "groups" | "groupSettings" | "members" | "notifications" | "notificationSettings" | "reports" | "settings" | "appearance" | "editProfile";
+export interface GroupCategory {
+  id: string;
+  groupId?: string;
+  name: string;
+  emoji: string;
+  icon?: string;
+  color?: string;
+  sortOrder: number;
+  isActive: boolean;
+  isDefault: boolean;
+  createdBy?: string;
+  subcategories: Subcategory[];
+}
+
+export type Screen = "identity" | "lock" | "main" | "register" | "invite" | "access" | "groups" | "groupSettings" | "members" | "notifications" | "notificationSettings" | "reports" | "settings" | "appearance" | "editProfile" | "categoryManagement";
 export type Tab = "home" | "expenses" | "balances" | "stats" | "history" | "profile";

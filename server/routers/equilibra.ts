@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { groupProcedure, publicProcedure, router } from "../_core/trpc";
+import { groupProcedure, groupAdminProcedure, publicProcedure, router } from "../_core/trpc";
 import { storagePut } from "../storage";
 import { invokeLLM } from "../_core/llm";
 import { randomUUID } from "node:crypto";
@@ -25,8 +25,15 @@ import {
   changeMemberRole,
   generateInviteToken,
   validateInviteToken,
-  createExpenseCategory,
-  deleteExpenseCategory,
+  getGroupCategories,
+  createGroupCategory,
+  updateGroupCategory,
+  deleteGroupCategory,
+  archiveGroupCategory,
+  createSubcategory as dbCreateSubcategory,
+  updateSubcategory as dbUpdateSubcategory,
+  deleteSubcategory as dbDeleteSubcategory,
+  seedDefaultCategories,
   addNotification,
   markNotificationRead,
   markAllNotificationsRead,
@@ -554,17 +561,100 @@ export const equilibraRouter = router({
       return { success };
     }),
 
-  createCategory: groupProcedure
-    .input(z.object({ name: z.string().trim().min(1).max(64), emoji: z.string().min(1).max(8) }))
+  getCategories: groupProcedure.query(async () => {
+    await seedDefaultCategories(GROUP_ID, "system");
+    const categories = await getGroupCategories(GROUP_ID);
+    return { categories };
+  }),
+
+  createCategory: groupAdminProcedure
+    .input(z.object({
+      memberId: z.string().min(1).max(128),
+      name: z.string().trim().min(1).max(64),
+      emoji: z.string().min(1).max(8),
+      icon: z.string().max(32).optional(),
+      color: z.string().max(16).optional(),
+      sortOrder: z.number().int().optional(),
+    }))
     .mutation(async ({ input }) => {
-      const category = await createExpenseCategory(GROUP_ID, input.name, input.emoji);
+      const { memberId, ...data } = input;
+      const category = await createGroupCategory(GROUP_ID, data, memberId);
       return { success: true, category };
     }),
 
-  deleteCategory: groupProcedure
-    .input(z.object({ categoryId: z.string() }))
+  updateCategory: groupAdminProcedure
+    .input(z.object({
+      memberId: z.string().min(1).max(128),
+      categoryId: z.string().min(1).max(128),
+      name: z.string().trim().min(1).max(64).optional(),
+      emoji: z.string().min(1).max(8).optional(),
+      icon: z.string().max(32).optional(),
+      color: z.string().max(16).optional(),
+      sortOrder: z.number().int().optional(),
+      isActive: z.boolean().optional(),
+    }))
     .mutation(async ({ input }) => {
-      const success = await deleteExpenseCategory(input.categoryId);
+      const { memberId, categoryId, ...data } = input;
+      const success = await updateGroupCategory(categoryId, data);
+      return { success };
+    }),
+
+  archiveCategory: groupAdminProcedure
+    .input(z.object({
+      memberId: z.string().min(1).max(128),
+      categoryId: z.string().min(1).max(128),
+    }))
+    .mutation(async ({ input }) => {
+      const success = await archiveGroupCategory(input.categoryId);
+      return { success };
+    }),
+
+  deleteCategory: groupAdminProcedure
+    .input(z.object({
+      memberId: z.string().min(1).max(128),
+      categoryId: z.string().min(1).max(128),
+    }))
+    .mutation(async ({ input }) => {
+      const success = await deleteGroupCategory(input.categoryId);
+      return { success };
+    }),
+
+  createSubcategory: groupAdminProcedure
+    .input(z.object({
+      memberId: z.string().min(1).max(128),
+      categoryId: z.string().min(1).max(128),
+      name: z.string().trim().min(1).max(64),
+      emoji: z.string().max(8).optional(),
+      sortOrder: z.number().int().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const { memberId, categoryId, ...data } = input;
+      const subcategory = await dbCreateSubcategory(categoryId, GROUP_ID, data);
+      return { success: true, subcategory };
+    }),
+
+  updateSubcategory: groupAdminProcedure
+    .input(z.object({
+      memberId: z.string().min(1).max(128),
+      subcategoryId: z.string().min(1).max(128),
+      name: z.string().trim().min(1).max(64).optional(),
+      emoji: z.string().max(8).optional(),
+      sortOrder: z.number().int().optional(),
+      isActive: z.boolean().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const { memberId, subcategoryId, ...data } = input;
+      const success = await dbUpdateSubcategory(subcategoryId, data);
+      return { success };
+    }),
+
+  deleteSubcategory: groupAdminProcedure
+    .input(z.object({
+      memberId: z.string().min(1).max(128),
+      subcategoryId: z.string().min(1).max(128),
+    }))
+    .mutation(async ({ input }) => {
+      const success = await dbDeleteSubcategory(input.subcategoryId);
       return { success };
     }),
 

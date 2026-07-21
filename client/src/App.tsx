@@ -37,6 +37,7 @@ import { ReportsScreen } from "./components/ReportsScreen";
 import { RegisterScreen } from "./components/RegisterScreen";
 import { InviteScreen } from "./components/InviteScreen";
 import { EditProfileScreen } from "./components/EditProfileScreen";
+import { CategoryManagementScreen } from "./components/CategoryManagementScreen";
 
 const isNetlify = import.meta.env.VITE_NETLIFY === "true";
 
@@ -111,6 +112,7 @@ export default function App() {
 
   const { data: groupData, refetch } = trpc.equilibra.getGroupData.useQuery(undefined, { enabled: !isNetlify, refetchInterval: 10000, retry: 2, refetchOnWindowFocus: true });
   const getNotificationsQuery = trpc.equilibra.getNotifications.useQuery({ memberId: currentMemberId }, { enabled: !!currentMemberId && !isNetlify, refetchInterval: 5000 });
+  const getCategoriesQuery = trpc.equilibra.getCategories.useQuery(undefined, { enabled: !isNetlify });
 
   // ─── Effects ───────────────────────────────────────────────
   useEffect(() => {
@@ -614,6 +616,7 @@ export default function App() {
   const goToMembers = useCallback(() => setScreen("members"), []);
   const goToAppearance = useCallback(() => setScreen("appearance"), []);
   const goToEditProfile = useCallback(() => setScreen("editProfile"), []);
+  const goToCategories = useCallback(() => setScreen("categoryManagement"), []);
 
   const handleLogout = useCallback(() => { setCurrentMemberId(""); setScreen("identity"); }, []);
 
@@ -697,6 +700,8 @@ export default function App() {
     content = <AppShell><EditProfileScreen currentName={currentMember.name} currentAvatar={currentMember.avatar} onSave={handleUpdateProfile} onBack={goToMain} saving={profileSaving} /></AppShell>;
   } else if (screen === "reports") {
     content = <AppShell><ReportsScreen expenses={expenses} members={members} pendingPayments={pendingPayments} completedPayments={completedPayments} monthlyBudget={monthlyBudget} onBack={goToMain} /></AppShell>;
+  } else if (screen === "categoryManagement") {
+    content = <AppShell><CategoryManagementScreen currentMemberId={currentMemberId} onBack={goToMain} /></AppShell>;
   } else if (!currentMember) {
     content = <AppShell><div className="flex items-center justify-center h-screen"><p className="text-muted-foreground">Chargement...</p></div></AppShell>;
   } else {
@@ -716,7 +721,7 @@ export default function App() {
             {activeTab === "balances" && <BalancesTab key="balances" members={members} balances={balances} suggestedTransactions={suggestedTransactions} currentMemberId={currentMemberId} onRequestPayment={(toId: string, amount: number, note?: string) => requestPayment(toId, amount, undefined, note)} expenses={expenses} currency={currency} />}
             {activeTab === "history" && <PaymentHistory key="history" payments={[...completedPayments, ...pendingPayments].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))} expenses={expenses} members={members} currentMemberId={currentMemberId} currency={currency} onConfirmPayment={confirmPayment} onRefusePayment={refusePayment} onResentPayment={resentPayment} onConfirmReceipt={confirmReceipt} onReportNotReceived={reportNotReceived} onMarkAsPaid={markAsPaid} onCancelPayment={cancelPaymentRequest} />}
             {activeTab === "stats" && <StatsTab key="stats" expenses={expenses} members={members} currentMemberId={currentMemberId} pendingPayments={pendingPayments} completedPayments={completedPayments} monthlyBudget={monthlyBudget} currency={currency} />}
-            {activeTab === "profile" && <ProfileTab key="profile" currentMember={currentMember} members={members} biometricEnabled={!!biometricEnabled[currentMemberId]} biometricAvailable={biometricAvailable} onToggleBiometric={toggleBiometric} onLogout={handleLogout} onRemoveMember={removeMember} isLocked={!!localStorage.getItem("equilibra_locked_member")} unreadCount={unreadCount} onOpenNotifications={goToNotifications} onOpenReports={goToReports} onOpenGroupSettings={goToGroupSettings} onOpenMembers={goToMembers} onOpenAppearance={goToAppearance} onOpenEditProfile={goToEditProfile} onResetAllData={handleResetAllData} onLeaveGroup={leaveGroup} currency={currency} onSetCurrency={updateCurrency} monthlyBudget={monthlyBudget} onSetBudget={updateBudget} pushNotifications={pushNotifications} onTogglePushNotifications={togglePushNotifications} autoReminders={autoReminders} onToggleReminders={toggleAutoReminders} reminderDelay={reminderDelay} onSetReminderDelay={(d: number) => setReminderDelay(d)} privacyMode={privacyMode} onTogglePrivacy={togglePrivacy} />}
+            {activeTab === "profile" && <ProfileTab key="profile" currentMember={currentMember} members={members} biometricEnabled={!!biometricEnabled[currentMemberId]} biometricAvailable={biometricAvailable} onToggleBiometric={toggleBiometric} onLogout={handleLogout} onRemoveMember={removeMember} isLocked={!!localStorage.getItem("equilibra_locked_member")} unreadCount={unreadCount} onOpenNotifications={goToNotifications} onOpenReports={goToReports} onOpenGroupSettings={goToGroupSettings} onOpenMembers={goToMembers} onOpenAppearance={goToAppearance} onOpenEditProfile={goToEditProfile} onOpenCategories={goToCategories} onResetAllData={handleResetAllData} onLeaveGroup={leaveGroup} currency={currency} onSetCurrency={updateCurrency} monthlyBudget={monthlyBudget} onSetBudget={updateBudget} pushNotifications={pushNotifications} onTogglePushNotifications={togglePushNotifications} autoReminders={autoReminders} onToggleReminders={toggleAutoReminders} reminderDelay={reminderDelay} onSetReminderDelay={(d: number) => setReminderDelay(d)} privacyMode={privacyMode} onTogglePrivacy={togglePrivacy} />}
           </AnimatePresence>
 
           {/* Bottom Navigation */}
@@ -738,7 +743,7 @@ export default function App() {
             </motion.button>
           )}
 
-          {showAddExpense && <AddExpenseSheet members={members} currentMemberId={currentMemberId} onAdd={(e) => { addExpense(e); setShowAddExpense(false); }} onClose={() => setShowAddExpense(false)} currency={currency} />}
+          {showAddExpense && <AddExpenseSheet members={members} currentMemberId={currentMemberId} onAdd={(e) => { addExpense(e); setShowAddExpense(false); }} onClose={() => setShowAddExpense(false)} currency={currency} categories={getCategoriesQuery.data?.categories || []} />}
         </div>
       </AppShell>
     );

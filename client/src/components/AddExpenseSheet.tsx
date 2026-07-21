@@ -1,7 +1,7 @@
 import { Toggle } from "./Toggle";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Check, ChevronLeft } from "lucide-react";
+import { X, Check, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { toast } from "sonner";
 import type { Member, Expense, GroupCategory } from "../types";
 import { CATEGORY_SECTIONS, CATEGORIES } from "../constants";
@@ -13,6 +13,7 @@ function AddExpenseSheet({
   onAdd,
   onClose,
   customCategories,
+  categories,
   currency,
 }: {
   members: Member[];
@@ -20,6 +21,7 @@ function AddExpenseSheet({
   onAdd: (expense: Omit<Expense, "id" | "date">) => void;
   onClose: () => void;
   customCategories?: GroupCategory[];
+  categories: GroupCategory[];
   currency?: string;
 }) {
   const [step, setStep] = useState(0);
@@ -30,6 +32,8 @@ function AddExpenseSheet({
   const [participants, setParticipants] = useState(members.map((m) => m.id));
   const [isRecurring, setIsRecurring] = useState(false);
   const [recurrenceInterval, setRecurrenceInterval] = useState<"weekly" | "monthly" | "yearly">("monthly");
+  const [categorySearch, setCategorySearch] = useState("");
+  const [expandedCategoryId, setExpandedCategoryId] = useState<string | null>(null);
   const displayCurrency = currency || "MAD";
 
   const toggleParticipant = (id: string) => {
@@ -64,6 +68,36 @@ function AddExpenseSheet({
     setCategory({ name, emoji });
     setStep(2);
   };
+
+  const activeCategories = useMemo(
+    () => (categories || []).filter((c) => c.isActive),
+    [categories]
+  );
+
+  const filteredDynamicCategories = useMemo(() => {
+    if (!categorySearch.trim()) return activeCategories;
+    const q = categorySearch.toLowerCase();
+    return activeCategories.filter((cat) => {
+      const nameMatch = cat.name.toLowerCase().includes(q);
+      const subMatch = cat.subcategories.some((s) => s.name.toLowerCase().includes(q));
+      return nameMatch || subMatch;
+    });
+  }, [activeCategories, categorySearch]);
+
+  const filteredStaticSections = useMemo(() => {
+    if (!categorySearch.trim()) return CATEGORY_SECTIONS;
+    const q = categorySearch.toLowerCase();
+    return CATEGORY_SECTIONS.filter((section) => {
+      const titleMatch = section.title.toLowerCase().includes(q);
+      const itemMatch = section.items.some((item) => item.name.toLowerCase().includes(q));
+      return titleMatch || itemMatch;
+    }).map((section) => ({
+      ...section,
+      items: section.items.filter((item) => item.name.toLowerCase().includes(q)),
+    }));
+  }, [categorySearch]);
+
+  const useDynamic = activeCategories.length > 0;
 
   const steps = [
     {
@@ -100,45 +134,150 @@ function AddExpenseSheet({
       title: "C'est pour quoi ?",
       content: (
         <div className="space-y-5 max-h-[55vh] overflow-y-auto -mx-1 px-1 scrollbar-thin">
-          {CATEGORY_SECTIONS.map((section) => (
-            <div key={section.title}>
-              <div className="flex items-center gap-2 mb-3 px-1">
-                <span className="text-lg">{section.emoji}</span>
-                <h3 className="text-sm font-bold text-foreground tracking-wide">{section.title}</h3>
+          {/* Search bar */}
+          <div className="relative">
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <input
+              type="text"
+              value={categorySearch}
+              onChange={(e) => setCategorySearch(e.target.value)}
+              placeholder="Rechercher une catégorie..."
+              className="w-full bg-card/50 border border-border rounded-xl pl-9 pr-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all"
+            />
+            {categorySearch && (
+              <motion.button
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                whileTap={{ scale: 0.85 }}
+                onClick={() => setCategorySearch("")}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-secondary/50 flex items-center justify-center"
+              >
+                <X size={9} />
+              </motion.button>
+            )}
+          </div>
+
+          {useDynamic ? (
+            filteredDynamicCategories.map((cat) => {
+              const hasSubs = cat.subcategories.length > 0;
+              const isExpanded = expandedCategoryId === cat.id;
+              return (
+                <div key={cat.id}>
+                  <motion.button
+                    whileTap={{ scale: 0.97 }}
+                    onClick={() => {
+                      if (hasSubs) {
+                        setExpandedCategoryId(isExpanded ? null : cat.id);
+                      } else {
+                        handleCategorySelect(cat.name, cat.emoji);
+                      }
+                    }}
+                    className={`w-full flex items-center gap-3 p-3.5 rounded-2xl transition-all duration-200 ${
+                      category.name === cat.name && !hasSubs
+                        ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25 ring-2 ring-primary/40"
+                        : "bg-card/60 border border-border/50 hover:bg-card hover:border-border"
+                    }`}
+                  >
+                    <span className="text-2xl shrink-0">{cat.emoji}</span>
+                    <span className="text-[13px] font-semibold flex-1 text-left">{cat.name}</span>
+                    {hasSubs && (
+                      <motion.div animate={{ rotate: isExpanded ? 90 : 0 }}>
+                        <ChevronRight size={14} className="text-muted-foreground" />
+                      </motion.div>
+                    )}
+                    {!hasSubs && category.name === cat.name && (
+                      <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="w-5 h-5 rounded-full bg-primary-foreground/20 flex items-center justify-center">
+                        <Check size={10} className="text-primary-foreground" />
+                      </motion.div>
+                    )}
+                  </motion.button>
+
+                  <AnimatePresence>
+                    {hasSubs && isExpanded && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="grid grid-cols-2 gap-2 pt-2 pl-6">
+                          {cat.subcategories
+                            .filter((s) => s.isActive)
+                            .sort((a, b) => a.sortOrder - b.sortOrder)
+                            .map((sub) => {
+                              const isSelected = category.name === sub.name;
+                              return (
+                                <motion.button
+                                  key={sub.id}
+                                  whileTap={{ scale: 0.96 }}
+                                  onClick={() => handleCategorySelect(sub.name, sub.emoji || cat.emoji)}
+                                  className={`flex items-center gap-2 p-3 rounded-xl transition-all ${
+                                    isSelected
+                                      ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25 ring-2 ring-primary/40"
+                                      : "bg-card/40 border border-border/40 hover:bg-card/70"
+                                  }`}
+                                >
+                                  <span className="text-lg shrink-0">{sub.emoji || cat.emoji}</span>
+                                  <span className={`text-xs font-semibold text-left ${isSelected ? "text-primary-foreground" : "text-foreground"}`}>
+                                    {sub.name}
+                                  </span>
+                                  {isSelected && (
+                                    <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="w-4 h-4 rounded-full bg-primary-foreground/20 flex items-center justify-center ml-auto">
+                                      <Check size={8} className="text-primary-foreground" />
+                                    </motion.div>
+                                  )}
+                                </motion.button>
+                              );
+                            })}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              );
+            })
+          ) : (
+            filteredStaticSections.map((section) => (
+              <div key={section.title}>
+                <div className="flex items-center gap-2 mb-3 px-1">
+                  <span className="text-lg">{section.emoji}</span>
+                  <h3 className="text-sm font-bold text-foreground tracking-wide">{section.title}</h3>
+                </div>
+                <div className="grid grid-cols-2 gap-2.5">
+                  {section.items.map((item) => {
+                    const isSelected = category.name === item.name && category.emoji === item.emoji;
+                    return (
+                      <motion.button
+                        key={item.name}
+                        whileTap={{ scale: 0.96 }}
+                        onClick={() => handleCategorySelect(item.name, item.emoji)}
+                        className={`relative flex items-center gap-3 p-3.5 rounded-2xl transition-all duration-200 ${
+                          isSelected
+                            ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25 ring-2 ring-primary/40"
+                            : "bg-card/60 border border-border/50 hover:bg-card hover:border-border active:bg-card/80"
+                        }`}
+                      >
+                        <span className="text-2xl shrink-0">{item.emoji}</span>
+                        <span className={`text-[13px] font-semibold leading-tight text-left ${isSelected ? "text-primary-foreground" : "text-foreground"}`}>
+                          {item.name}
+                        </span>
+                        {isSelected && (
+                          <motion.div
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary-foreground/20 flex items-center justify-center"
+                          >
+                            <Check size={10} className="text-primary-foreground" />
+                          </motion.div>
+                        )}
+                      </motion.button>
+                    );
+                  })}
+                </div>
               </div>
-              <div className="grid grid-cols-2 gap-2.5">
-                {section.items.map((item) => {
-                  const isSelected = category.name === item.name && category.emoji === item.emoji;
-                  return (
-                    <motion.button
-                      key={item.name}
-                      whileTap={{ scale: 0.96 }}
-                      onClick={() => handleCategorySelect(item.name, item.emoji)}
-                      className={`relative flex items-center gap-3 p-3.5 rounded-2xl transition-all duration-200 ${
-                        isSelected
-                          ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25 ring-2 ring-primary/40"
-                          : "bg-card/60 border border-border/50 hover:bg-card hover:border-border active:bg-card/80"
-                      }`}
-                    >
-                      <span className="text-2xl shrink-0">{item.emoji}</span>
-                      <span className={`text-[13px] font-semibold leading-tight text-left ${isSelected ? "text-primary-foreground" : "text-foreground"}`}>
-                        {item.name}
-                      </span>
-                      {isSelected && (
-                        <motion.div
-                          initial={{ scale: 0 }}
-                          animate={{ scale: 1 }}
-                          className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary-foreground/20 flex items-center justify-center"
-                        >
-                          <Check size={10} className="text-primary-foreground" />
-                        </motion.div>
-                      )}
-                    </motion.button>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       ),
     },
@@ -289,7 +428,10 @@ function AddExpenseSheet({
               {step > 0 && (
                 <motion.button
                   whileTap={{ scale: 0.85 }}
-                  onClick={() => setStep(step > 1 ? step - 1 : 0)}
+                  onClick={() => {
+                    if (step === 1) setCategorySearch("");
+                    setStep(step > 1 ? step - 1 : 0);
+                  }}
                   className="w-8 h-8 rounded-full bg-secondary/50 flex items-center justify-center"
                 >
                   <ChevronLeft size={16} />
