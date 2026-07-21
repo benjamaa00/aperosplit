@@ -8,7 +8,7 @@ import { CATEGORY_SECTIONS, CATEGORIES } from "../constants";
 import { AvatarImg } from "./AvatarImg";
 import { haptics } from "../utils/haptics";
 import { SuccessAnimation } from "./success-animation";
-import { getAISuggestions } from "../utils/ai-suggestions";
+import { getSmartSuggestions } from "../utils/ai-suggestions";
 import { formatCurrency } from "../utils/currency";
 
 function AddExpenseSheet({
@@ -43,6 +43,7 @@ function AddExpenseSheet({
   const [categorySearch, setCategorySearch] = useState("");
   const [expandedCategoryId, setExpandedCategoryId] = useState<string | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const displayCurrency = currency || "MAD";
 
   useEffect(() => {
@@ -66,6 +67,7 @@ function AddExpenseSheet({
   };
 
   const handleSubmit = () => {
+    if (isSubmitting) return;
     if (!amount || parseFloat(amount) <= 0) {
       toast.error("Veuillez entrer un montant");
       return;
@@ -74,22 +76,27 @@ function AddExpenseSheet({
       toast.error("Sélectionnez au moins un participant");
       return;
     }
-    onAdd({
-      description: description.trim() || category.name,
-      amount: parseFloat(amount),
-      payerId,
-      category: category.name,
-      categoryEmoji: category.emoji,
-      participants,
-      isRecurring,
-      recurrenceInterval: isRecurring ? recurrenceInterval : undefined,
-    });
-    haptics.success();
-    setShowSuccess(true);
-    setTimeout(() => {
-      setShowSuccess(false);
-      onClose();
-    }, 1500);
+    setIsSubmitting(true);
+    try {
+      onAdd({
+        description: description.trim() || category.name,
+        amount: parseFloat(amount),
+        payerId,
+        category: category.name,
+        categoryEmoji: category.emoji,
+        participants,
+        isRecurring,
+        recurrenceInterval: isRecurring ? recurrenceInterval : undefined,
+      });
+      haptics.success();
+      setShowSuccess(true);
+      setTimeout(() => {
+        setShowSuccess(false);
+        onClose();
+      }, 1500);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleCategorySelect = (name: string, emoji: string) => {
@@ -129,7 +136,7 @@ function AddExpenseSheet({
 
   const suggestions = useMemo(() => {
     if (!description.trim()) return null;
-    return getAISuggestions(description, amount ? parseFloat(amount) : null, allExpenses || [], categories);
+    return getSmartSuggestions(description, amount ? parseFloat(amount) : null, allExpenses || [], categories, undefined, payerId);
   }, [description, amount, allExpenses, categories]);
 
   const steps = [
@@ -359,7 +366,7 @@ function AddExpenseSheet({
               animate={{ opacity: 1, y: 0 }}
               className="flex items-center gap-2 px-3 py-2 rounded-xl bg-primary/5 border border-primary/20 text-xs"
             >
-              <span className="text-primary font-medium">Suggestion:</span>
+              <span className="text-primary font-medium">Suggestion auto:</span>
               <button
                 onClick={() => setCategory({ name: suggestions.suggestedCategory!.name, emoji: suggestions.suggestedCategory!.emoji })}
                 className="flex items-center gap-1 hover:underline"
@@ -583,7 +590,7 @@ function AddExpenseSheet({
                 <motion.button
                   whileTap={{ scale: 0.97 }}
                   onClick={handleSubmit}
-                  disabled={participants.length === 0}
+                  disabled={isSubmitting || participants.length === 0}
                   className="flex-1 bg-primary text-primary-foreground font-semibold py-4 rounded-2xl disabled:opacity-50"
                 >
                   Confirmer

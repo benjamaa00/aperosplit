@@ -1,6 +1,6 @@
 import { memo, useState } from "react";
 import { motion } from "framer-motion";
-import { Fingerprint, Moon, Sun, Sparkles, Copy, Share2, X, DollarSign, Bell, BarChart3, Users, Settings, Shield, Trash2, Clock, Loader2, QrCode, ChevronRight, Pencil, Tag } from "lucide-react";
+import { Fingerprint, Moon, Sun, Sparkles, Copy, Share2, X, DollarSign, Bell, BarChart3, Users, Settings, Shield, Trash2, Clock, Loader2, QrCode, ChevronRight, Pencil, Tag, Smartphone } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useThemeContext } from "../contexts/ThemeContext";
 import { trpc } from "../lib/trpc";
@@ -11,6 +11,7 @@ import { useHaptic } from "../hooks/useHaptic";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { AvatarImg } from "../components/AvatarImg";
 import { Toggle } from "../components/Toggle";
+import { areHapticsEnabled, setHapticsEnabled } from "../utils/haptics";
 
 function SettingRow({ icon, iconBg, title, subtitle, children }: {
   icon: React.ReactNode;
@@ -109,6 +110,7 @@ export const ProfileTab = memo(function ProfileTab({
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showBudgetInput, setShowBudgetInput] = useState(false);
   const [budgetInput, setBudgetInput] = useState(monthlyBudget.toString());
+  const [hapticsOn, setHapticsOn] = useState(areHapticsEnabled());
   const generateInviteMutation = trpc.equilibra.generateInvite.useMutation();
 
   const handleGenerateInvite = async () => {
@@ -382,6 +384,14 @@ export const ProfileTab = memo(function ProfileTab({
             subtitle="Masquer les montants dans l'app"
           >
             <Toggle enabled={privacyMode} onToggle={onTogglePrivacy} />
+          </SettingRow>
+          <SettingRow
+            icon={<Smartphone size={20} className="text-orange-500" />}
+            iconBg="bg-orange-500/10"
+            title="Vibrations"
+            subtitle="Retour haptique pour les interactions"
+          >
+            <Toggle enabled={hapticsOn} onToggle={() => { setHapticsOn(!hapticsOn); setHapticsEnabled(!hapticsOn); }} />
           </SettingRow>
         </div>
 

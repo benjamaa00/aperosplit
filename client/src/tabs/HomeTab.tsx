@@ -1,6 +1,6 @@
 import { memo, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { TrendingUp, TrendingDown, Receipt } from "lucide-react";
+import { TrendingUp, TrendingDown, Receipt, Send, CheckCircle2 } from "lucide-react";
 import { EmptyState } from "../components/EmptyState";
 import { TabContentSkeleton } from "../components/SkeletonLoaders";
 import { PaymentRequestCard } from "../components/PaymentRequestCard";
@@ -269,7 +269,7 @@ export const HomeTab = memo(function HomeTab({
       </div>
 
       {/* Pending Payments */}
-      {pendingPayments.length > 0 && (
+      {pendingPayments.length > 0 ? (
         <div>
           <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
@@ -294,10 +294,16 @@ export const HomeTab = memo(function HomeTab({
             ))}
           </div>
         </div>
+      ) : (
+        <EmptyState
+          icon={Send}
+          title="Aucun remboursement en cours"
+          description="Les demandes de remboursement apparaitront ici."
+        />
       )}
 
       {/* Completed Payments History */}
-      {completedPayments.length > 0 && (
+      {completedPayments.length > 0 ? (
         <div>
           <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-emerald-400" />
@@ -337,6 +343,12 @@ export const HomeTab = memo(function HomeTab({
             )}
           </div>
         </div>
+      ) : (
+        <EmptyState
+          icon={CheckCircle2}
+          title="Aucun remboursement"
+          description="L'historique des remboursements confirmes apparaitra ici."
+        />
       )}
 
       {/* Recent Activity */}

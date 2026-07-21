@@ -146,6 +146,11 @@ export function ReportsScreen({ expenses, members, pendingPayments, completedPay
   const handleExportCSV = useCallback(() => {
     if (!filtered.length) return;
 
+    const sanitizeCSVCell = (val: string): string => {
+      if (/^[=+\-@]/.test(val)) return `'${val}`;
+      return val;
+    };
+
     const BOM = "\uFEFF";
     const headers = ["Date", "Description", "Montant", "Devise", "Paye par", "Categorie", "Repartition"];
 
@@ -156,11 +161,11 @@ export function ReportsScreen({ expenses, members, pendingPayments, completedPay
 
       return [
         date,
-        `"${(e.description || "").replace(/"/g, '""')}"`,
+        `"${sanitizeCSVCell((e.description || "").replace(/"/g, '""'))}"`,
         e.amount.toFixed(2),
         "MAD",
-        payer?.name || "Inconnu",
-        `${e.categoryEmoji || ""} ${e.category || ""}`.trim(),
+        `"${sanitizeCSVCell(payer?.name || "Inconnu")}"`,
+        `"${sanitizeCSVCell(`${e.categoryEmoji || ""} ${e.category || ""}`.trim())}"`,
         `${e.participants.length} personne(s)`,
         splitType,
       ].join(",");
@@ -177,33 +182,62 @@ export function ReportsScreen({ expenses, members, pendingPayments, completedPay
   }, [filtered, members]);
 
   const handlePrint = useCallback(() => {
-    const printWindow = window.open("", "_blank");
-    if (!printWindow) return;
+    const escHtml = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    const periodLabel = period === "all" ? "Tout" : period === "week" ? "7 jours" : period === "month" ? "1 mois" : "1 an";
+    const now = new Date();
+    const genDate = now.toLocaleDateString("fr-FR") + " a " + now.toLocaleTimeString("fr-FR");
 
-    const total = filtered.reduce((sum, e) => sum + e.amount, 0);
     const rows = filtered.map(e => {
       const payer = members.find(m => m.id === e.payerId);
       return `<tr>
-        <td style="padding:8px;border-bottom:1px solid #eee">${new Date(e.date).toLocaleDateString("fr-FR")}</td>
-        <td style="padding:8px;border-bottom:1px solid #eee">${e.description || "-"}</td>
-        <td style="padding:8px;border-bottom:1px solid #eee;text-align:right">${e.amount.toFixed(2)} MAD</td>
-        <td style="padding:8px;border-bottom:1px solid #eee">${payer?.name || "-"}</td>
-        <td style="padding:8px;border-bottom:1px solid #eee">${e.categoryEmoji || ""} ${e.category || "-"}</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;font-size:13px">${new Date(e.date).toLocaleDateString("fr-FR")}</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;font-size:13px">${escHtml(e.description || "-")}</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;font-size:13px">${escHtml(payer?.name || "-")}</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;font-size:13px">${escHtml(e.category || "-")}</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;font-size:13px;text-align:right;font-weight:600">${e.amount.toFixed(2)} MAD</td>
       </tr>`;
     }).join("");
 
-    printWindow.document.write(`<!DOCTYPE html><html><head><title>Equilibra - Depenses</title>
-      <style>body{font-family:system-ui,sans-serif;padding:20px}table{width:100%;border-collapse:collapse}th{background:#f3f4f6;padding:8px;text-align:left;border-bottom:2px solid #d1d5db;font-size:12px}td{font-size:13px}.total{font-weight:bold;font-size:16px;margin-top:16px;text-align:right}</style>
-    </head><body>
-      <h1 style="font-size:20px">Equilibra - Rapport des depenses</h1>
-      <p style="color:#666;font-size:13px">Genere le ${new Date().toLocaleDateString("fr-FR")} a ${new Date().toLocaleTimeString("fr-FR")}</p>
-      <table><thead><tr><th>Date</th><th>Description</th><th style="text-align:right">Montant</th><th>Paye par</th><th>Categorie</th></tr></thead>
-      <tbody>${rows}</tbody></table>
-      <p class="total">Total: ${total.toFixed(2)} MAD</p>
-      <script>window.onload=function(){window.print();}<\/script>
-    </body></html>`);
-    printWindow.document.close();
-  }, [filtered, members]);
+    const printHtml = `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><title>Equilibra - Rapport</title>
+    <style>
+      @page { size: A4; margin: 15mm; }
+      @media print { .no-print { display: none !important; } }
+      body { font-family: system-ui, -apple-system, sans-serif; color: #1e293b; padding: 0; margin: 0; }
+      .header { text-align: center; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 2px solid #e5e7eb; }
+      .header h1 { font-size: 22px; margin: 0 0 4px 0; }
+      .header p { font-size: 12px; color: #64748b; margin: 2px 0; }
+      table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+      th { background: #f8fafc; padding: 10px 12px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; border-bottom: 2px solid #e2e8f0; }
+      td { padding: 8px 12px; border-bottom: 1px solid #f1f5f9; }
+      tr:nth-child(even) { background: #fafbfc; }
+      .summary { display: flex; gap: 24px; margin: 16px 0; }
+      .summary-box { flex: 1; padding: 12px 16px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; }
+      .summary-box .label { font-size: 11px; color: #64748b; text-transform: uppercase; }
+      .summary-box .value { font-size: 18px; font-weight: 700; margin-top: 4px; }
+      .footer { text-align: center; margin-top: 24px; padding-top: 12px; border-top: 1px solid #e5e7eb; font-size: 11px; color: #94a3b8; }
+    </style></head><body>
+    <div class="header">
+      <h1>Equilibra Groupe</h1>
+      <p>Rapport des depenses</p>
+      <p>Periode: ${escHtml(periodLabel)} | Genere le ${escHtml(genDate)}</p>
+    </div>
+    <div class="summary">
+      <div class="summary-box"><div class="label">Total</div><div class="value">${total.toFixed(2)} MAD</div></div>
+      <div class="summary-box"><div class="label">Depenses</div><div class="value">${filtered.length}</div></div>
+      <div class="summary-box"><div class="label">Moyenne</div><div class="value">${avg.toFixed(2)} MAD</div></div>
+      <div class="summary-box"><div class="label">Membres</div><div class="value">${memberData.length}</div></div>
+    </div>
+    <table>
+      <thead><tr><th>Date</th><th>Description</th><th>Paye par</th><th>Categorie</th><th style="text-align:right">Montant</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <div class="footer">Equilibra Groupe - Rapport genere le ${escHtml(genDate)}</div>
+    <script>window.onload=function(){setTimeout(function(){window.print();},300);}<\/script>
+    </body></html>`;
+
+    const w = window.open("", "_blank");
+    if (w) { w.document.write(printHtml); w.document.close(); }
+  }, [filtered, members, total, avg, memberData.length, period]);
 
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-md mx-auto px-5 pt-12 space-y-5">

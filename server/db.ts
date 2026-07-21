@@ -204,6 +204,21 @@ export function initializeDatabase(): Promise<void> {
           used_count INTEGER NOT NULL DEFAULT 0,
           created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         );
+        -- Performance indexes
+        CREATE INDEX IF NOT EXISTS idx_expenses_group_id ON expenses(group_id);
+        CREATE INDEX IF NOT EXISTS idx_expenses_payer_id ON expenses(payer_id);
+        CREATE INDEX IF NOT EXISTS idx_expenses_category ON expenses(category);
+        CREATE INDEX IF NOT EXISTS idx_expenses_date ON expenses(date);
+        CREATE INDEX IF NOT EXISTS idx_expenses_created_at ON expenses(created_at);
+        CREATE INDEX IF NOT EXISTS idx_payments_group_id ON payments(group_id);
+        CREATE INDEX IF NOT EXISTS idx_payments_from_id ON payments(from_id);
+        CREATE INDEX IF NOT EXISTS idx_payments_to_id ON payments(to_id);
+        CREATE INDEX IF NOT EXISTS idx_payments_status ON payments(status);
+        CREATE INDEX IF NOT EXISTS idx_notifications_member_id ON notifications(member_id);
+        CREATE INDEX IF NOT EXISTS idx_notifications_read ON notifications(read);
+        CREATE INDEX IF NOT EXISTS idx_group_members_group_id ON group_members(group_id);
+        CREATE INDEX IF NOT EXISTS idx_group_members_member_id ON group_members(member_id);
+        CREATE INDEX IF NOT EXISTS idx_expense_categories_group_id ON expense_categories(group_id);
       `);
       await dbPool.query(`
         DO $$ BEGIN
@@ -272,6 +287,8 @@ export function initializeDatabase(): Promise<void> {
             updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
           );
           CREATE INDEX IF NOT EXISTS subcategories_category_idx ON expense_subcategories(category_id);
+          CREATE INDEX IF NOT EXISTS idx_expense_subcategories_group_id ON expense_subcategories(group_id);
+          CREATE INDEX IF NOT EXISTS idx_expense_subcategories_category_id ON expense_subcategories(category_id);
         `);
       } catch {}
     } catch (error) {

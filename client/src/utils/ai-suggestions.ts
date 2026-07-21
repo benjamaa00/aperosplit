@@ -1,18 +1,22 @@
 import type { Expense, GroupCategory } from "../types";
 
+function normalizeText(s: string): string {
+  return s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+}
+
 const KEYWORD_MAP: Record<string, string[]> = {
-  "restaurant": ["Restauration"],
-  "repas": ["Restauration"],
-  "dejeuner": ["Restauration"],
-  "dinner": ["Restauration"],
-  "pizza": ["Restauration"],
-  "sushi": ["Restauration"],
-  "kebab": ["Restauration"],
-  "cafe": ["Boissons"],
-  "the": ["Boissons"],
-  "biere": ["Boissons"],
-  "vin": ["Boissons"],
-  "boisson": ["Boissons"],
+  "restaurant": ["Restaurants"],
+  "repas": ["Restaurants"],
+  "dejeuner": ["Restaurants"],
+  "dinner": ["Restaurants"],
+  "pizza": ["Restaurants"],
+  "sushi": ["Restaurants"],
+  "kebab": ["Restaurants"],
+  "cafe": ["Restaurants"],
+  "the": ["Restaurants"],
+  "biere": ["Soirées & Fêtes"],
+  "vin": ["Soirées & Fêtes"],
+  "boisson": ["Soirées & Fêtes"],
   "taxi": ["Transport"],
   "uber": ["Transport"],
   "carburant": ["Transport"],
@@ -22,11 +26,11 @@ const KEYWORD_MAP: Record<string, string[]> = {
   "metro": ["Transport"],
   "bus": ["Transport"],
   "train": ["Transport"],
-  "vol": ["Voyage"],
-  "avion": ["Voyage"],
-  "hotel": ["Voyage"],
-  "hebergement": ["Voyage"],
-  "airbnb": ["Voyage"],
+  "vol": ["Voyages"],
+  "avion": ["Voyages"],
+  "hotel": ["Voyages"],
+  "hebergement": ["Voyages"],
+  "airbnb": ["Voyages"],
   "marche": ["Courses"],
   "supermarche": ["Courses"],
   "epicerie": ["Courses"],
@@ -36,25 +40,44 @@ const KEYWORD_MAP: Record<string, string[]> = {
   "theatre": ["Loisirs"],
   "spectacle": ["Loisirs"],
   "jeu": ["Loisirs"],
-  "sport": ["Loisirs"],
-  "facture": ["Factures"],
-  "loyer": ["Factures"],
-  "electricite": ["Factures"],
-  "eau": ["Factures"],
-  "internet": ["Factures"],
-  "telephone": ["Factures"],
-  "medicament": ["Sante"],
-  "pharmacie": ["Sante"],
-  "docteur": ["Sante"],
-  "medecin": ["Sante"],
-  "hopital": ["Sante"],
-  "cadeau": ["Divers"],
-  "gift": ["Divers"],
-  "decor": ["Divers"],
-  "amenagement": ["Divers"],
+  "sport": ["Jeux & Sports"],
+  "facture": ["Maison"],
+  "loyer": ["Maison"],
+  "electricite": ["Maison"],
+  "eau": ["Maison"],
+  "internet": ["Maison"],
+  "telephone": ["Maison"],
+  "medicament": ["Santé"],
+  "pharmacie": ["Santé"],
+  "docteur": ["Santé"],
+  "medecin": ["Santé"],
+  "hopital": ["Santé"],
+  "cadeau": ["Cadeaux & Cagnottes"],
+  "gift": ["Cadeaux & Cagnottes"],
+  "decor": ["Maison"],
+  "amenagement": ["Maison"],
+  "courses": ["Courses"],
+  "abonnement": ["Abonnements"],
+  "netflix": ["Abonnements"],
+  "spotify": ["Abonnements"],
+  "education": ["Éducation"],
+  "cours": ["Éducation"],
+  "ecole": ["Éducation"],
+  "shopping": ["Shopping"],
+  "vetements": ["Shopping"],
+  "vetement": ["Shopping"],
+  "animaux": ["Animaux"],
+  "veterinaire": ["Animaux"],
+  "chien": ["Animaux"],
+  "chat": ["Animaux"],
+  "jeux": ["Jeux & Sports"],
+  "salle de sport": ["Jeux & Sports"],
+  "apero": ["Soirées & Fêtes"],
+  "soiree": ["Soirées & Fêtes"],
+  "barbecue": ["Soirées & Fêtes"],
 };
 
-export interface SuggestionResult {
+export interface SmartSuggestionResult {
   suggestedCategory: GroupCategory | null;
   confidence: number;
   similarExpenses: Expense[];
@@ -62,14 +85,15 @@ export interface SuggestionResult {
   nameSuggestions: string[];
 }
 
-export function getAISuggestions(
+export function getSmartSuggestions(
   description: string,
   amount: number | null,
   allExpenses: Expense[],
   categories: GroupCategory[],
   currentExpenseId?: string,
-): SuggestionResult {
-  const desc = (description || "").toLowerCase().trim();
+  currentPayerId?: string,
+): SmartSuggestionResult {
+  const desc = normalizeText(description || "");
 
   let suggestedCategory: GroupCategory | null = null;
   let confidence = 0;
@@ -77,7 +101,7 @@ export function getAISuggestions(
   if (desc.length >= 2) {
     const matchedCategoryNames = new Set<string>();
     for (const [keyword, catNames] of Object.entries(KEYWORD_MAP)) {
-      if (desc.includes(keyword.toLowerCase())) {
+      if (desc.includes(normalizeText(keyword))) {
         for (const catName of catNames) {
           matchedCategoryNames.add(catName);
         }
@@ -88,7 +112,7 @@ export function getAISuggestions(
       const matched: GroupCategory[] = [];
       Array.from(matchedCategoryNames).forEach(catName => {
         const found = categories.find(c =>
-          c.name.toLowerCase().includes(catName.toLowerCase())
+          normalizeText(c.name).includes(normalizeText(catName))
         );
         if (found) matched.push(found);
       });
@@ -99,7 +123,7 @@ export function getAISuggestions(
       } else if (matched.length > 1) {
         const freq = new Map<string, number>();
         for (const e of allExpenses) {
-          const foundCat = matched.find(c => c.name === e.category);
+          const foundCat = matched.find(c => normalizeText(c.name) === normalizeText(e.category));
           if (foundCat) {
             freq.set(foundCat.id, (freq.get(foundCat.id) || 0) + 1);
           }
@@ -118,14 +142,14 @@ export function getAISuggestions(
     if (!suggestedCategory && desc.length >= 3) {
       const categoryFreq = new Map<string, number>();
       for (const e of allExpenses) {
-        if (e.description?.toLowerCase().includes(desc.substring(0, Math.min(desc.length, 5)))) {
+        if (normalizeText(e.description || "").includes(desc.substring(0, Math.min(desc.length, 5)))) {
           categoryFreq.set(e.category, (categoryFreq.get(e.category) || 0) + 1);
         }
       }
       const sorted = Array.from(categoryFreq.entries()).sort((a, b) => b[1] - a[1]);
       if (sorted.length > 0 && sorted[0][1] >= 2) {
         const catName = sorted[0][0];
-        suggestedCategory = categories.find(c => c.name === catName) || null;
+        suggestedCategory = categories.find(c => normalizeText(c.name) === normalizeText(catName)) || null;
         confidence = 0.5;
       }
     }
@@ -135,7 +159,7 @@ export function getAISuggestions(
     .filter(e => e.id !== currentExpenseId)
     .filter(e => {
       if (desc.length < 3) return false;
-      return e.description?.toLowerCase().includes(desc);
+      return normalizeText(e.description || "").includes(desc);
     })
     .slice(0, 5);
 
@@ -146,9 +170,19 @@ export function getAISuggestions(
     duplicateWarning = allExpenses.find(e =>
       e.id !== currentExpenseId &&
       Math.abs(e.amount - amount) < 0.01 &&
-      e.description?.toLowerCase().includes(desc) &&
-      new Date(e.date) > thirtyDaysAgo
+      normalizeText(e.description || "").includes(desc) &&
+      new Date(e.date) > thirtyDaysAgo &&
+      (!currentPayerId || e.payerId === currentPayerId) &&
+      normalizeText(e.category || "") === normalizeText(suggestedCategory?.name || e.category)
     ) || null;
+    if (!duplicateWarning) {
+      duplicateWarning = allExpenses.find(e =>
+        e.id !== currentExpenseId &&
+        Math.abs(e.amount - amount) < 0.01 &&
+        normalizeText(e.description || "").includes(desc) &&
+        new Date(e.date) > thirtyDaysAgo
+      ) || null;
+    }
   }
 
   const nameSuggestions: string[] = [];
@@ -159,7 +193,7 @@ export function getAISuggestions(
 
     const descFreq = new Map<string, number>();
     for (const d of descriptions) {
-      const normalized = d.toLowerCase().trim();
+      const normalized = normalizeText(d);
       descFreq.set(normalized, (descFreq.get(normalized) || 0) + 1);
     }
 
@@ -176,3 +210,7 @@ export function getAISuggestions(
 
   return { suggestedCategory, confidence, similarExpenses, duplicateWarning, nameSuggestions };
 }
+
+// Backward compatibility alias
+export const getAISuggestions = getSmartSuggestions;
+export type SuggestionResult = SmartSuggestionResult;

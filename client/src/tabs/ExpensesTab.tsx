@@ -282,6 +282,9 @@ export const ExpensesTab = memo(function ExpensesTab({
                 exp.participants.length === 1 &&
                 otherParticipants.length === 1;
 
+              const cat = categories.find(c => c.name === exp.category);
+              const emoji = cat?.emoji || exp.categoryEmoji || "📦";
+
               const expensePayments = pendingPayments.filter((p: { expenseId?: string }) => p.expenseId === exp.id);
               const expenseCompletedPayments = completedPayments.filter((p: { expenseId?: string }) => p.expenseId === exp.id);
               const totalParticipantsExceptPayer = exp.participants.filter(pid => pid !== exp.payerId).length;
@@ -312,14 +315,14 @@ export const ExpensesTab = memo(function ExpensesTab({
                 >
                   <div className="flex items-start gap-3 mb-3">
                     <div className="w-12 h-12 rounded-2xl bg-secondary/50 flex items-center justify-center text-xl shrink-0">
-                      {exp.categoryEmoji}
+                      {emoji}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold truncate">
                         {exp.description}
                       </p>
                       <p className="text-xs text-muted-foreground mt-0.5">
-                        {formatDate(exp.date)}
+                        {cat?.name || exp.category} · {formatDate(exp.date)}
                       </p>
                     </div>
                     <div className="text-right shrink-0 flex items-start gap-1">

@@ -123,25 +123,31 @@ export const AdvancedAnalytics = memo(function AdvancedAnalytics({
   return (
     <div className="space-y-4">
       <CollapsibleSection title="Evolution mensuelle" icon={TrendingUp}>
-        <div className="flex items-end gap-2 h-40">
-          {monthlyData.map((m, i) => (
-            <div key={i} className="flex-1 flex flex-col items-center gap-1">
-              <span className="text-[10px] text-muted-foreground font-medium">{m.total > 0 ? formatCurrency(m.total, currency) : ""}</span>
-              <div className="w-full relative" style={{ height: `${Math.max((m.total / maxMonthly) * 100, 4)}%` }}>
-                <motion.div
-                  initial={{ height: 0 }}
-                  animate={{ height: "100%" }}
-                  transition={{ delay: i * 0.1, duration: 0.4, ease: "easeOut" }}
-                  className="absolute inset-0 rounded-t-lg bg-gradient-to-t from-primary to-primary/70"
-                />
-              </div>
-              <span className="text-[10px] text-muted-foreground">{m.label}</span>
+        {expenses.length === 0 ? (
+          <p className="text-xs text-muted-foreground text-center py-4">Aucune donnee pour cette periode</p>
+        ) : (
+          <>
+            <div className="flex items-end gap-2 h-40">
+              {monthlyData.map((m, i) => (
+                <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                  <span className="text-[10px] text-muted-foreground font-medium">{m.total > 0 ? formatCurrency(m.total, currency) : ""}</span>
+                  <div className="w-full relative" style={{ height: `${Math.max((m.total / maxMonthly) * 100, 4)}%` }}>
+                    <motion.div
+                      initial={{ height: 0 }}
+                      animate={{ height: "100%" }}
+                      transition={{ delay: i * 0.1, duration: 0.4, ease: "easeOut" }}
+                      className="absolute inset-0 rounded-t-lg bg-gradient-to-t from-primary to-primary/70"
+                    />
+                  </div>
+                  <span className="text-[10px] text-muted-foreground">{m.label}</span>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-        <p className="text-center text-xs text-muted-foreground mt-3">
-          {monthlyData.reduce((s, m) => s + m.count, 0)} depenses ce semestre
-        </p>
+            <p className="text-center text-xs text-muted-foreground mt-3">
+              {monthlyData.reduce((s, m) => s + m.count, 0)} depenses ce semestre
+            </p>
+          </>
+        )}
       </CollapsibleSection>
 
       <CollapsibleSection title="Depenses par categorie" icon={PieChart} defaultOpen={false}>
@@ -167,7 +173,7 @@ export const AdvancedAnalytics = memo(function AdvancedAnalytics({
                   style={{ backgroundColor: cat.color }}
                 />
               </div>
-              <p className="text-[10px] text-muted-foreground mt-0.5">{((cat.total / totalSpent) * 100).toFixed(1)}% du total</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">{totalSpent > 0 ? ((cat.total / totalSpent) * 100).toFixed(1) : "0"}% du total</p>
             </div>
           ))}
         </div>
@@ -217,22 +223,26 @@ export const AdvancedAnalytics = memo(function AdvancedAnalytics({
       </CollapsibleSection>
 
       <CollapsibleSection title="Depenses par jour" icon={Calendar} defaultOpen={false}>
-        <div className="flex items-end gap-2 h-32">
-          {dayOfWeekData.map((d, i) => (
-            <div key={i} className="flex-1 flex flex-col items-center gap-1">
-              <span className="text-[10px] text-muted-foreground font-medium">{d.total > 0 ? formatCurrency(d.total, currency) : ""}</span>
-              <div className="w-full relative" style={{ height: `${Math.max((d.total / maxDay) * 100, 4)}%` }}>
-                <motion.div
-                  initial={{ height: 0 }}
-                  animate={{ height: "100%" }}
-                  transition={{ delay: i * 0.05, duration: 0.3 }}
-                  className="absolute inset-0 rounded-t-lg bg-gradient-to-t from-accent-foreground/30 to-accent-foreground/10"
-                />
+        {dayOfWeekData.every(d => d.total === 0) ? (
+          <p className="text-xs text-muted-foreground text-center py-4">Aucune donnee</p>
+        ) : (
+          <div className="flex items-end gap-2 h-32">
+            {dayOfWeekData.map((d, i) => (
+              <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                <span className="text-[10px] text-muted-foreground font-medium">{d.total > 0 ? formatCurrency(d.total, currency) : ""}</span>
+                <div className="w-full relative" style={{ height: `${Math.max((d.total / maxDay) * 100, 4)}%` }}>
+                  <motion.div
+                    initial={{ height: 0 }}
+                    animate={{ height: "100%" }}
+                    transition={{ delay: i * 0.05, duration: 0.3 }}
+                    className="absolute inset-0 rounded-t-lg bg-gradient-to-t from-accent-foreground/30 to-accent-foreground/10"
+                  />
+                </div>
+                <span className="text-[10px] text-muted-foreground">{d.label}</span>
               </div>
-              <span className="text-[10px] text-muted-foreground">{d.label}</span>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </CollapsibleSection>
 
       <CollapsibleSection title="Budget previsionnel" icon={Target} defaultOpen={false}>
@@ -249,24 +259,30 @@ export const AdvancedAnalytics = memo(function AdvancedAnalytics({
               <span className="text-xs text-muted-foreground">MAD</span>
             </div>
           </div>
-          <div className="h-4 rounded-full bg-secondary/50 overflow-hidden">
-            <motion.div
-              initial={{ width: 0 }}
-              animate={{ width: `${Math.min((totalSpent / budget) * 100, 100)}%` }}
-              transition={{ duration: 0.6, ease: "easeOut" }}
-              className={`h-full rounded-full ${totalSpent > budget ? "bg-destructive" : totalSpent > budget * 0.8 ? "bg-yellow-500" : "bg-primary"}`}
-            />
-          </div>
-          <div className="flex justify-between text-xs">
-            <span className="text-muted-foreground">{formatCurrency(totalSpent, currency)} depenses</span>
-            <span className={totalSpent > budget ? "text-destructive font-bold" : "text-muted-foreground"}>
-              {formatCurrency(Math.max(budget - totalSpent, 0), currency)} restant
-            </span>
-          </div>
-          {totalSpent > budget && (
-            <p className="text-xs text-destructive text-center font-medium">
-              Depassement de {formatCurrency(totalSpent - budget, currency)}
-            </p>
+          {budget > 0 ? (
+            <>
+              <div className="h-4 rounded-full bg-secondary/50 overflow-hidden">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${Math.min((totalSpent / budget) * 100, 100)}%` }}
+                  transition={{ duration: 0.6, ease: "easeOut" }}
+                  className={`h-full rounded-full ${totalSpent > budget ? "bg-destructive" : totalSpent > budget * 0.8 ? "bg-yellow-500" : "bg-primary"}`}
+                />
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-muted-foreground">{formatCurrency(totalSpent, currency)} depenses</span>
+                <span className={totalSpent > budget ? "text-destructive font-bold" : "text-muted-foreground"}>
+                  {formatCurrency(Math.max(budget - totalSpent, 0), currency)} restant
+                </span>
+              </div>
+              {totalSpent > budget && (
+                <p className="text-xs text-destructive text-center font-medium">
+                  Depassement de {formatCurrency(totalSpent - budget, currency)}
+                </p>
+              )}
+            </>
+          ) : (
+            <p className="text-xs text-muted-foreground text-center py-2">Definissez un budget pour voir l&apos;analyse</p>
           )}
         </div>
       </CollapsibleSection>
