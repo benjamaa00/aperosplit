@@ -10,24 +10,36 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import { getLoginUrl } from "./const";
 import "./index.css";
 
-// Register Service Worker for PWA
+// Register Service Worker for PWA + keep-alive ping
 if ("serviceWorker" in navigator) {
  window.addEventListener("load", async () => {
- try {
- const registration = await navigator.serviceWorker.register("/sw.js");
+  try {
+   const registration = await navigator.serviceWorker.register("/sw.js");
 
- // Force update to clear old cache
- if (registration.waiting) {
- registration.waiting.postMessage({ type: "SKIP_WAITING" });
- }
- } catch (error) {
- console.error("Service Worker registration failed:", error);
- }
+   // Force update to clear old cache
+   if (registration.waiting) {
+    registration.waiting.postMessage({ type: "SKIP_WAITING" });
+   }
+
+   // Request periodic background sync permission (Chrome/Edge)
+   if ("periodicSync" in registration) {
+    try {
+     const status = await navigator.permissions.query({ name: "periodic-background-sync" } as any);
+     if (status.state === "granted") {
+      await registration.periodicSync.register("keep-alive", {
+       minInterval: 5 * 60 * 1000,
+      }).catch(() => {});
+     }
+    } catch {}
+   }
+  } catch (error) {
+   console.error("Service Worker registration failed:", error);
+  }
  });
 
  // Listen for controlling service worker
  navigator.serviceWorker.addEventListener("controllerchange", () => {
- window.location.reload();
+  window.location.reload();
  });
 }
 

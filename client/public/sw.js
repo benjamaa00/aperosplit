@@ -1,6 +1,9 @@
 const CACHE_NAME = 'equilibra-v3';
 const STATIC_CACHE = 'equilibra-static-v3';
 
+const PING_URL = '/api/trpc/equilibra.getGroupData?input=%7B%7D';
+const PING_INTERVAL = 5 * 60 * 1000; // 5 minutes
+
 self.addEventListener('install', (event) => {
   self.skipWaiting();
   event.waitUntil(
@@ -9,6 +12,26 @@ self.addEventListener('install', (event) => {
       '/icon.svg',
     ]))
   );
+});
+
+// Keep-alive ping using setInterval (runs while SW is alive)
+let pingTimer = null;
+function startPing() {
+  if (pingTimer) return;
+  pingTimer = setInterval(() => {
+    fetch(PING_URL, { cache: 'no-store' }).catch(() => {});
+  }, PING_INTERVAL);
+  // Also ping immediately on activation
+  fetch(PING_URL, { cache: 'no-store' }).catch(() => {});
+}
+
+// Periodic Background Sync (Chrome/Edge - works even when app is closed)
+self.addEventListener('periodicsync', (event) => {
+  if (event.tag === 'keep-alive') {
+    event.waitUntil(
+      fetch(PING_URL, { cache: 'no-store' }).catch(() => {})
+    );
+  }
 });
 
 self.addEventListener('fetch', (event) => {
@@ -53,6 +76,13 @@ self.addEventListener('fetch', (event) => {
 
 self.addEventListener('activate', (event) => {
   self.clients.claim();
+  startPing();
+  // Register periodic sync if available
+  if (self.registration.periodicSync) {
+    self.registration.periodicSync.register('keep-alive', {
+      minInterval: PING_INTERVAL,
+    }).catch(() => {});
+  }
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
