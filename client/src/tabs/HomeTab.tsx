@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { memo, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { TrendingUp, TrendingDown, Receipt } from "lucide-react";
 import { PaymentRequestCard } from "../components/PaymentRequestCard";
@@ -9,7 +9,7 @@ import { fadeUp, spring } from "../constants";
 import { AvatarImg } from "../components/AvatarImg";
 import { InputPrompt } from "../components/InputPrompt";
 
-export function HomeTab({
+export const HomeTab = memo(function HomeTab({
   currentMember,
   balance,
   totalSpent,
@@ -24,6 +24,7 @@ export function HomeTab({
   onConfirmReceipt,
   onReportNotReceived,
   onMarkAsPaid,
+  onCancelPaymentRequest,
   expenses,
   monthlyBudget,
   currency,
@@ -43,6 +44,7 @@ export function HomeTab({
   onConfirmReceipt: (id: string) => void;
   onReportNotReceived: (id: string, comment?: string) => void;
   onMarkAsPaid: (id: string) => void;
+  onCancelPaymentRequest?: (id: string) => void;
   expenses: Expense[];
   monthlyBudget: number;
   currency: string;
@@ -281,6 +283,7 @@ export function HomeTab({
                 onConfirmReceipt={onConfirmReceipt}
                 onReportNotReceived={onReportNotReceived}
                 onMarkAsPaid={onMarkAsPaid}
+                cancelPaymentRequest={onCancelPaymentRequest}
               />
             ))}
           </div>
@@ -383,4 +386,5 @@ export function HomeTab({
       <div className="h-8" />
     </>
   );
-}
+});
+HomeTab.displayName = "HomeTab";
