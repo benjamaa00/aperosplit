@@ -19,6 +19,8 @@ export function InviteScreen({ inviteToken, onJoinByInvite, onBack }: InviteScre
   const [groupName, setGroupName] = useState("");
   const [joinError, setJoinError] = useState("");
   const [memberName, setMemberName] = useState("");
+  const [retryCount, setRetryCount] = useState(0);
+  const maxRetries = 5;
 
   const validateQuery = trpc.equilibra.validateInvite.useQuery(
     { token: inviteToken },
@@ -31,18 +33,33 @@ export function InviteScreen({ inviteToken, onJoinByInvite, onBack }: InviteScre
         setGroupName(validateQuery.data.groupName || "Équilibra");
         setStep("register");
       } else {
-        setJoinError(validateQuery.data.error || "Lien d'invitation invalide");
+        const errMsg = validateQuery.data.error || "Lien d'invitation invalide";
+        if (errMsg === "Offline mode" && retryCount < maxRetries) {
+          const timer = setTimeout(() => {
+            setRetryCount(prev => prev + 1);
+            validateQuery.refetch();
+          }, 3000 * (retryCount + 1));
+          return () => clearTimeout(timer);
+        }
+        setJoinError(errMsg === "Offline mode" ? "Le serveur demarre, veuillez patienter..." : errMsg);
         setStep("error");
       }
     }
-  }, [validateQuery.data, validateQuery.isError]);
+  }, [validateQuery.data, validateQuery.isError, retryCount]);
 
   useEffect(() => {
     if (validateQuery.isError) {
-      setJoinError("Impossible de vérifier le lien. Vérifiez votre connexion.");
+      if (retryCount < maxRetries) {
+        const timer = setTimeout(() => {
+          setRetryCount(prev => prev + 1);
+          validateQuery.refetch();
+        }, 3000 * (retryCount + 1));
+        return () => clearTimeout(timer);
+      }
+      setJoinError("Impossible de verifier le lien. Verifiez votre connexion.");
       setStep("error");
     }
-  }, [validateQuery.isError]);
+  }, [validateQuery.isError, retryCount]);
 
   const handleRegister = useCallback(async (name: string, avatar: string) => {
     setMemberName(name);
@@ -87,9 +104,9 @@ export function InviteScreen({ inviteToken, onJoinByInvite, onBack }: InviteScre
             className="relative z-10 min-h-screen flex flex-col items-center justify-center px-6"
           >
             <Loader2 size={40} className="text-primary animate-spin mb-6" />
-            <h2 className="text-xl font-bold tracking-tight mb-2">Vérification du lien...</h2>
+            <h2 className="text-xl font-bold tracking-tight mb-2">Verification du lien...</h2>
             <p className="text-muted-foreground text-sm text-center">
-              Chargement des informations du groupe
+              {retryCount > 0 ? `Tentative ${retryCount + 1}/${maxRetries + 1}... Le serveur demarre` : "Chargement des informations du groupe"}
             </p>
           </motion.div>
         )}
