@@ -246,6 +246,11 @@ export function initializeDatabase(): Promise<void> {
       try {
         await pool!.query(`ALTER TABLE payments ADD COLUMN IF NOT EXISTS comment TEXT`);
       } catch {}
+      // Drop and recreate payments status check constraint to include all valid statuses
+      try {
+        await pool!.query(`ALTER TABLE payments DROP CONSTRAINT IF EXISTS payments_status_check`);
+        await pool!.query(`ALTER TABLE payments ADD CONSTRAINT payments_status_check CHECK (status IN ('pending', 'accepted', 'refused', 'resent', 'in_progress', 'completed', 'late', 'disputed', 'paid'))`);
+      } catch {}
       // Enhance expense_categories
       try { await pool!.query(`ALTER TABLE expense_categories ADD COLUMN IF NOT EXISTS icon VARCHAR(32)`); } catch {}
       try { await pool!.query(`ALTER TABLE expense_categories ADD COLUMN IF NOT EXISTS color VARCHAR(16)`); } catch {}
