@@ -2,7 +2,7 @@ const CACHE_NAME = 'equilibra-v3';
 const STATIC_CACHE = 'equilibra-static-v3';
 
 const PING_URL = '/api/trpc/equilibra.getGroupData?input=%7B%7D';
-const PING_INTERVAL = 5 * 60 * 1000; // 5 minutes
+const PING_INTERVAL = 60 * 1000; // 1 minute
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();

@@ -27,7 +27,7 @@ if ("serviceWorker" in navigator) {
      const status = await navigator.permissions.query({ name: "periodic-background-sync" } as any);
      if (status.state === "granted") {
       await (registration as any).periodicSync.register("keep-alive", {
-       minInterval: 5 * 60 * 1000,
+       minInterval: 60 * 1000,
       }).catch(() => {});
      }
     } catch {}
