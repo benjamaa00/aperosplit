@@ -131,10 +131,17 @@ function SplashCanvas() {
       const orb2Appear = Math.min(1, Math.max(0, (t - 0.5) / 0.4));
       const orb2Pulse = t > 0.5 && t < 1.3 ? 1 + 0.12 * Math.sin((t - 0.5) * 10) * (1 - (t - 0.5) / 0.8) : (t >= 1.3 ? 1 : 0);
 
-      // ── Converge with spring overshoot ──
-      const convergeT = t < 1.2 ? 0 : Math.min(1, (t - 1.2) / 1.2);
-      const springVal = convergeT >= 1 ? 1 : spring(convergeT, 0.6, 2.5);
-      const orbOffset = 80 * (1 - springVal);
+      // ── Phase 1: Converge to center (1.2–2.4s) ──
+      const convergeT = t < 1.2 ? 0 : Math.min(1, (t - 1.2) / 1.0);
+      const convergeSpring = convergeT >= 1 ? 1 : spring(convergeT, 0.6, 2.5);
+      const convergeOffset = 80 * (1 - convergeSpring);
+
+      // ── Phase 2: Separate to final positions (2.6–3.4s) ──
+      const separateT = t < 2.6 ? 0 : Math.min(1, (t - 2.6) / 0.8);
+      const separateSpring = separateT >= 1 ? 1 : spring(separateT, 0.5, 2);
+      const separateOffset = separateSpring * 110;
+
+      const orbOffset = convergeOffset + separateOffset;
 
       const orb1X = cx - orbOffset;
       const orb1Y = cy;
@@ -150,7 +157,7 @@ function SplashCanvas() {
       trailIdx = (trailIdx + 1) % TRAIL_LEN;
 
       // ── Draw trails ──
-      if (t > 0.3 && t < 3.5) {
+      if (t > 0.3 && t < 4.2) {
         ctx.globalCompositeOperation = "lighter";
         for (let i = 0; i < TRAIL_LEN; i++) {
           const idx = (trailIdx - i - 1 + TRAIL_LEN) % TRAIL_LEN;
@@ -185,9 +192,15 @@ function SplashCanvas() {
       }
 
       // ── Spawn trail particles ──
-      if (t > 0.2 && t < 3.8) {
+      if (t > 0.2 && t < 4.0) {
         spawn(orb1X, orb1Y, 270, 2);
         if (orb2Appear > 0.3) spawn(orb2X, orb2Y, 285, 2);
+      }
+      // ── Burst particles during separation ──
+      if (t > 2.6 && t < 3.0) {
+        spawn(orb1X, orb1Y, 270, 4);
+        spawn(orb2X, orb2Y, 290, 4);
+        spawn(cx, cy, 280, 3);
       }
 
       // ── Update & draw particles ──
@@ -275,10 +288,10 @@ function SplashCanvas() {
       // Orb 2 (mauve)
       drawOrb(orb2X, orb2Y, orb2Pulse, orb2Appear, 275, 290);
 
-      // ── Merge flash (2.2–2.7s) ──
-      if (t > 2.1 && t < 2.8) {
-        const flashT = (t - 2.1) / 0.7;
-        const flashAlpha = Math.max(0, 0.5 * (1 - flashT) * (1 - flashT));
+      // ── Merge flash (2.0–2.6s) — at convergence peak ──
+      if (t > 2.0 && t < 2.7) {
+        const flashT = (t - 2.0) / 0.7;
+        const flashAlpha = Math.max(0, 0.6 * (1 - flashT) * (1 - flashT));
         ctx.globalCompositeOperation = "lighter";
         ctx.globalAlpha = flashAlpha;
         const fg = ctx.createRadialGradient(cx, cy, 0, cx, cy, 120);
@@ -293,11 +306,11 @@ function SplashCanvas() {
         ctx.globalCompositeOperation = "source-over";
       }
 
-      // ── Divider line (2.3–2.6s) ──
-      if (t > 2.2 && t < 5.0) {
-        const lineIn = Math.min(1, (t - 2.2) / 0.35);
+      // ── Divider line (2.5–5.0s) — appears during separation ──
+      if (t > 2.5 && t < 5.0) {
+        const lineIn = Math.min(1, (t - 2.5) / 0.4);
         const lineOut = t > 4.5 ? Math.max(0, 1 - (t - 4.5) / 0.5) : 1;
-        const lineH = 90 * easeOutExpo(lineIn) * lineOut;
+        const lineH = 80 * easeOutExpo(lineIn) * lineOut;
         const lineAlpha = Math.min(1, lineIn * 2) * lineOut;
 
         ctx.globalAlpha = lineAlpha;
@@ -327,10 +340,10 @@ function SplashCanvas() {
         ctx.shadowBlur = 0;
       }
 
-      // ── Ripple waves (2.5–3.5s) ──
+      // ── Ripple waves (2.6–3.6s) — during separation ──
       ctx.globalCompositeOperation = "lighter";
       for (let wave = 0; wave < 3; wave++) {
-        const waveStart = 2.5 + wave * 0.2;
+        const waveStart = 2.6 + wave * 0.2;
         if (t > waveStart && t < waveStart + 1.5) {
           const rT = (t - waveStart) / 1.5;
           const rR = easeOutExpo(rT) * Math.min(W, H) * 0.55;
@@ -347,10 +360,10 @@ function SplashCanvas() {
 
       // ── Ambient floating orbs ──
       ctx.globalCompositeOperation = "lighter";
-      if (t > 0.8 && t < 4.8) {
+      if (t > 0.8 && t < 5.0) {
         for (const ao of ambientOrbs) {
           const aT = Math.min(1, (t - 0.8) / 0.5);
-          const aOut = t > 4.3 ? Math.max(0, 1 - (t - 4.3) / 0.5) : 1;
+          const aOut = t > 4.5 ? Math.max(0, 1 - (t - 4.5) / 0.5) : 1;
           const angle = ao.baseAngle + t * ao.speed;
           const ax = cx + Math.cos(angle) * ao.dist;
           const ay = cy + Math.sin(angle) * ao.dist * 0.6;
