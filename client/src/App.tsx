@@ -15,6 +15,7 @@ import { useHaptic } from "./hooks/useHaptic";
 import { isTutorialCompleted } from "./utils/tutorialStorage";
 import { GuidedTour } from "./components/GuidedTour";
 import { ALL_TUTORIALS } from "./utils/tutorialSteps";
+import { OnboardingScreen, hasCompletedOnboarding } from "./components/OnboardingScreen";
 
 import { AccessScreen } from "./screens/AccessScreen";
 import { IdentityScreen } from "./screens/IdentityScreen";
@@ -87,6 +88,7 @@ export default function App() {
  const [notifications, setNotifications] = useState<Notification[]>([]);
  const [unreadCount, setUnreadCount] = useState(0);
  const [showSplash, setShowSplash] = useState(true);
+ const [showOnboarding, setShowOnboarding] = useState(() => !hasCompletedOnboarding());
  const [serverWaking, setServerWaking] = useState(false);
  const [serverWakeRetries, setServerWakeRetries] = useState(0);
  const [activeTutorial, setActiveTutorial] = useState<string | null>(null);
@@ -863,6 +865,7 @@ export default function App() {
  return (
  <>
  {showSplash && <SplashScreen onComplete={() => setShowSplash(false)} />}
+ {!showSplash && showOnboarding && <OnboardingScreen onComplete={() => setShowOnboarding(false)} />}
  <ThemeProvider memberId={currentMemberId}>
  <ThemeToaster />
  {content}

@@ -516,184 +516,249 @@
     scroll-snap-align: start;
   }
 
-  /* Splash Screen — Premium 6s animated intro */
-  .splash-screen-new {
+  /* ═══════════════════════════════════════════════════════════
+     APPLE-LEVEL SPLASH — Canvas-driven, pure black bg
+     ═══════════════════════════════════════════════════════════ */
+  .apple-splash {
     position: fixed;
     inset: 0;
     z-index: 9999;
+    background: #000;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--app-bg, var(--background));
     overflow: hidden;
+    animation: appleSplashFade 400ms ease 4800ms forwards;
   }
 
-  .splash-screen-new.splash-exit {
-    animation: splashExit 500ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
-  }
-
-  /* ── Spheres ─────────────────────────────────────────────── */
-  .splash-sphere {
+  .apple-splash-canvas {
     position: absolute;
-    width: 56px;
-    height: 56px;
-    border-radius: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
+    inset: 0;
   }
 
-  .splash-sphere-1 {
-    left: 50%;
-    background: radial-gradient(circle, #9B59F7 0%, #7B2FF7 60%, transparent 100%);
-    box-shadow:
-      0 0 24px 8px rgba(123, 47, 247, 0.5),
-      0 0 60px 16px rgba(123, 47, 247, 0.2);
-    animation: sphere1Appear 6000ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
-  }
-
-  .splash-sphere-2 {
-    left: 50%;
-    background: radial-gradient(circle, #E0C4FF 0%, #C9A6FF 60%, transparent 100%);
-    box-shadow:
-      0 0 24px 8px rgba(201, 166, 255, 0.5),
-      0 0 60px 16px rgba(201, 166, 255, 0.2);
-    animation: sphere2Appear 6000ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
-  }
-
-  /* ── Divider line ────────────────────────────────────────── */
-  .splash-divider {
+  .apple-splash-brand {
     position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 2px;
-    height: 0;
-    transform: translate(-50%, -50%);
-    background: linear-gradient(180deg, transparent, rgba(255,255,255,0.9) 30%, rgba(201,166,255,0.8) 50%, rgba(255,255,255,0.9) 70%, transparent);
-    box-shadow: 0 0 12px 2px rgba(201, 166, 255, 0.6);
+    bottom: 28%;
+    left: 0; right: 0;
+    text-align: center;
     opacity: 0;
-    animation: dividerAppear 6000ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    transform: translateY(20px);
+    animation: appleBrandIn 800ms cubic-bezier(0.16, 1, 0.3, 1) 3200ms forwards;
   }
 
-  /* ── Ripple ──────────────────────────────────────────────── */
-  .splash-ripple {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    transform: translate(-50%, -50%) scale(0);
-    border: 2px solid rgba(201, 166, 255, 0.6);
-    opacity: 0;
-    animation: rippleExpand 6000ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
-  }
-
-  /* ── Brand text ──────────────────────────────────────────── */
-  .splash-brand {
-    position: absolute;
-    bottom: 38%;
-    left: 0;
-    right: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 6px;
-    opacity: 0;
-    transform: translateY(16px);
-    animation: brandAppear 6000ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
-  }
-
-  .splash-brand-name {
-    font-size: 2rem;
+  .apple-splash-logo-text {
+    font-size: 2.4rem;
     font-weight: 800;
-    letter-spacing: -0.03em;
-    background: linear-gradient(135deg, #C9A6FF, #7B2FF7);
+    letter-spacing: -0.04em;
+    background: linear-gradient(135deg, #E0C4FF 0%, #C9A6FF 30%, #9B59F7 60%, #7B2FF7 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+    filter: drop-shadow(0 0 20px rgba(139, 92, 246, 0.4));
   }
 
-  .splash-brand-tagline {
-    font-size: 0.8rem;
+  .apple-splash-tagline {
+    margin-top: 8px;
+    font-size: 0.75rem;
     font-weight: 500;
-    color: var(--muted-foreground, rgba(255,255,255,0.5));
-    letter-spacing: 0.08em;
+    color: rgba(255,255,255,0.45);
+    letter-spacing: 0.12em;
     text-transform: uppercase;
   }
 
-  /* ── Keyframes ───────────────────────────────────────────── */
-
-  /* Sphere 1: appear 0.3s → pulse 0.6s → move left 1.8s → hold → exit 5.5s */
-  @keyframes sphere1Appear {
-    0%    { opacity: 0; transform: translate(-50%, -50%) scale(0); }
-    /* appear at 0.3s = 5% */
-    5%    { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-    /* pulse at 0.6s = 10% */
-    10%   { opacity: 1; transform: translate(-50%, -50%) scale(1.18); }
-    14%   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-    /* move toward center 1.8s–2.4s = 30%–40% */
-    30%   { opacity: 1; transform: translate(-50%, -50%) translateX(-52px) scale(1); }
-    40%   { opacity: 1; transform: translate(-50%, -50%) translateX(-22px) scale(1); }
-    /* hold at contact 3.0s–4.8s = 50%–80% */
-    50%   { opacity: 1; transform: translate(-50%, -50%) translateX(-22px) scale(1); }
-    80%   { opacity: 1; transform: translate(-50%, -50%) translateX(-22px) scale(1); }
-    /* exit 5.5s = 91.7% */
-    91.7% { opacity: 1; transform: translate(-50%, -50%) translateX(-22px) scale(1); }
-    100%  { opacity: 0; transform: translate(-50%, -50%) translateX(-22px) scale(0.85); }
+  .apple-splash-fade {
+    position: absolute;
+    inset: 0;
+    background: #000;
+    opacity: 0;
+    pointer-events: none;
+    animation: appleSplashFade 400ms ease 4800ms forwards;
   }
 
-  /* Sphere 2: appear at 1.2s = 20% → move toward center → hold → exit */
-  @keyframes sphere2Appear {
-    0%    { opacity: 0; transform: translate(-50%, -50%) scale(0) translateX(80px); }
-    20%   { opacity: 0; transform: translate(-50%, -50%) scale(0) translateX(80px); }
-    /* appear 1.2s–1.4s */
-    23%   { opacity: 1; transform: translate(-50%, -50%) scale(1) translateX(52px); }
-    /* pulse 1.4s */
-    25%   { opacity: 1; transform: translate(-50%, -50%) scale(1.15) translateX(52px); }
-    28%   { opacity: 1; transform: translate(-50%, -50%) scale(1) translateX(52px); }
-    /* move toward center 1.8s–2.4s = 30%–40% */
-    30%   { opacity: 1; transform: translate(-50%, -50%) scale(1) translateX(52px); }
-    40%   { opacity: 1; transform: translate(-50%, -50%) scale(1) translateX(22px); }
-    /* hold at contact */
-    50%   { opacity: 1; transform: translate(-50%, -50%) scale(1) translateX(22px); }
-    80%   { opacity: 1; transform: translate(-50%, -50%) scale(1) translateX(22px); }
-    /* exit */
-    91.7% { opacity: 1; transform: translate(-50%, -50%) scale(1) translateX(22px); }
-    100%  { opacity: 0; transform: translate(-50%, -50%) scale(0.85) translateX(22px); }
+  @keyframes appleBrandIn {
+    from { opacity: 0; transform: translateY(20px) scale(0.95); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
   }
 
-  /* Divider: appears at 3.0s = 50% → holds → exits */
-  @keyframes dividerAppear {
-    0%    { opacity: 0; height: 0; }
-    50%   { opacity: 0; height: 0; }
-    54%   { opacity: 1; height: 72px; }
-    80%   { opacity: 1; height: 72px; }
-    91.7% { opacity: 1; height: 72px; }
-    100%  { opacity: 0; height: 72px; }
+  @keyframes appleSplashFade {
+    from { opacity: 0; }
+    to   { opacity: 1; pointer-events: none; }
   }
 
-  /* Ripple: expands at 3.6s = 60% */
-  @keyframes rippleExpand {
-    0%    { opacity: 0; transform: translate(-50%, -50%) scale(0); }
-    58%   { opacity: 0; transform: translate(-50%, -50%) scale(0); }
-    60%   { opacity: 0.7; transform: translate(-50%, -50%) scale(1); }
-    72%   { opacity: 0; transform: translate(-50%, -50%) scale(14); }
-    100%  { opacity: 0; transform: translate(-50%, -50%) scale(14); }
+  /* ═══════════════════════════════════════════════════════════
+     ONBOARDING — 6-page premium intro
+     ═══════════════════════════════════════════════════════════ */
+  .onboarding-screen {
+    position: fixed;
+    inset: 0;
+    z-index: 9998;
+    display: flex;
+    flex-direction: column;
+    background: #000;
+    overflow: hidden;
+    touch-action: pan-y;
   }
 
-  /* Brand: appears at 4.8s = 80% → exits */
-  @keyframes brandAppear {
-    0%    { opacity: 0; transform: translateY(16px); }
-    78%   { opacity: 0; transform: translateY(16px); }
-    84%   { opacity: 1; transform: translateY(0); }
-    90%   { opacity: 1; transform: translateY(0); }
-    91.7% { opacity: 1; transform: translateY(0); }
-    100%  { opacity: 0; transform: translateY(-8px) scale(0.96); }
+  .onboarding-screen.onboarding-exit {
+    animation: onboardingExit 450ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
   }
 
-  /* Exit overlay fade */
-  @keyframes splashExit {
-    to { opacity: 0; pointer-events: none; }
+  .onboarding-bg {
+    position: absolute;
+    inset: 0;
+    opacity: 0.18;
+    transition: background 0.6s ease, opacity 0.6s ease;
+  }
+
+  .onboarding-glow {
+    position: absolute;
+    top: 15%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 400px;
+    height: 400px;
+    border-radius: 50%;
+    filter: blur(60px);
+    transition: background 0.6s ease;
+    pointer-events: none;
+  }
+
+  .onboarding-skip {
+    position: absolute;
+    top: env(safe-area-inset-top, 16px);
+    right: 16px;
+    margin-top: 16px;
+    padding: 8px 16px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: rgba(255,255,255,0.5);
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 100px;
+    backdrop-filter: blur(10px);
+    z-index: 10;
+    transition: all 0.2s;
+  }
+
+  .onboarding-skip:hover { color: rgba(255,255,255,0.8); background: rgba(255,255,255,0.12); }
+
+  .onboarding-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0 32px;
+    padding-top: env(safe-area-inset-top, 0);
+    gap: 0;
+    z-index: 5;
+  }
+
+  .onboarding-emoji {
+    width: 120px;
+    height: 120px;
+    border-radius: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3.2rem;
+    margin-bottom: 40px;
+    animation: onboardingEmojiIn 600ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .onboarding-title {
+    font-size: 2rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    color: #fff;
+    text-align: center;
+    line-height: 1.15;
+    white-space: pre-line;
+    margin-bottom: 16px;
+    animation: onboardingTextIn 600ms cubic-bezier(0.16, 1, 0.3, 1) 80ms both;
+  }
+
+  .onboarding-desc {
+    font-size: 0.95rem;
+    line-height: 1.55;
+    color: rgba(255,255,255,0.55);
+    text-align: center;
+    max-width: 320px;
+    animation: onboardingTextIn 600ms cubic-bezier(0.16, 1, 0.3, 1) 160ms both;
+  }
+
+  @keyframes onboardingEmojiIn {
+    from { opacity: 0; transform: scale(0.7) translateY(24px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+  }
+
+  @keyframes onboardingTextIn {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .onboarding-bottom {
+    padding: 0 32px 48px;
+    padding-bottom: calc(48px + env(safe-area-inset-bottom, 0));
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+    z-index: 5;
+  }
+
+  .onboarding-dots {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .onboarding-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 100px;
+    background: rgba(255,255,255,0.2);
+    transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    cursor: pointer;
+  }
+
+  .onboarding-dot.active {
+    width: 28px;
+    background: #C9A6FF;
+    box-shadow: 0 0 12px rgba(201, 166, 255, 0.5);
+  }
+
+  .onboarding-dot.done {
+    background: rgba(201, 166, 255, 0.4);
+  }
+
+  .onboarding-next {
+    width: 100%;
+    max-width: 340px;
+    height: 54px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #fff;
+    background: linear-gradient(135deg, #7B2FF7, #9B59F7);
+    border: none;
+    border-radius: 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 4px 24px rgba(123, 47, 247, 0.35);
+  }
+
+  .onboarding-next:active {
+    transform: scale(0.97);
+    box-shadow: 0 2px 12px rgba(123, 47, 247, 0.25);
+  }
+
+  @keyframes onboardingExit {
+    from { opacity: 1; transform: scale(1); }
+    to   { opacity: 0; transform: scale(0.95); pointer-events: none; }
   }
 
   /* Skeleton Loaders */
@@ -817,13 +882,20 @@
   .skeleton::after {
     animation: none !important;
   }
-  .splash-screen-new {
-    animation: none !important;
+  .apple-splash,
+  .apple-splash * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
   }
-  .splash-screen-new * {
-    animation: none !important;
+  .apple-splash {
+    background: var(--background) !important;
   }
-  .splash-screen-new.splash-exit {
+  .onboarding-screen,
+  .onboarding-screen * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+  .onboarding-screen.onboarding-exit {
     opacity: 0 !important;
     transition: none !important;
   }
@@ -831,7 +903,8 @@
 
 /* iOS safe area */
 @supports (padding-top: env(safe-area-inset-top)) {
-  .splash-screen-new {
+  .apple-splash,
+  .onboarding-screen {
     padding-top: env(safe-area-inset-top);
     padding-bottom: env(safe-area-inset-bottom);
     padding-left: env(safe-area-inset-left);
