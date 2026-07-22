@@ -516,55 +516,184 @@
     scroll-snap-align: start;
   }
 
-  /* Splash Screen */
-  .splash-screen {
+  /* Splash Screen — Premium 6s animated intro */
+  .splash-screen-new {
     position: fixed;
     inset: 0;
     z-index: 9999;
     display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
     background: var(--app-bg, var(--background));
-    transition: opacity 400ms cubic-bezier(0.23, 1, 0.32, 1);
+    overflow: hidden;
   }
 
-  .splash-screen.fade-out {
+  .splash-screen-new.splash-exit {
+    animation: splashExit 500ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  }
+
+  /* ── Spheres ─────────────────────────────────────────────── */
+  .splash-sphere {
+    position: absolute;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+  }
+
+  .splash-sphere-1 {
+    left: 50%;
+    background: radial-gradient(circle, #9B59F7 0%, #7B2FF7 60%, transparent 100%);
+    box-shadow:
+      0 0 24px 8px rgba(123, 47, 247, 0.5),
+      0 0 60px 16px rgba(123, 47, 247, 0.2);
+    animation: sphere1Appear 6000ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  }
+
+  .splash-sphere-2 {
+    left: 50%;
+    background: radial-gradient(circle, #E0C4FF 0%, #C9A6FF 60%, transparent 100%);
+    box-shadow:
+      0 0 24px 8px rgba(201, 166, 255, 0.5),
+      0 0 60px 16px rgba(201, 166, 255, 0.2);
+    animation: sphere2Appear 6000ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  }
+
+  /* ── Divider line ────────────────────────────────────────── */
+  .splash-divider {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 2px;
+    height: 0;
+    transform: translate(-50%, -50%);
+    background: linear-gradient(180deg, transparent, rgba(255,255,255,0.9) 30%, rgba(201,166,255,0.8) 50%, rgba(255,255,255,0.9) 70%, transparent);
+    box-shadow: 0 0 12px 2px rgba(201, 166, 255, 0.6);
     opacity: 0;
-    pointer-events: none;
+    animation: dividerAppear 6000ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
   }
 
-  .splash-logo {
-    width: 80px;
-    height: 80px;
-    animation: splashLogoIn 600ms cubic-bezier(0.23, 1, 0.32, 1) forwards;
-  }
-
-  .splash-title {
-    margin-top: 1rem;
-    font-size: 1.5rem;
-    font-weight: 700;
-    letter-spacing: -0.02em;
+  /* ── Ripple ──────────────────────────────────────────────── */
+  .splash-ripple {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    border: 2px solid rgba(201, 166, 255, 0.6);
     opacity: 0;
-    animation: splashFadeIn 400ms cubic-bezier(0.23, 1, 0.32, 1) 300ms forwards;
+    animation: rippleExpand 6000ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
   }
 
-  .splash-subtitle {
-    margin-top: 0.5rem;
-    font-size: 0.875rem;
-    color: var(--muted-foreground);
+  /* ── Brand text ──────────────────────────────────────────── */
+  .splash-brand {
+    position: absolute;
+    bottom: 38%;
+    left: 0;
+    right: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
     opacity: 0;
-    animation: splashFadeIn 400ms cubic-bezier(0.23, 1, 0.32, 1) 500ms forwards;
+    transform: translateY(16px);
+    animation: brandAppear 6000ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
   }
 
-  @keyframes splashLogoIn {
-    from { opacity: 0; transform: scale(0.8); }
-    to { opacity: 1; transform: scale(1); }
+  .splash-brand-name {
+    font-size: 2rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    background: linear-gradient(135deg, #C9A6FF, #7B2FF7);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
   }
 
-  @keyframes splashFadeIn {
-    from { opacity: 0; transform: translateY(8px); }
-    to { opacity: 1; transform: translateY(0); }
+  .splash-brand-tagline {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--muted-foreground, rgba(255,255,255,0.5));
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  /* ── Keyframes ───────────────────────────────────────────── */
+
+  /* Sphere 1: appear 0.3s → pulse 0.6s → move left 1.8s → hold → exit 5.5s */
+  @keyframes sphere1Appear {
+    0%    { opacity: 0; transform: translate(-50%, -50%) scale(0); }
+    /* appear at 0.3s = 5% */
+    5%    { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    /* pulse at 0.6s = 10% */
+    10%   { opacity: 1; transform: translate(-50%, -50%) scale(1.18); }
+    14%   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    /* move toward center 1.8s–2.4s = 30%–40% */
+    30%   { opacity: 1; transform: translate(-50%, -50%) translateX(-52px) scale(1); }
+    40%   { opacity: 1; transform: translate(-50%, -50%) translateX(-22px) scale(1); }
+    /* hold at contact 3.0s–4.8s = 50%–80% */
+    50%   { opacity: 1; transform: translate(-50%, -50%) translateX(-22px) scale(1); }
+    80%   { opacity: 1; transform: translate(-50%, -50%) translateX(-22px) scale(1); }
+    /* exit 5.5s = 91.7% */
+    91.7% { opacity: 1; transform: translate(-50%, -50%) translateX(-22px) scale(1); }
+    100%  { opacity: 0; transform: translate(-50%, -50%) translateX(-22px) scale(0.85); }
+  }
+
+  /* Sphere 2: appear at 1.2s = 20% → move toward center → hold → exit */
+  @keyframes sphere2Appear {
+    0%    { opacity: 0; transform: translate(-50%, -50%) scale(0) translateX(80px); }
+    20%   { opacity: 0; transform: translate(-50%, -50%) scale(0) translateX(80px); }
+    /* appear 1.2s–1.4s */
+    23%   { opacity: 1; transform: translate(-50%, -50%) scale(1) translateX(52px); }
+    /* pulse 1.4s */
+    25%   { opacity: 1; transform: translate(-50%, -50%) scale(1.15) translateX(52px); }
+    28%   { opacity: 1; transform: translate(-50%, -50%) scale(1) translateX(52px); }
+    /* move toward center 1.8s–2.4s = 30%–40% */
+    30%   { opacity: 1; transform: translate(-50%, -50%) scale(1) translateX(52px); }
+    40%   { opacity: 1; transform: translate(-50%, -50%) scale(1) translateX(22px); }
+    /* hold at contact */
+    50%   { opacity: 1; transform: translate(-50%, -50%) scale(1) translateX(22px); }
+    80%   { opacity: 1; transform: translate(-50%, -50%) scale(1) translateX(22px); }
+    /* exit */
+    91.7% { opacity: 1; transform: translate(-50%, -50%) scale(1) translateX(22px); }
+    100%  { opacity: 0; transform: translate(-50%, -50%) scale(0.85) translateX(22px); }
+  }
+
+  /* Divider: appears at 3.0s = 50% → holds → exits */
+  @keyframes dividerAppear {
+    0%    { opacity: 0; height: 0; }
+    50%   { opacity: 0; height: 0; }
+    54%   { opacity: 1; height: 72px; }
+    80%   { opacity: 1; height: 72px; }
+    91.7% { opacity: 1; height: 72px; }
+    100%  { opacity: 0; height: 72px; }
+  }
+
+  /* Ripple: expands at 3.6s = 60% */
+  @keyframes rippleExpand {
+    0%    { opacity: 0; transform: translate(-50%, -50%) scale(0); }
+    58%   { opacity: 0; transform: translate(-50%, -50%) scale(0); }
+    60%   { opacity: 0.7; transform: translate(-50%, -50%) scale(1); }
+    72%   { opacity: 0; transform: translate(-50%, -50%) scale(14); }
+    100%  { opacity: 0; transform: translate(-50%, -50%) scale(14); }
+  }
+
+  /* Brand: appears at 4.8s = 80% → exits */
+  @keyframes brandAppear {
+    0%    { opacity: 0; transform: translateY(16px); }
+    78%   { opacity: 0; transform: translateY(16px); }
+    84%   { opacity: 1; transform: translateY(0); }
+    90%   { opacity: 1; transform: translateY(0); }
+    91.7% { opacity: 1; transform: translateY(0); }
+    100%  { opacity: 0; transform: translateY(-8px) scale(0.96); }
+  }
+
+  /* Exit overlay fade */
+  @keyframes splashExit {
+    to { opacity: 0; pointer-events: none; }
   }
 
   /* Skeleton Loaders */
@@ -688,10 +817,13 @@
   .skeleton::after {
     animation: none !important;
   }
-  .splash-screen {
+  .splash-screen-new {
     animation: none !important;
   }
-  .splash-screen.fade-out {
+  .splash-screen-new * {
+    animation: none !important;
+  }
+  .splash-screen-new.splash-exit {
     opacity: 0 !important;
     transition: none !important;
   }
@@ -699,7 +831,7 @@
 
 /* iOS safe area */
 @supports (padding-top: env(safe-area-inset-top)) {
-  .splash-screen {
+  .splash-screen-new {
     padding-top: env(safe-area-inset-top);
     padding-bottom: env(safe-area-inset-bottom);
     padding-left: env(safe-area-inset-left);
