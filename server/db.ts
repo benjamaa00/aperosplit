@@ -44,7 +44,7 @@ export function initializeDatabase(): Promise<void> {
   initialization ??= (async () => {
     const dbPool = getPool();
     if (!dbPool) {
-      console.log("[DB] Skipping database initialization (using JSON storage)");
+      console.warn("[DB] Skipping database initialization (using JSON storage)");
       return;
     }
     try {

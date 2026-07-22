@@ -1,21 +1,19 @@
-import { useState, useEffect, memo, useCallback, useRef } from "react";
+import { useState, useEffect, memo, useRef } from "react";
 
 const SPLASH_DURATION = 5200;
 
 export const SplashScreen = memo(function SplashScreen({ onComplete }: { onComplete: () => void }) {
   const [done, setDone] = useState(false);
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
-
-  const schedule = useCallback((fn: () => void, ms: number) => {
-    timersRef.current.push(setTimeout(fn, ms));
-  }, []);
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
 
   useEffect(() => {
-    schedule(() => setDone(true), SPLASH_DURATION);
-    schedule(onComplete, SPLASH_DURATION + 400);
-    return () => { timersRef.current.forEach(clearTimeout); timersRef.current = [];
-    };
-  }, [onComplete, schedule]);
+    const t1 = setTimeout(() => setDone(true), SPLASH_DURATION);
+    const t2 = setTimeout(() => onCompleteRef.current(), SPLASH_DURATION + 400);
+    timersRef.current = [t1, t2];
+    return () => { timersRef.current.forEach(clearTimeout); timersRef.current = []; };
+  }, []);
 
   if (done) return null;
 
