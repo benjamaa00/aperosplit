@@ -866,10 +866,12 @@ export default function App() {
  <>
  {showSplash && <SplashScreen onComplete={() => setShowSplash(false)} />}
  {!showSplash && showOnboarding && <OnboardingScreen onComplete={() => setShowOnboarding(false)} />}
+ {!showSplash && !showOnboarding && (
  <ThemeProvider memberId={currentMemberId}>
  <ThemeToaster />
  {content}
  </ThemeProvider>
+ )}
  {activeTutorial && ALL_TUTORIALS[activeTutorial as keyof typeof ALL_TUTORIALS] && (
  <GuidedTour
  tutorialId={activeTutorial as any}

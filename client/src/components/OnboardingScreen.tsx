@@ -134,48 +134,50 @@ export const OnboardingScreen = memo(function OnboardingScreen({ onComplete }: {
         </button>
       )}
 
-      <div className="onboarding-content">
-        <div className="onboarding-illustration-wrapper" key={page}>
-          <img
-            src={current.image}
-            alt={current.title.replace("\n", " ")}
-            className="onboarding-image"
-            draggable={false}
-          />
-        </div>
+      <div className="onboarding-illustration-wrapper" key={page}>
+        <img
+          src={current.image}
+          alt={current.title.replace("\n", " ")}
+          className="onboarding-image"
+          draggable={false}
+        />
+      </div>
 
+      <div className="onboarding-bottom-overlay" />
+
+      <div className="onboarding-content">
         <h2 className="onboarding-title" key={`t-${page}`}>
           {current.title}
         </h2>
         <p className="onboarding-desc" key={`d-${page}`}>
           {current.description}
         </p>
-      </div>
 
-      <div className="onboarding-bottom">
-        <div className="onboarding-dots">
-          {PAGES.map((_, i) => (
-            <div
-              key={i}
-              className={`onboarding-dot ${i === page ? "active" : ""} ${i < page ? "done" : ""}`}
-              onClick={() => setPage(i)}
-            />
-          ))}
+        <div className="onboarding-bottom">
+          <div className="onboarding-dots">
+            {PAGES.map((_, i) => (
+              <div
+                key={i}
+                className={`onboarding-dot ${i === page ? "active" : ""} ${i < page ? "done" : ""}`}
+                onClick={() => setPage(i)}
+              />
+            ))}
+          </div>
+
+          <button onClick={goNext} className="onboarding-next" type="button">
+            {isLast ? (
+              <>
+                <Sparkles size={18} />
+                Commencer
+              </>
+            ) : (
+              <>
+                Suivant
+                <ArrowRight size={18} />
+              </>
+            )}
+          </button>
         </div>
-
-        <button onClick={goNext} className="onboarding-next" type="button">
-          {isLast ? (
-            <>
-              <Sparkles size={18} />
-              Commencer
-            </>
-          ) : (
-            <>
-              Suivant
-              <ArrowRight size={18} />
-            </>
-          )}
-        </button>
       </div>
     </div>
   );
