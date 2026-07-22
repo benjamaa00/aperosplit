@@ -9,6 +9,7 @@ export interface TourStep {
   description: string;
   placement?: "top" | "bottom" | "left" | "right";
   adminOnly?: boolean;
+  tab?: string;
 }
 
 interface GuidedTourProps {
@@ -17,9 +18,11 @@ interface GuidedTourProps {
   isOpen: boolean;
   onClose: () => void;
   isAdmin?: boolean;
+  currentTab?: string;
+  onTabChange?: (tab: string) => void;
 }
 
-export function GuidedTour({ tutorialId, steps, isOpen, onClose, isAdmin = false }: GuidedTourProps) {
+export function GuidedTour({ tutorialId, steps, isOpen, onClose, isAdmin = false, currentTab, onTabChange }: GuidedTourProps) {
   const filteredSteps = steps.filter((s) => !s.adminOnly || isAdmin);
   const [current, setCurrent] = useState(0);
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
@@ -38,14 +41,40 @@ export function GuidedTour({ tutorialId, steps, isOpen, onClose, isAdmin = false
     }
   }, [target]);
 
+  const navigateAndMeasure = useCallback((stepIndex: number) => {
+    const step = filteredSteps[stepIndex];
+    if (!step) return;
+
+    if (step.tab && currentTab && step.tab !== currentTab && onTabChange) {
+      onTabChange(step.tab);
+      setTimeout(() => {
+        const el = document.querySelector(step.target);
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "center" });
+          setTimeout(() => setTargetRect(el.getBoundingClientRect()), 400);
+        } else {
+          setTargetRect(null);
+        }
+      }, 150);
+    } else {
+      const el = document.querySelector(step.target);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        setTimeout(() => setTargetRect(el.getBoundingClientRect()), 350);
+      } else {
+        setTargetRect(null);
+      }
+    }
+  }, [filteredSteps, currentTab, onTabChange]);
+
   useEffect(() => {
     if (!isOpen) return;
-    measureTarget();
+    navigateAndMeasure(current);
     const onResize = () => measureTarget();
     window.addEventListener("resize", onResize);
     window.addEventListener("scroll", onResize, true);
     return () => { window.removeEventListener("resize", onResize); window.removeEventListener("scroll", onResize, true); };
-  }, [isOpen, measureTarget]);
+  }, [isOpen, current, navigateAndMeasure, measureTarget]);
 
   useEffect(() => {
     if (!isOpen) return;

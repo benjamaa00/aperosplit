@@ -874,6 +874,8 @@ export default function App() {
  isOpen={true}
  onClose={() => setActiveTutorial(null)}
  isAdmin={currentMember?.role === "admin"}
+ currentTab={activeTab}
+ onTabChange={(tab) => setActiveTab(tab as Tab)}
  />
  )}
  </>
