@@ -185,6 +185,8 @@ export const GROUP_ID = "equilibra-fixed-group";
 
 export const CHART_COLORS = ["#34d399", "#60a5fa", "#f472b6", "#fbbf24", "#a78bfa", "#fb923c", "#2dd4bf", "#e879f9"];
 
+export const MAIN_TUTORIAL_ID = "main" as const;
+
 export const spring = { type: "spring" as const, stiffness: 300, damping: 30 };
 export const fadeUp = {
   initial: { opacity: 0, y: 14 },

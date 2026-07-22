@@ -334,10 +334,6 @@ export const ExpensesTab = memo(function ExpensesTab({
  
  {openMenuId === exp.id && (
  <div
- initial={{ opacity: 0, scale: 0.9, y: -4 }}
- 
- 
- 
  className="absolute right-0 top-8 z-50 min-w-[160px] bg-card border border-border rounded-xl shadow-xl overflow-hidden"
  onClick={(e) => e.stopPropagation()}
  >
@@ -545,10 +541,6 @@ export const ExpensesTab = memo(function ExpensesTab({
  {modal.type === "group" && (
  <div
  key="group-backdrop"
- initial={{ opacity: 0 }}
- 
- 
- 
  className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm"
  onClick={close}
  />
@@ -556,10 +548,6 @@ export const ExpensesTab = memo(function ExpensesTab({
  {modal.type === "group" && (
  <div
  key="group-sheet"
- initial={{ y: "100%" }}
- 
- 
- 
  className="fixed inset-x-0 bottom-0 z-50 bg-card rounded-t-[1.5rem] p-5 pb-8 max-h-[80vh] flex flex-col"
  onClick={(e) => e.stopPropagation()}
  >
@@ -655,10 +643,6 @@ export const ExpensesTab = memo(function ExpensesTab({
  {modal.type === "individual" && (
  <div
  key="indiv-backdrop"
- initial={{ opacity: 0 }}
- 
- 
- 
  className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm"
  onClick={close}
  />
@@ -666,10 +650,6 @@ export const ExpensesTab = memo(function ExpensesTab({
  {modal.type === "individual" && (
  <div
  key="indiv-sheet"
- initial={{ y: "100%" }}
- 
- 
- 
  className="fixed inset-x-0 bottom-0 z-50 bg-card rounded-t-[1.5rem] p-5 pb-8 max-h-[70vh] flex flex-col"
  onClick={(e) => e.stopPropagation()}
  >
@@ -768,10 +748,6 @@ export const ExpensesTab = memo(function ExpensesTab({
  {modal.type === "reimbursement" && (
  <div
  key="reimb-backdrop"
- initial={{ opacity: 0 }}
- 
- 
- 
  className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm"
  onClick={close}
  />
@@ -779,10 +755,6 @@ export const ExpensesTab = memo(function ExpensesTab({
  {modal.type === "reimbursement" && (
  <div
  key="reimb-sheet"
- initial={{ y: "100%" }}
- 
- 
- 
  className="fixed inset-x-0 bottom-0 z-50 bg-card rounded-t-[1.5rem] p-5 pb-8"
  onClick={(e) => e.stopPropagation()}
  >

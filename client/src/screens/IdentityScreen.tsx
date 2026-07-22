@@ -23,9 +23,6 @@ export function IdentityScreen({ members, onSelect, onReset }: { members: Member
 
  <div  className="text-center mb-12 relative z-10">
  <div
- initial={{ scale: 0.8, opacity: 0 }}
- 
- 
  className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border border-primary/20 shadow-lg shadow-primary/10"
  >
  <Sparkles size={28} className="text-primary" />
@@ -38,9 +35,6 @@ export function IdentityScreen({ members, onSelect, onReset }: { members: Member
  {members.filter(m => m.status === "active").map((member, i) => (
  <button
  key={member.id}
- initial={{ opacity: 0, scale: 0.9, y: 20 }}
- 
- 
  onClick={() => handleSelect(member.id)}
  className="flex flex-col items-center gap-3 p-6 rounded-3xl bg-card/50 border border-border hover:border-primary/30 hover:bg-card hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 press-scale backdrop-blur-sm"
  >
@@ -56,9 +50,6 @@ export function IdentityScreen({ members, onSelect, onReset }: { members: Member
  {members.filter(m => m.status === "pending").map((member, i) => (
  <div
  key={member.id}
- initial={{ opacity: 0, scale: 0.9, y: 20 }}
- 
- 
  className="flex flex-col items-center gap-3 p-6 rounded-3xl bg-card/50 border border-border opacity-50 cursor-not-allowed"
  >
  <AvatarImg avatar={member.avatar} size="text-4xl" />
@@ -70,9 +61,6 @@ export function IdentityScreen({ members, onSelect, onReset }: { members: Member
 
  {onReset && (
  <button
- initial={{ opacity: 0 }}
- 
- 
  onClick={() => {
  haptic("heavy");
  setShowResetConfirm(true);

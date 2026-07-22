@@ -69,10 +69,6 @@ export function MemberSelect({
  
  {open && (
  <div
- initial={{ opacity: 0, y: -8, scale: 0.96 }}
- 
- 
- 
  className="absolute z-50 mt-2 w-full bg-card border border-border rounded-2xl shadow-xl shadow-black/20 overflow-hidden backdrop-blur-xl"
  >
  <div className="max-h-64 overflow-y-auto p-1.5">

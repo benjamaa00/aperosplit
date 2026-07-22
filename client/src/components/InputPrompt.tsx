@@ -42,24 +42,17 @@ export function InputPrompt({
  }
  };
 
- return (
- 
- {open && (
- <div
- initial={{ opacity: 0 }}
- 
- 
- className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm px-6"
- onClick={onClose}
- >
- <div
- initial={{ scale: 0.9, opacity: 0, y: 20 }}
- 
- 
- 
- onClick={(e) => e.stopPropagation()}
- className="bg-card border border-border rounded-3xl p-6 w-full max-w-sm shadow-2xl"
- >
+  return (
+  <>
+  {open && (
+  <div
+  className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm px-6"
+  onClick={onClose}
+  >
+  <div
+  onClick={(e) => e.stopPropagation()}
+  className="bg-card border border-border rounded-3xl p-6 w-full max-w-sm shadow-2xl"
+  >
  <button
  onClick={onClose}
  className="absolute top-4 right-4 w-7 h-7 rounded-full bg-muted/50 flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors"
@@ -102,6 +95,6 @@ export function InputPrompt({
  </div>
  </div>
  )}
- 
+ </>
  );
 }

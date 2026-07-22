@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 375 812" width="375" height="812">
+  <defs>
+    <!-- Left sphere gradient (purple) -->
+    <radialGradient id="leftGrad" cx="40%" cy="35%" r="55%">
+      <stop offset="0%" stop-color="#a66aff"/>
+      <stop offset="60%" stop-color="#7B2FF7"/>
+      <stop offset="100%" stop-color="#5a1fd4"/>
+    </radialGradient>
+    <!-- Right sphere gradient (mauve) -->
+    <radialGradient id="rightGrad" cx="40%" cy="35%" r="55%">
+      <stop offset="0%" stop-color="#e0c8ff"/>
+      <stop offset="60%" stop-color="#C9A6FF"/>
+      <stop offset="100%" stop-color="#a880e6"/>
+    </radialGradient>
+    <!-- Left glow -->
+    <radialGradient id="leftGlow">
+      <stop offset="0%" stop-color="#7B2FF7" stop-opacity="0.35"/>
+      <stop offset="50%" stop-color="#7B2FF7" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#7B2FF7" stop-opacity="0"/>
+    </radialGradient>
+    <!-- Right glow -->
+    <radialGradient id="rightGlow">
+      <stop offset="0%" stop-color="#C9A6FF" stop-opacity="0.35"/>
+      <stop offset="50%" stop-color="#C9A6FF" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#C9A6FF" stop-opacity="0"/>
+    </radialGradient>
+    <!-- Center line gradient -->
+    <linearGradient id="lineGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#7B2FF7" stop-opacity="0.6"/>
+      <stop offset="50%" stop-color="#ffffff" stop-opacity="0.95"/>
+      <stop offset="100%" stop-color="#C9A6FF" stop-opacity="0.6"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background (transparent by default for logo usage) -->
+
+  <!-- Left sphere glow -->
+  <circle cx="163.5" cy="340" r="50" fill="url(#leftGlow)"/>
+
+  <!-- Left sphere -->
+  <circle cx="163.5" cy="340" r="23" fill="url(#leftGrad)"/>
+
+  <!-- Right sphere glow -->
+  <circle cx="211.5" cy="340" r="50" fill="url(#rightGlow)"/>
+
+  <!-- Right sphere -->
+  <circle cx="211.5" cy="340" r="23" fill="url(#rightGrad)"/>
+
+  <!-- Center line (split) -->
+  <rect x="186.5" y="312.4" width="2" height="55.2" rx="1" fill="url(#lineGrad)"/>
+
+  <!-- Text -->
+  <text x="187.5" y="398" text-anchor="middle" font-family="-apple-system, 'SF Pro Display', 'Inter', 'Segoe UI', sans-serif" font-size="28" font-weight="600" letter-spacing="1.5" fill="#ffffff">AperoSplit</text>
+</svg>

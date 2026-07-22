@@ -241,10 +241,6 @@ function AddExpenseSheet({
  
  {hasSubs && isExpanded && (
  <div
- initial={{ height: 0, opacity: 0 }}
- 
- 
- 
  className="overflow-hidden"
  >
  <div className="grid grid-cols-2 gap-2 pt-2 pl-6">
@@ -356,8 +352,6 @@ function AddExpenseSheet({
 
  {suggestions?.suggestedCategory && suggestions.confidence > 0.6 && suggestions.suggestedCategory.name !== category.name && (
  <div
- initial={{ opacity: 0, y: -10 }}
- 
  className="flex items-center gap-2 px-3 py-2 rounded-xl bg-primary/5 border border-primary/20 text-xs"
  >
  <span className="text-primary font-medium">Suggestion auto:</span>
@@ -373,8 +367,6 @@ function AddExpenseSheet({
 
  {suggestions?.duplicateWarning && (
  <div
- initial={{ opacity: 0, y: -10 }}
- 
  className="flex items-center gap-2 px-3 py-2 rounded-xl bg-yellow-500/10 border border-yellow-500/20 text-xs"
  >
  <span className="text-yellow-600 font-medium">Doublon possible:</span>
@@ -474,17 +466,10 @@ function AddExpenseSheet({
 
  return (
  <div
- initial={{ opacity: 0 }}
- 
- 
  className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-md"
  onClick={onClose}
  >
  <div
- initial={{ y: "100%" }}
- 
- 
- 
  onClick={(e) => e.stopPropagation()}
  className="absolute bottom-0 left-0 right-0 bg-background rounded-t-[2.5rem] max-h-[92vh] overflow-hidden flex flex-col"
  >
@@ -535,8 +520,6 @@ function AddExpenseSheet({
  {/* Selected category chip */}
  {step > 1 && (
  <div
- initial={{ opacity: 0, y: -10 }}
- 
  className="flex items-center gap-2 bg-primary/10 border border-primary/20 rounded-2xl px-4 py-3 mb-4 shrink-0"
  >
  <span className="text-2xl">{category.emoji}</span>

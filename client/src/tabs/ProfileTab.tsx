@@ -1,5 +1,5 @@
 import { memo, useState } from "react";
-import { Fingerprint, Moon, Sun, Sparkles, Copy, Share2, X, DollarSign, Bell, BarChart3, Users, Settings, Shield, Trash2, Clock, Loader2, QrCode, ChevronRight, Pencil, Tag, Smartphone } from "lucide-react";
+import { Fingerprint, Moon, Sun, Sparkles, Copy, Share2, X, DollarSign, Bell, BarChart3, Users, Settings, Shield, Trash2, Clock, Loader2, QrCode, ChevronRight, Pencil, Tag, Smartphone, HelpCircle, Play } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useThemeContext } from "../contexts/ThemeContext";
 import { trpc } from "../lib/trpc";
@@ -10,6 +10,8 @@ import { ConfirmDialog } from "../components/ConfirmDialog";
 import { AvatarImg } from "../components/AvatarImg";
 import { Toggle } from "../components/Toggle";
 import { areHapticsEnabled, setHapticsEnabled } from "../utils/haptics";
+import { isTutorialCompleted, getTutorialStep } from "../utils/tutorialStorage";
+import { MAIN_TUTORIAL_ID } from "../constants";
 
 function SettingRow({ icon, iconBg, title, subtitle, children }: {
  icon: React.ReactNode;
@@ -66,6 +68,7 @@ export const ProfileTab = memo(function ProfileTab({
  onOpenAppearance,
  onOpenEditProfile,
  onOpenCategories,
+ onReplayTutorial,
 }: {
  currentMember: Member;
  members: Member[];
@@ -98,6 +101,7 @@ export const ProfileTab = memo(function ProfileTab({
  onOpenAppearance?: () => void;
  onOpenEditProfile?: () => void;
  onOpenCategories?: () => void;
+ onReplayTutorial?: (id: string) => void;
 }) {
  const { theme, toggleTheme } = useThemeContext();
  const shareUrl = window.location.origin;
@@ -252,9 +256,6 @@ export const ProfileTab = memo(function ProfileTab({
  </SettingRow>
  {showBudgetInput && (
  <div
- initial={{ height: 0, opacity: 0 }}
- 
- 
  className="px-4 pb-4"
  >
  <div className="flex gap-2">
@@ -509,8 +510,6 @@ export const ProfileTab = memo(function ProfileTab({
  <div className="p-6 flex flex-col items-center">
  {inviteTokenValue ? (
  <div 
- initial={{ scale: 0.9, opacity: 0 }}
- 
  className="bg-white rounded-3xl p-5 shadow-2xl mb-4"
  >
  <QRCodeSVG
@@ -600,9 +599,6 @@ export const ProfileTab = memo(function ProfileTab({
  {members.map((member, i) => (
  <div
  key={member.id}
- initial={{ opacity: 0, x: -10 }}
- 
- 
  className="px-4 py-3.5 flex items-center gap-3 border-t border-border cursor-pointer hover:bg-card/60 transition-colors duration-200"
  >
  <span 
@@ -631,6 +627,34 @@ export const ProfileTab = memo(function ProfileTab({
  )}
  </div>
  ))}
+ </div>
+
+ {/* ─── AIDE & TUTORIELS ──────────────────────────── */}
+ <div
+ data-tutorial="profile-help"
+ className="glass-card-enhanced rounded-[1.25rem] overflow-hidden"
+ >
+ <div className="p-4 pb-2 flex items-center justify-between">
+ <div>
+ <p className="text-sm font-semibold">Aide & Tutoriels</p>
+ <p className="text-xs text-muted-foreground">Apprenez à utiliser l'application</p>
+ </div>
+ <HelpCircle size={16} className="text-muted-foreground" />
+ </div>
+ <button
+ onClick={() => onReplayTutorial?.(MAIN_TUTORIAL_ID)}
+ className="w-full px-4 py-3 flex items-center gap-3 hover:bg-card/60 transition-colors"
+ >
+ <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
+ <Play size={18} className="text-blue-400" />
+ </div>
+ <div className="text-left flex-1">
+ <p className="text-sm font-medium">Rejouer le tutoriel</p>
+ <p className="text-xs text-muted-foreground">
+ {isTutorialCompleted(MAIN_TUTORIAL_ID) ? "Revoir la visite guidée de l'application" : "Commencer la visite guidée"}
+ </p>
+ </div>
+ </button>
  </div>
 
  {/* Switch Account */}

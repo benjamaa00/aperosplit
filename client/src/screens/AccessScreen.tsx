@@ -34,9 +34,6 @@ export function AccessScreen({ onSubmit }: { onSubmit: (code: string) => void })
 
  <div  className="text-center mb-12 relative z-10">
  <div
- initial={{ scale: 0.8, opacity: 0 }}
- 
- 
  className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border border-primary/20 shadow-lg shadow-primary/10"
  >
  <Shield size={28} className="text-primary" />

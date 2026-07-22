@@ -168,7 +168,6 @@ const CategoryCard = memo(function CategoryCard({
 
  return (
  <div
- layout
  className={`glass-card-enhanced rounded-[1.25rem] overflow-hidden transition-opacity ${
  !category.isActive ? "opacity-50" : ""
  }`}
@@ -227,10 +226,6 @@ const CategoryCard = memo(function CategoryCard({
  
  {isExpanded && (
  <div
- initial={{ height: 0, opacity: 0 }}
- 
- 
- 
  className="overflow-hidden"
  >
  <div className="px-4 pb-4 pt-1 border-t border-border/50">
@@ -296,8 +291,6 @@ const CategoryCard = memo(function CategoryCard({
  <div className="mt-3">
  {addingSub ? (
  <div
- initial={{ opacity: 0, y: -5 }}
- 
  className="flex items-center gap-2"
  >
  <button
@@ -506,17 +499,10 @@ export const CategoryManagementScreen = memo(function CategoryManagementScreen({
 
  const renderFormModal = (isEdit: boolean) => (
  <div
- initial={{ opacity: 0 }}
- 
- 
  className="fixed inset-0 z-[200] bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center"
  onClick={() => { isEdit ? setEditingCategory(null) : setShowAddModal(false); }}
  >
  <div
- initial={{ y: "100%" }}
- 
- 
- 
  onClick={(e) => e.stopPropagation()}
  className="bg-background rounded-t-3xl sm:rounded-2xl w-full max-w-md p-6 space-y-5"
  >

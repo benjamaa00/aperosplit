@@ -119,14 +119,10 @@ export const GlobalSearchScreen = memo(function GlobalSearchScreen({
  }, []);
 
  return (
- 
+ <>
  {isOpen && (
  <div
- initial={{ opacity: 0 }}
- 
- 
- 
- className="fixed inset-0 z-[100] bg-background/95 backdrop-blur-xl"
+ className="fixed inset-0 z-[200] bg-background/95 backdrop-blur-xl"
  style={{ WebkitBackdropFilter: "blur(20px)" }}
  >
  <div className="flex flex-col h-full max-w-md mx-auto">
@@ -284,7 +280,7 @@ export const GlobalSearchScreen = memo(function GlobalSearchScreen({
  </div>
  </div>
  )}
- 
+ </>
  );
 });
 

@@ -8,6 +8,7 @@ import { formatCurrency, formatDate } from "../utils/currency";
 import { calculateMemberBreakdown } from "../utils/debts";
 import { AvatarImg } from "../components/AvatarImg";
 import { InputPrompt } from "../components/InputPrompt";
+import { HelpIcon } from "../components/HelpIcon";
 
 export const HomeTab = memo(function HomeTab({
  currentMember,
@@ -83,7 +84,7 @@ export const HomeTab = memo(function HomeTab({
 
  return (
  <>
- <div  className="max-w-md mx-auto px-5 pt-16 space-y-5">
+ <div data-tutorial="welcome" className="max-w-md mx-auto px-5 pt-16 space-y-5">
  {/* Greeting */}
  <div>
  <p className="text-muted-foreground text-sm font-medium">Bonjour,</p>
@@ -91,7 +92,7 @@ export const HomeTab = memo(function HomeTab({
  </div>
 
  {/* Balance Card - Premium Glass */}
- <div
+ <div data-tutorial="balance-summary"
  
  
  
@@ -135,8 +136,10 @@ export const HomeTab = memo(function HomeTab({
  className="glass-card-enhanced rounded-[1.25rem] p-4"
  >
  <div className="flex items-center justify-between mb-3">
- <div>
+ <div className="flex items-center gap-2">
  <h3 className="text-sm font-semibold">Budget mensuel</h3>
+ <HelpIcon variant="info" title="Budget mensuel" description="Suivez vos dépenses du mois par rapport au budget défini. Le code couleur indique si vous êtes dans les limites." />
+ </div>
  <p className="text-xs text-muted-foreground">
  {formatCurrency(currentMonthSpending, currency)} / {formatCurrency(monthlyBudget, currency)}
  </p>
@@ -152,9 +155,6 @@ export const HomeTab = memo(function HomeTab({
  {/* Progress Bar */}
  <div className="h-3 bg-secondary rounded-full overflow-hidden mb-2">
  <div
- initial={{ width: 0 }}
- 
- 
  className={`h-full rounded-full ${
  budgetPercentage > 90 ? "bg-destructive" : budgetPercentage > 70 ? "bg-amber-500" : "bg-primary"
  }`}
@@ -267,7 +267,7 @@ export const HomeTab = memo(function HomeTab({
 
  {/* Pending Payments */}
  {pendingPayments.length > 0 ? (
- <div>
+ <div data-tutorial="pending-payments">
  <div className="flex items-center justify-between mb-3">
  <h3 className="text-sm font-semibold flex items-center gap-2">
  <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
@@ -359,7 +359,7 @@ export const HomeTab = memo(function HomeTab({
  )}
 
  {/* Recent Activity */}
- <div>
+ <div data-tutorial="recent-expenses">
  <h3 className="text-sm font-semibold mb-3">Activité récente</h3>
  <div className="space-y-2">
  {recentExpenses.length === 0 ? (
@@ -392,7 +392,6 @@ export const HomeTab = memo(function HomeTab({
  );
  })
  )}
- </div>
  </div>
  </div>
 

@@ -202,8 +202,8 @@ export const StatsTab = memo(function StatsTab({ expenses, members, currentMembe
  <p className="text-sm font-bold">{formatCurrency(currentMonthTotal, currency)} / {formatCurrency(monthlyBudget, currency)}</p>
  </div>
  <div className="h-3 bg-muted rounded-full overflow-hidden">
- <div initial={{ width: 0 }} 
- 
+ <div 
+  
  className={`h-full rounded-full ${budgetUsed > 100 ? "bg-destructive" : budgetUsed > 80 ? "bg-amber-500" : "bg-primary"}`} />
  </div>
  <div className="flex justify-between mt-2">

@@ -210,7 +210,7 @@ export default function AppearanceScreen({ onBack }: AppearanceScreenProps) {
  onClick={() => setPalette(p.id)}
  className="flex flex-col items-center gap-1.5"
  >
- <div layout className={`relative w-9 h-9 rounded-full transition-all duration-200 ${
+ <div className={`relative w-9 h-9 rounded-full transition-all duration-200 ${
  palette === p.id
  ? "scale-110"
  : "hover:scale-105"
@@ -270,11 +270,9 @@ export default function AppearanceScreen({ onBack }: AppearanceScreenProps) {
  
  {themeId === t.id && (
  <div
- initial={{ scale: 0, opacity: 0 }}
- 
- 
- 
- className="absolute inset-0 flex items-center justify-center"
+  
+  
+  className="absolute inset-0 flex items-center justify-center"
  >
  <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center shadow-md">
  <Check size={12} className="text-primary-foreground" strokeWidth={3} />
@@ -568,10 +566,10 @@ export default function AppearanceScreen({ onBack }: AppearanceScreenProps) {
 
  
  {showResetConfirm && (
- <div initial={{ opacity: 0 }} 
+ <div 
  className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-6"
  onClick={() => setShowResetConfirm(false)}>
- <div initial={{ scale: 0.9, opacity: 0 }} 
+ <div 
  onClick={(e) => e.stopPropagation()}
  className="bg-card border border-border rounded-[1.25rem] p-6 w-full max-w-sm shadow-xl">
  <div className="text-center mb-4">

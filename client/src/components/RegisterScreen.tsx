@@ -117,8 +117,6 @@ export function RegisterScreen({ onRegister, onBack, groupName }: RegisterScreen
  <div className="flex items-center gap-3 mb-6">
  {step === "avatar" && (
  <button
- initial={{ opacity: 0, x: -20 }}
- 
  onClick={() => setStep("name")}
  className="w-10 h-10 rounded-2xl bg-card/30 border border-border flex items-center justify-center"
  >
@@ -202,8 +200,6 @@ export function RegisterScreen({ onRegister, onBack, groupName }: RegisterScreen
  {/* Avatar Preview */}
  <div className="flex justify-center mb-6">
  <div
- initial={{ scale: 0.8, opacity: 0 }}
- 
  className="relative"
  >
  <div className="w-28 h-28 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border-2 border-primary/30 shadow-xl shadow-primary/10 overflow-hidden">

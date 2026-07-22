@@ -111,10 +111,10 @@ function SettingsTab({ groupName, requireApproval, onUpdateSettings, onResetAllD
  {/* Reset Confirm Modal */}
  
  {showResetConfirm && (
- <div initial={{ opacity: 0 }} 
+ <div 
  className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] px-6"
  onClick={() => setShowResetConfirm(false)}>
- <div initial={{ scale: 0.9, opacity: 0 }} 
+ <div 
  onClick={e => e.stopPropagation()}
  className="glass-card-enhanced rounded-[1.25rem] p-6 w-full max-w-sm shadow-2xl">
  <div className="w-14 h-14 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto mb-4">
@@ -426,8 +426,8 @@ export function MemberManagement({
  {/* Role Menu Dropdown */}
  
  {showRoleMenu === member.id && (
- <div initial={{ opacity: 0, scale: 0.9, y: -10 }} 
- 
+ <div 
+  
  className="absolute right-4 top-full mt-1 bg-card border border-white/10 rounded-2xl shadow-2xl shadow-black/20 z-50 overflow-hidden min-w-[160px]">
  <button onClick={() => { onChangeRole?.(member.id, "admin"); setShowRoleMenu(null); }}
  className="w-full px-4 py-3 text-sm font-medium text-left flex items-center gap-2 hover:bg-muted/50">
@@ -501,10 +501,10 @@ export function MemberManagement({
  const expelMember = members.find(m => m.id === showConfirmExpel);
  if (!expelMember) { setShowConfirmExpel(null); return null; }
  return (
- <div initial={{ opacity: 0 }} 
+ <div 
  className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] px-6"
  onClick={() => setShowConfirmExpel(null)}>
- <div initial={{ scale: 0.9, opacity: 0 }} 
+ <div 
  onClick={e => e.stopPropagation()}
  className="glass-card-enhanced rounded-[1.25rem] p-6 w-full max-w-sm shadow-2xl">
  <div className="w-14 h-14 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto mb-4">
@@ -533,10 +533,10 @@ export function MemberManagement({
  {/* Add Member Modal */}
  
  {showAddMember && (
- <div initial={{ opacity: 0 }} 
+ <div 
  className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] px-6"
  onClick={() => { if (!addMemberLoading) { setShowAddMember(false); setAddMemberResult(null); } }}>
- <div initial={{ scale: 0.9, opacity: 0 }} 
+ <div 
  onClick={e => e.stopPropagation()}
  className="glass-card-enhanced rounded-[1.25rem] p-6 w-full max-w-sm shadow-2xl">
 

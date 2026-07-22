@@ -132,9 +132,6 @@ export const AdvancedAnalytics = memo(function AdvancedAnalytics({
  <span className="text-[10px] text-muted-foreground font-medium">{m.total > 0 ? formatCurrency(m.total, currency) : ""}</span>
  <div className="w-full relative" style={{ height: `${Math.max((m.total / maxMonthly) * 100, 4)}%` }}>
  <div
- initial={{ height: 0 }}
- 
- 
  className="absolute inset-0 rounded-t-lg bg-gradient-to-t from-primary to-primary/70"
  />
  </div>
@@ -165,9 +162,6 @@ export const AdvancedAnalytics = memo(function AdvancedAnalytics({
  </div>
  <div className="h-2 rounded-full bg-secondary/50 overflow-hidden">
  <div
- initial={{ width: 0 }}
- 
- 
  className="h-full rounded-full"
  style={{ backgroundColor: cat.color }}
  />
@@ -194,15 +188,9 @@ export const AdvancedAnalytics = memo(function AdvancedAnalytics({
  </div>
  <div className="flex gap-1 h-3">
  <div
- initial={{ width: 0 }}
- 
- 
  className="h-full rounded-full bg-primary"
  />
  <div
- initial={{ width: 0 }}
- 
- 
  className="h-full rounded-full bg-destructive/70"
  />
  </div>
@@ -231,9 +219,6 @@ export const AdvancedAnalytics = memo(function AdvancedAnalytics({
  <span className="text-[10px] text-muted-foreground font-medium">{d.total > 0 ? formatCurrency(d.total, currency) : ""}</span>
  <div className="w-full relative" style={{ height: `${Math.max((d.total / maxDay) * 100, 4)}%` }}>
  <div
- initial={{ height: 0 }}
- 
- 
  className="absolute inset-0 rounded-t-lg bg-gradient-to-t from-accent-foreground/30 to-accent-foreground/10"
  />
  </div>
@@ -262,9 +247,6 @@ export const AdvancedAnalytics = memo(function AdvancedAnalytics({
  <>
  <div className="h-4 rounded-full bg-secondary/50 overflow-hidden">
  <div
- initial={{ width: 0 }}
- 
- 
  className={`h-full rounded-full ${totalSpent > budget ? "bg-destructive" : totalSpent > budget * 0.8 ? "bg-yellow-500" : "bg-primary"}`}
  />
  </div>

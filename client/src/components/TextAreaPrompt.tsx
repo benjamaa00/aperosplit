@@ -41,20 +41,13 @@ export function TextAreaPrompt({
  };
 
  return (
- 
+ <>
  {open && (
  <div
- initial={{ opacity: 0 }}
- 
- 
  className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm px-6"
  onClick={onClose}
  >
  <div
- initial={{ scale: 0.9, opacity: 0, y: 20 }}
- 
- 
- 
  onClick={(e) => e.stopPropagation()}
  className="bg-card border border-border rounded-3xl p-6 w-full max-w-sm shadow-2xl"
  >
@@ -101,6 +94,6 @@ export function TextAreaPrompt({
  </div>
  </div>
  )}
- 
+ </>
  );
 }

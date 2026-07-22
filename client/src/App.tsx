@@ -4,7 +4,7 @@ import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 
 import type { Member, Expense, PendingPayment, Notification, Screen, Tab } from "./types";
-import { GROUP_ID } from "./constants";
+import { GROUP_ID, MAIN_TUTORIAL_ID } from "./constants";
 import { formatCurrency } from "./utils/currency";
 import { simplifyDebts } from "./utils/debts";
 import { checkBiometricAvailable, registerBiometric, authenticateBiometric } from "./utils/biometric";
@@ -12,6 +12,9 @@ import { storePhotoAvatar } from "./utils/avatarStorage";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { useNotifications } from "./hooks/useNotifications";
 import { useHaptic } from "./hooks/useHaptic";
+import { isTutorialCompleted } from "./utils/tutorialStorage";
+import { GuidedTour } from "./components/GuidedTour";
+import { ALL_TUTORIALS } from "./utils/tutorialSteps";
 
 import { AccessScreen } from "./screens/AccessScreen";
 import { IdentityScreen } from "./screens/IdentityScreen";
@@ -86,6 +89,7 @@ export default function App() {
  const [showSplash, setShowSplash] = useState(true);
  const [serverWaking, setServerWaking] = useState(false);
  const [serverWakeRetries, setServerWakeRetries] = useState(0);
+ const [activeTutorial, setActiveTutorial] = useState<string | null>(null);
 
  const { permission: notificationPermission, requestPermission, showNotification } = useNotifications();
  const haptic = useHaptic();
@@ -314,6 +318,14 @@ export default function App() {
  }, 5000);
  return () => clearInterval(interval);
  }, [isNetlify, groupData]);
+
+ // First-time tutorial auto-trigger
+ useEffect(() => {
+ if (screen === "main" && currentMemberId && !isTutorialCompleted(MAIN_TUTORIAL_ID)) {
+ const timer = setTimeout(() => setActiveTutorial(MAIN_TUTORIAL_ID), 800);
+ return () => clearTimeout(timer);
+ }
+ }, [screen, currentMemberId]);
 
  // ─── Auto-Reminder System ─────────────────────────────────
  useEffect(() => {
@@ -832,11 +844,11 @@ export default function App() {
  {activeTab === "balances" && <BalancesTab key="balances" members={members} balances={balances} suggestedTransactions={suggestedTransactions} currentMemberId={currentMemberId} onRequestPayment={(toId: string, amount: number, note?: string) => requestPayment(toId, amount, undefined, note)} expenses={expenses} currency={currency} />}
  {activeTab === "history" && <Suspense key="history" fallback={<TabContentSkeleton />}><PaymentHistory payments={[...completedPayments, ...pendingPayments].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))} expenses={expenses} members={members} currentMemberId={currentMemberId} currency={currency} onConfirmPayment={confirmPayment} onRefusePayment={refusePayment} onResentPayment={resentPayment} onConfirmReceipt={confirmReceipt} onReportNotReceived={reportNotReceived} onMarkAsPaid={markAsPaid} onCancelPayment={cancelPaymentRequest} /></Suspense>}
  {activeTab === "stats" && <ErrorBoundary><StatsTab key="stats" expenses={expenses} members={members} currentMemberId={currentMemberId} pendingPayments={pendingPayments} completedPayments={completedPayments} monthlyBudget={monthlyBudget} currency={currency} categories={getCategoriesQuery.data?.categories || []} /></ErrorBoundary>}
- {activeTab === "profile" && <ProfileTab key="profile" currentMember={currentMember} members={members} biometricEnabled={!!biometricEnabled[currentMemberId]} biometricAvailable={biometricAvailable} onToggleBiometric={toggleBiometric} onLogout={handleLogout} onRemoveMember={removeMember} isLocked={!!localStorage.getItem("equilibra_locked_member")} unreadCount={unreadCount} onOpenNotifications={goToNotifications} onOpenReports={goToReports} onOpenGroupSettings={goToGroupSettings} onOpenMembers={goToMembers} onOpenAppearance={goToAppearance} onOpenEditProfile={goToEditProfile} onOpenCategories={goToCategories} onResetAllData={handleResetAllData} onLeaveGroup={leaveGroup} currency={currency} onSetCurrency={updateCurrency} monthlyBudget={monthlyBudget} onSetBudget={updateBudget} pushNotifications={pushNotifications} onTogglePushNotifications={togglePushNotifications} autoReminders={autoReminders} onToggleReminders={toggleAutoReminders} reminderDelay={reminderDelay} onSetReminderDelay={(d: number) => setReminderDelay(d)} privacyMode={privacyMode} onTogglePrivacy={togglePrivacy} />}
+ {activeTab === "profile" && <ProfileTab key="profile" currentMember={currentMember} members={members} biometricEnabled={!!biometricEnabled[currentMemberId]} biometricAvailable={biometricAvailable} onToggleBiometric={toggleBiometric} onLogout={handleLogout} onRemoveMember={removeMember} isLocked={!!localStorage.getItem("equilibra_locked_member")} unreadCount={unreadCount} onOpenNotifications={goToNotifications} onOpenReports={goToReports} onOpenGroupSettings={goToGroupSettings} onOpenMembers={goToMembers} onOpenAppearance={goToAppearance} onOpenEditProfile={goToEditProfile} onOpenCategories={goToCategories} onResetAllData={handleResetAllData} onLeaveGroup={leaveGroup} currency={currency} onSetCurrency={updateCurrency} monthlyBudget={monthlyBudget} onSetBudget={updateBudget} pushNotifications={pushNotifications} onTogglePushNotifications={togglePushNotifications} autoReminders={autoReminders} onToggleReminders={toggleAutoReminders} reminderDelay={reminderDelay} onSetReminderDelay={(d: number) => setReminderDelay(d)} privacyMode={privacyMode} onTogglePrivacy={togglePrivacy} onReplayTutorial={(id) => setActiveTutorial(id)} />}
 
  {/* Floating Add Button */}
  {activeTab === "expenses" && (
- <button onClick={() => setShowAddExpense(true)} className="fixed bottom-20 right-4 z-50 w-14 h-14 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg shadow-primary/30">
+ <button data-tutorial="add-expense-btn" onClick={() => setShowAddExpense(true)} className="fixed bottom-20 right-4 z-50 w-14 h-14 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg shadow-primary/30">
  <Plus size={24} />
  </button>
  )}
@@ -855,6 +867,15 @@ export default function App() {
  <ThemeToaster />
  {content}
  </ThemeProvider>
+ {activeTutorial && ALL_TUTORIALS[activeTutorial as keyof typeof ALL_TUTORIALS] && (
+ <GuidedTour
+ tutorialId={activeTutorial as any}
+ steps={ALL_TUTORIALS[activeTutorial as keyof typeof ALL_TUTORIALS].steps}
+ isOpen={true}
+ onClose={() => setActiveTutorial(null)}
+ isAdmin={currentMember?.role === "admin"}
+ />
+ )}
  </>
  );
 }

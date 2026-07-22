@@ -265,9 +265,6 @@ export const PaymentRequestCard = memo(function PaymentRequestCard({
  return (
  <>
  <div
- initial={{ opacity: 0, y: 12, scale: 0.97 }}
- 
- 
  className={`glass-card-enhanced rounded-[1.25rem] p-4 relative overflow-hidden`}
  style={{
  borderLeft: `3px solid ${accentBorder}`,
@@ -407,8 +404,6 @@ export const PaymentRequestCard = memo(function PaymentRequestCard({
  {/* Step status text for paid/accepted */}
  {(payment.status === "paid" || payment.status === "accepted") && (
  <div
- initial={{ opacity: 0, height: 0 }}
- 
  className="bg-blue-500/5 border border-blue-500/10 rounded-2xl px-3 py-2 mb-2 mt-1"
  >
  <p className="text-[11px] text-blue-400/90 font-medium leading-relaxed">
@@ -554,10 +549,6 @@ export const PaymentRequestCard = memo(function PaymentRequestCard({
  
  {showComments && (
  <div
- initial={{ height: 0, opacity: 0 }}
- 
- 
- 
  className="overflow-hidden"
  >
  <div className="pt-3 border-t border-border/40 mt-2">
@@ -654,17 +645,10 @@ export const PaymentRequestCard = memo(function PaymentRequestCard({
  
  {showRefuseModal && (
  <div
- initial={{ opacity: 0 }}
- 
- 
  className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-6"
  onClick={() => setShowRefuseModal(false)}
  >
  <div
- initial={{ scale: 0.9, opacity: 0 }}
- 
- 
- 
  onClick={(e) => e.stopPropagation()}
  className="glass-card-enhanced rounded-[1.25rem] p-6 w-full max-w-sm shadow-xl"
  >

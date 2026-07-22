@@ -274,10 +274,10 @@ const NotificationsSection = ({ pushNotifications, onTogglePushNotifications, au
  {/* Reminder Delay Picker Modal */}
  
  {showDelayPicker && (
- <div initial={{ opacity: 0 }} 
+ <div 
  className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end justify-center z-[100] px-4 pb-8"
  onClick={() => setShowDelayPicker(false)}>
- <div initial={{ y: 200 }} 
+ <div 
  onClick={e => e.stopPropagation()}
  className="w-full max-w-md bg-card border border-border rounded-[1.25rem] p-5 shadow-2xl">
  <div className="flex items-center justify-between mb-4">
@@ -335,10 +335,10 @@ const PrivacySection = ({ privacyMode, onTogglePrivacy, offlineMode, onToggleOff
  {/* Clear Data Confirmation Modal */}
  
  {showClearConfirm && (
- <div initial={{ opacity: 0 }} 
+ <div 
  className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] px-6"
  onClick={() => setShowClearConfirm(false)}>
- <div initial={{ scale: 0.9, opacity: 0 }} 
+ <div 
  onClick={e => e.stopPropagation()}
  className="w-full max-w-sm bg-card border border-border rounded-[1.25rem] p-6 shadow-2xl">
  <div className="w-14 h-14 rounded-2xl bg-destructive/10 border border-destructive/20 flex items-center justify-center mx-auto mb-4">

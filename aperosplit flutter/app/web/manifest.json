@@ -1,22 +1,37 @@
 {
-  "name": "Equilibra Groupe",
-  "short_name": "Equilibra",
+  "name": "AperoSplit - Groupe",
+  "short_name": "AperoSplit",
   "description": "Application de partage de dépenses de groupe",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#8B5CF6",
   "orientation": "portrait",
+  "background_color": "#8B5CF6",
+  "theme_color": "#8B5CF6",
+  "scope": "/",
+  "categories": ["finance", "utilities"],
+  "lang": "fr",
+  "dir": "ltr",
+  "prefer_related_applications": false,
   "icons": [
     {
-      "src": "assets/icons/icon-192.png",
+      "src": "icons/icon-192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
-      "src": "assets/icons/icon-512.png",
+      "src": "icons/icon-512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "form_factor": "narrow"
     }
   ]
 }

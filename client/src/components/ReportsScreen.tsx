@@ -461,7 +461,7 @@ export function ReportsScreen({ expenses, members, pendingPayments, completedPay
  <span className={m.total > monthlyBudget ? "text-destructive font-semibold" : "text-muted-foreground"}>{fmt(m.total)}</span>
  </div>
  <div className="h-2 bg-muted rounded-full overflow-hidden">
- <div initial={{ width: 0 }} 
+ <div 
  className={`h-full rounded-full ${m.total > monthlyBudget ? "bg-destructive" : m.total > monthlyBudget * 0.8 ? "bg-amber-500" : "bg-primary"}`} />
  </div>
  </div>

@@ -5,6 +5,7 @@ import type { Member, Expense } from "../types";
 import { formatCurrency } from "../utils/currency";
 import { calculateMemberBreakdown } from "../utils/debts";
 import { AvatarImg } from "../components/AvatarImg";
+import { HelpIcon } from "../components/HelpIcon";
 
 interface RequestSheetProps {
  member: Member;
@@ -19,18 +20,10 @@ function RequestSheet({ member, amount, currency, onClose, onConfirm }: RequestS
 
  return (
  <div
- initial={{ opacity: 0 }}
- 
- 
- 
  className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end justify-center"
  onClick={onClose}
  >
  <div
- initial={{ y: "100%" }}
- 
- 
- 
  className="w-full max-w-md bg-card rounded-t-[1.5rem] max-h-[80vh] overflow-y-auto [&::-webkit-scrollbar]:hidden"
  onClick={(e) => e.stopPropagation()}
  >
@@ -121,9 +114,9 @@ export const BalancesTab = memo(function BalancesTab({
  
  className="max-w-md mx-auto px-5 pt-16 space-y-5"
  >
- <h1 className="text-2xl font-bold tracking-tight">Soldes</h1>
+ <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">Soldes <HelpIcon variant="question" title="Soldes du groupe" description="Visualisez qui doit rembourser qui. Un montant positif (vert) signifie qu'on vous doit. Un montant négatif (rouge) signifie que vous devez." /></h1>
 
- <div className="space-y-2">
+ <div data-tutorial="balance-card" className="space-y-2">
  {members.map((member, i) => {
  const memberBalance = balances[member.id] ?? 0;
  const isPositive = memberBalance > 0.01;
@@ -207,10 +200,6 @@ export const BalancesTab = memo(function BalancesTab({
  
  {selectedMember === member.id && selectedBreakdown && (
  <div
- initial={{ opacity: 0, height: 0 }}
- 
- 
- 
  className="overflow-hidden"
  >
  <div className="glass-card-enhanced rounded-[1.25rem] p-4 mt-2 space-y-5 border border-border">

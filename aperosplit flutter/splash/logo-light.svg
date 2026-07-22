@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 375 812" width="375" height="812">
+  <defs>
+    <radialGradient id="leftGrad" cx="40%" cy="35%" r="55%">
+      <stop offset="0%" stop-color="#a66aff"/>
+      <stop offset="60%" stop-color="#7B2FF7"/>
+      <stop offset="100%" stop-color="#5a1fd4"/>
+    </radialGradient>
+    <radialGradient id="rightGrad" cx="40%" cy="35%" r="55%">
+      <stop offset="0%" stop-color="#e0c8ff"/>
+      <stop offset="60%" stop-color="#C9A6FF"/>
+      <stop offset="100%" stop-color="#a880e6"/>
+    </radialGradient>
+    <radialGradient id="leftGlow">
+      <stop offset="0%" stop-color="#7B2FF7" stop-opacity="0.25"/>
+      <stop offset="50%" stop-color="#7B2FF7" stop-opacity="0.08"/>
+      <stop offset="100%" stop-color="#7B2FF7" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="rightGlow">
+      <stop offset="0%" stop-color="#C9A6FF" stop-opacity="0.25"/>
+      <stop offset="50%" stop-color="#C9A6FF" stop-opacity="0.08"/>
+      <stop offset="100%" stop-color="#C9A6FF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="lineGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#7B2FF7" stop-opacity="0.5"/>
+      <stop offset="50%" stop-color="#333333" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#C9A6FF" stop-opacity="0.5"/>
+    </linearGradient>
+  </defs>
+
+  <circle cx="163.5" cy="340" r="50" fill="url(#leftGlow)"/>
+  <circle cx="163.5" cy="340" r="23" fill="url(#leftGrad)"/>
+  <circle cx="211.5" cy="340" r="50" fill="url(#rightGlow)"/>
+  <circle cx="211.5" cy="340" r="23" fill="url(#rightGrad)"/>
+  <rect x="186.5" y="312.4" width="2" height="55.2" rx="1" fill="url(#lineGrad)"/>
+  <text x="187.5" y="398" text-anchor="middle" font-family="-apple-system, 'SF Pro Display', 'Inter', 'Segoe UI', sans-serif" font-size="28" font-weight="600" letter-spacing="1.5" fill="#111111">AperoSplit</text>
+</svg>

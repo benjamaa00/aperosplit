@@ -74,9 +74,6 @@ export function LockScreen({ member, onUnlock, onSkip, onSwitchIdentity }: { mem
  
  {authStatus === "success" && (
  <div
- initial={{ scale: 0, opacity: 0 }}
- 
- 
  className="absolute inset-0 flex items-center justify-center"
  >
  <div className="w-20 h-20 rounded-full bg-emerald-500 flex items-center justify-center shadow-lg shadow-emerald-500/50">

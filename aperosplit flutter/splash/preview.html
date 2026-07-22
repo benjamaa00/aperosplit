@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AperoSplit Splash Animation Preview</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #111;
+    color: #fff;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    padding: 20px;
+  }
+  h1 { font-size: 18px; font-weight: 600; margin-bottom: 4px; letter-spacing: -0.3px; }
+  .subtitle { font-size: 12px; color: #888; margin-bottom: 20px; }
+  .preview-container {
+    display: flex;
+    gap: 24px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .phone-frame {
+    border: 2px solid #333;
+    border-radius: 40px;
+    overflow: hidden;
+    position: relative;
+    background: #000;
+  }
+  .phone-frame canvas { display: block; }
+  .phone-label {
+    text-align: center;
+    font-size: 11px;
+    color: #888;
+    margin-top: 8px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .controls {
+    width: 100%;
+    max-width: 780px;
+    background: #1a1a1a;
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-bottom: 16px;
+  }
+  .timeline-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .timeline-row input[type="range"] {
+    flex: 1;
+    height: 4px;
+    -webkit-appearance: none;
+    background: #333;
+    border-radius: 2px;
+    outline: none;
+  }
+  .timeline-row input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #7B2FF7;
+    cursor: pointer;
+    border: 2px solid #fff;
+  }
+  .btn-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  button {
+    background: #2a2a2a;
+    color: #fff;
+    border: 1px solid #444;
+    border-radius: 8px;
+    padding: 6px 14px;
+    font-size: 12px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background 0.15s;
+  }
+  button:hover { background: #3a3a3a; }
+  button.active { background: #7B2FF7; border-color: #7B2FF7; }
+  .frame-info {
+    font-size: 12px;
+    color: #aaa;
+    font-variant-numeric: tabular-nums;
+    min-width: 180px;
+  }
+  .easing-label {
+    font-size: 11px;
+    color: #666;
+    margin-left: auto;
+  }
+  .markers {
+    width: 100%;
+    max-width: 780px;
+    background: #1a1a1a;
+    border-radius: 12px;
+    padding: 12px 20px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 4px 16px;
+    font-size: 11px;
+  }
+  .marker {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 0;
+    color: #999;
+    cursor: pointer;
+    transition: color 0.15s;
+  }
+  .marker:hover { color: #fff; }
+  .marker .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #555;
+    flex-shrink: 0;
+  }
+  .marker .time { color: #666; font-variant-numeric: tabular-nums; min-width: 40px; }
+  .marker .desc { color: #888; }
+</style>
+</head>
+<body>
+
+<h1>AperoSplit Splash Animation</h1>
+<p class="subtitle">60 FPS &middot; 4.0s &middot; 240 frames &middot; Bodymovin-compatible</p>
+
+<div class="preview-container">
+  <div>
+    <div class="phone-frame" id="frame-dark"></div>
+    <div class="phone-label">Dark</div>
+  </div>
+  <div>
+    <div class="phone-frame" id="frame-light"></div>
+    <div class="phone-label">Light</div>
+  </div>
+</div>
+
+<div class="controls">
+  <div class="timeline-row">
+    <input type="range" id="scrubber" min="0" max="239" value="0" step="1">
+    <div class="frame-info" id="frame-info">Frame 0 &middot; 0.000s</div>
+  </div>
+  <div class="btn-row">
+    <button id="btn-play">Play</button>
+    <button id="btn-pause">Pause</button>
+    <button id="btn-reset">Reset</button>
+    <button id="btn-speed-1" class="active">1x</button>
+    <button id="btn-speed-05">0.5x</button>
+    <button id="btn-speed-025">0.25x</button>
+    <span class="easing-label">Drag timeline or press Space to play/pause</span>
+  </div>
+</div>
+
+<div class="markers" id="markers"></div>
+
+<script>
+// ─── Configuration ─────────────────────────────────────────
+const W = 375, H = 812;
+const FPS = 60;
+const TOTAL = 240;
+
+const CX = W / 2;          // 187.5
+const CY = 340;             // Vertical center for logo
+
+const SPHERE_D = 46;        // Diameter
+const SPHERE_R = SPHERE_D / 2;
+const LINE_W = 2;
+const LINE_H = SPHERE_D * 1.2;  // 55.2
+
+// Glow levels: [radius offset, opacity]
+const GLOW_LEVELS = [
+  { extraR: 6,  alpha: 0.25 },   // inner glow
+  { extraR: 14, alpha: 0.12 },   // mid glow
+  { extraR: 24, alpha: 0.05 },   // outer glow
+];
+
+// Sphere colors
+const PURPLE = [123, 47, 247];    // #7B2FF7
+const MAUVE  = [201, 166, 255];   // #C9A6FF
+
+// Positions
+// Initial: spheres 1.5 diameters apart (edge-to-edge)
+const INIT_GAP = SPHERE_D * 1.5;  // 69
+const INIT_SEP = SPHERE_D + INIT_GAP; // 115 center-to-center
+const LEFT_INIT_X  = CX - INIT_SEP / 2;   // 130
+const RIGHT_INIT_X = CX + INIT_SEP / 2;   // 245
+
+// Final: spheres separated by thin line
+const FINAL_SEP = SPHERE_D + LINE_W; // 48 center-to-center
+const LEFT_FINAL_X  = CX - FINAL_SEP / 2; // 163.5
+const RIGHT_FINAL_X = CX + FINAL_SEP / 2; // 211.5
+
+// ─── Easing functions ──────────────────────────────────────
+function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+function easeOutQuint(t) { return 1 - Math.pow(1 - t, 5); }
+function easeOutExpo(t)  { return t === 1 ? 1 : 1 - Math.pow(2, -10 * t); }
+function easeInOutCubic(t) { return t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2,3)/2; }
+function easeInOutQuad(t) { return t < 0.5 ? 2*t*t : 1 - Math.pow(-2*t+2,2)/2; }
+
+function lerp(a, b, t) { return a + (b - a) * t; }
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+// ─── Keyframe interpolation helpers ────────────────────────
+// Returns a value between 0 and 1 based on frame range and easing
+function progress(frame, start, end, easeFn) {
+  if (frame < start) return 0;
+  if (frame >= end) return 1;
+  const t = (frame - start) / (end - start);
+  return easeFn ? easeFn(t) : t;
+}
+
+// Pulse: goes from 0→1→0 over a range
+function pulse(frame, start, peak, end) {
+  if (frame < start || frame >= end) return 0;
+  if (frame < peak) {
+    return (frame - start) / (peak - start);
+  }
+  return 1 - (frame - peak) / (end - peak);
+}
+
+// ─── Frame state calculator ────────────────────────────────
+function getFrame(frame) {
+  const s = {};
+
+  // === LEFT SPHERE ===
+  // Appear: frames 12-23 (opacity + scale)
+  const leftAppear = progress(frame, 12, 23, easeOutCubic);
+  // Pulse: frames 24-35 (scale bump)
+  const leftPulseVal = pulse(frame, 24, 30, 36);
+  // Move to center: frames 72-120 (ease-in-out)
+  const leftMove = progress(frame, 72, 120, easeInOutCubic);
+  // Exit: frames 216-240
+  const exitProg = progress(frame, 216, 240, easeInOutCubic);
+
+  s.leftOpacity = leftAppear * (1 - exitProg);
+  s.leftScale = (leftAppear > 0 ? lerp(0.8, 1.0, leftAppear) : 0)
+              * (1 + leftPulseVal * 0.15)
+              * lerp(1.0, 0.96, exitProg);
+  s.leftX = lerp(LEFT_INIT_X, LEFT_FINAL_X, leftMove);
+  s.leftY = CY;
+
+  // === RIGHT SPHERE ===
+  const rightAppear = progress(frame, 48, 59, easeOutCubic);
+  const rightPulseVal = pulse(frame, 60, 66, 72);
+  const rightMove = progress(frame, 72, 120, easeInOutCubic);
+
+  s.rightOpacity = rightAppear * (1 - exitProg);
+  s.rightScale = (rightAppear > 0 ? lerp(0.8, 1.0, rightAppear) : 0)
+               * (1 + rightPulseVal * 0.15)
+               * lerp(1.0, 0.96, exitProg);
+  s.rightX = lerp(RIGHT_INIT_X, RIGHT_FINAL_X, rightMove);
+  s.rightY = CY;
+
+  // === CENTER LINE ===
+  const lineAppear = progress(frame, 120, 132, easeOutCubic);
+  s.lineOpacity = lineAppear * (1 - exitProg);
+  s.lineX = CX;
+  s.lineY = CY;
+
+  // === LIGHT WAVE ===
+  const waveStart = 144;
+  const waveEnd = 192;
+  if (frame >= waveStart && frame < waveEnd) {
+    const wt = (frame - waveStart) / (waveEnd - waveStart);
+    const waveEased = easeOutExpo(wt);
+    s.waveRadius = waveEased * 120;
+    s.waveOpacity = (1 - wt) * 0.6;  // fade out
+  } else {
+    s.waveRadius = 0;
+    s.waveOpacity = 0;
+  }
+
+  // === TEXT ===
+  const textAppear = progress(frame, 192, 210, easeOutQuint);
+  s.textOpacity = textAppear * (1 - exitProg);
+  s.textY = CY + SPHERE_R + 44 - (1 - textAppear) * 12;
+
+  return s;
+}
+
+// ─── Drawing ───────────────────────────────────────────────
+function drawSphereGlow(ctx, x, y, r, color, alpha) {
+  const grad = ctx.createRadialGradient(x, y, r * 0.4, x, y, r);
+  grad.addColorStop(0, `rgba(${color[0]},${color[1]},${color[2]},${alpha})`);
+  grad.addColorStop(0.5, `rgba(${color[0]},${color[1]},${color[2]},${alpha * 0.4})`);
+  grad.addColorStop(1, `rgba(${color[0]},${color[1]},${color[2]},0)`);
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawSphere(ctx, x, y, d, color, opacity, scale) {
+  if (opacity <= 0.001 || scale <= 0.001) return;
+  ctx.save();
+  ctx.globalAlpha = opacity;
+
+  const r = (d / 2) * scale;
+
+  // Glow layers
+  for (const gl of GLOW_LEVELS) {
+    drawSphereGlow(ctx, x, y, r + gl.extraR, color, gl.alpha * opacity);
+  }
+
+  // Main sphere with gradient
+  const grad = ctx.createRadialGradient(x - r * 0.25, y - r * 0.25, r * 0.1, x, y, r);
+  grad.addColorStop(0, `rgba(${Math.min(255, color[0] + 60)},${Math.min(255, color[1] + 60)},${Math.min(255, color[2] + 60)},1)`);
+  grad.addColorStop(0.6, `rgb(${color[0]},${color[1]},${color[2]})`);
+  grad.addColorStop(1, `rgba(${Math.max(0, color[0] - 30)},${Math.max(0, color[1] - 30)},${Math.max(0, color[2] - 30)},1)`);
+
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
+function drawCenterLine(ctx, x, y, w, h, opacity, isDark) {
+  if (opacity <= 0.001) return;
+  ctx.save();
+  ctx.globalAlpha = opacity;
+
+  const grad = ctx.createLinearGradient(x, y - h / 2, x, y + h / 2);
+  grad.addColorStop(0, isDark ? 'rgba(123,47,247,0.4)' : 'rgba(123,47,247,0.3)');
+  grad.addColorStop(0.5, isDark ? 'rgba(255,255,255,0.9)' : 'rgba(123,47,247,0.7)');
+  grad.addColorStop(1, isDark ? 'rgba(201,166,255,0.4)' : 'rgba(201,166,255,0.3)');
+
+  ctx.fillStyle = grad;
+  ctx.fillRect(x - w / 2, y - h / 2, w, h);
+
+  // Subtle glow
+  ctx.shadowColor = isDark ? 'rgba(123,47,247,0.5)' : 'rgba(123,47,247,0.3)';
+  ctx.shadowBlur = 6;
+  ctx.fillRect(x - w / 2, y - h / 2, w, h);
+
+  ctx.restore();
+}
+
+function drawLightWave(ctx, x, y, radius, opacity) {
+  if (opacity <= 0.001 || radius <= 0) return;
+  ctx.save();
+  ctx.globalAlpha = opacity;
+
+  ctx.strokeStyle = 'rgba(123,47,247,0.8)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.arc(x, y, radius, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // Inner fill
+  const grad = ctx.createRadialGradient(x, y, radius * 0.7, x, y, radius);
+  grad.addColorStop(0, 'rgba(123,47,247,0)');
+  grad.addColorStop(0.8, 'rgba(123,47,247,0)');
+  grad.addColorStop(1, `rgba(123,47,247,${opacity * 0.3})`);
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.arc(x, y, radius, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
+function drawText(ctx, text, x, y, opacity, isDark, scale) {
+  if (opacity <= 0.001) return;
+  ctx.save();
+  ctx.globalAlpha = opacity;
+  ctx.font = '600 28px -apple-system, "SF Pro Display", "Inter", "Segoe UI", sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  ctx.letterSpacing = '2px';
+  ctx.fillStyle = isDark ? '#ffffff' : '#111111';
+  ctx.fillText(text, x, y);
+  ctx.restore();
+}
+
+function renderFrame(canvas, frame, isDark) {
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+
+  ctx.save();
+  ctx.scale(dpr, dpr);
+
+  // Background
+  ctx.fillStyle = isDark ? '#000000' : '#FFFFFF';
+  ctx.fillRect(0, 0, W, H);
+
+  const s = getFrame(frame);
+
+  // Draw spheres (with glow)
+  drawSphere(ctx, s.leftX, s.leftY, SPHERE_D, PURPLE, s.leftOpacity, s.leftScale);
+  drawSphere(ctx, s.rightX, s.rightY, SPHERE_D, MAUVE, s.rightOpacity, s.rightScale);
+
+  // Draw center line
+  drawCenterLine(ctx, s.lineX, s.lineY, LINE_W, LINE_H, s.lineOpacity, isDark);
+
+  // Draw light wave
+  drawLightWave(ctx, CX, CY, s.waveRadius, s.waveOpacity);
+
+  // Draw text
+  drawText(ctx, 'AperoSplit', CX, s.textY, s.textOpacity, isDark);
+
+  ctx.restore();
+}
+
+// ─── Setup canvases ────────────────────────────────────────
+function setupCanvas(containerId, isDark) {
+  const container = document.getElementById(containerId);
+  const dpr = window.devicePixelRatio || 1;
+  const canvas = document.createElement('canvas');
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  container.appendChild(canvas);
+  return canvas;
+}
+
+const darkCanvas = setupCanvas('frame-dark', true);
+const lightCanvas = setupCanvas('frame-light', false);
+
+// ─── Timeline markers ──────────────────────────────────────
+const markers = [
+  { f: 0,   label: 'Empty screen' },
+  { f: 12,  label: 'Purple sphere appears' },
+  { f: 24,  label: 'Purple sphere pulse' },
+  { f: 48,  label: 'Mauve sphere appears' },
+  { f: 72,  label: 'Spheres attract' },
+  { f: 96,  label: 'Deceleration' },
+  { f: 120, label: 'Final position + center line' },
+  { f: 144, label: 'Light wave emits' },
+  { f: 192, label: 'Text "AperoSplit" appears' },
+  { f: 216, label: 'Exit animation begins' },
+  { f: 240, label: 'Animation end' },
+];
+
+const markersEl = document.getElementById('markers');
+markers.forEach(m => {
+  const el = document.createElement('div');
+  el.className = 'marker';
+  el.innerHTML = `<span class="dot"></span><span class="time">${(m.f / FPS).toFixed(2)}s</span><span class="desc">${m.label}</span>`;
+  el.addEventListener('click', () => {
+    currentFrame = m.f;
+    render();
+  });
+  markersEl.appendChild(el);
+});
+
+// ─── Playback controls ─────────────────────────────────────
+let currentFrame = 0;
+let playing = false;
+let speed = 1;
+let lastTime = 0;
+let accumulator = 0;
+
+const scrubber = document.getElementById('scrubber');
+const frameInfo = document.getElementById('frame-info');
+
+function render() {
+  renderFrame(darkCanvas, currentFrame, true);
+  renderFrame(lightCanvas, currentFrame, false);
+  scrubber.value = currentFrame;
+  frameInfo.textContent = `Frame ${currentFrame} \u00B7 ${(currentFrame / FPS).toFixed(3)}s`;
+}
+
+function animate(timestamp) {
+  if (!playing) return;
+  if (!lastTime) lastTime = timestamp;
+  const dt = timestamp - lastTime;
+  lastTime = timestamp;
+
+  accumulator += dt * speed;
+  const frameMs = 1000 / FPS;
+  while (accumulator >= frameMs) {
+    currentFrame++;
+    if (currentFrame >= TOTAL) {
+      currentFrame = 0;
+    }
+    accumulator -= frameMs;
+  }
+
+  render();
+  requestAnimationFrame(animate);
+}
+
+document.getElementById('btn-play').addEventListener('click', () => {
+  if (!playing) {
+    playing = true;
+    lastTime = 0;
+    accumulator = 0;
+    requestAnimationFrame(animate);
+  }
+});
+
+document.getElementById('btn-pause').addEventListener('click', () => {
+  playing = false;
+});
+
+document.getElementById('btn-reset').addEventListener('click', () => {
+  playing = false;
+  currentFrame = 0;
+  render();
+});
+
+document.getElementById('btn-speed-1').addEventListener('click', function() {
+  speed = 1;
+  document.querySelectorAll('.btn-row button').forEach(b => b.classList.remove('active'));
+  this.classList.add('active');
+});
+document.getElementById('btn-speed-05').addEventListener('click', function() {
+  speed = 0.5;
+  document.querySelectorAll('.btn-row button').forEach(b => b.classList.remove('active'));
+  this.classList.add('active');
+});
+document.getElementById('btn-speed-025').addEventListener('click', function() {
+  speed = 0.25;
+  document.querySelectorAll('.btn-row button').forEach(b => b.classList.remove('active'));
+  this.classList.add('active');
+});
+
+scrubber.addEventListener('input', () => {
+  currentFrame = parseInt(scrubber.value);
+  render();
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.code === 'Space') {
+    e.preventDefault();
+    if (playing) {
+      playing = false;
+    } else {
+      playing = true;
+      lastTime = 0;
+      accumulator = 0;
+      requestAnimationFrame(animate);
+    }
+  }
+  if (e.code === 'ArrowRight') {
+    currentFrame = Math.min(TOTAL - 1, currentFrame + 1);
+    render();
+  }
+  if (e.code === 'ArrowLeft') {
+    currentFrame = Math.max(0, currentFrame - 1);
+    render();
+  }
+});
+
+// Initial render
+render();
+</script>
+</body>
+</html>

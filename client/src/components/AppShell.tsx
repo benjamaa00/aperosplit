@@ -5,13 +5,13 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { haptics } from "../utils/haptics";
 import type { Tab } from "../types";
 
-const navTabs: { id: Tab; Icon: typeof Home; label: string }[] = [
+const navTabs: { id: Tab; Icon: typeof Home; label: string; tutorial?: string }[] = [
  { id: "home", Icon: Home, label: "Accueil" },
- { id: "expenses", Icon: Receipt, label: "Dépenses" },
- { id: "balances", Icon: Scale, label: "Soldes" },
+ { id: "expenses", Icon: Receipt, label: "Dépenses", tutorial: "tab-expenses" },
+ { id: "balances", Icon: Scale, label: "Soldes", tutorial: "tab-balances" },
  { id: "history", Icon: History, label: "Historique" },
- { id: "stats", Icon: BarChart3, label: "Stats" },
- { id: "profile", Icon: User, label: "Profil" },
+ { id: "stats", Icon: BarChart3, label: "Stats", tutorial: "tab-stats" },
+ { id: "profile", Icon: User, label: "Profil", tutorial: "tab-profile" },
 ];
 
 interface AppShellProps {
@@ -63,7 +63,7 @@ const AppShell = memo(({ children, activeTab, onTabChange }: AppShellProps) => {
  
  
  />
- {navTabs.map(({ id, Icon, label }) => {
+ {navTabs.map(({ id, Icon, label, tutorial }) => {
  const isActive = activeTab === id;
  return (
  <button
@@ -71,6 +71,7 @@ const AppShell = memo(({ children, activeTab, onTabChange }: AppShellProps) => {
  ref={(el) => {
  if (el) tabRefs.current.set(id, el);
  }}
+  data-tutorial={tutorial}
  onClick={() => handleTabChange(id)}
  aria-label={label}
  className={`relative z-10 flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition-colors duration-200 ${
