@@ -50,7 +50,7 @@ const AppShell = memo(({ children, activeTab, onTabChange }: AppShellProps) => {
  <TooltipProvider>
  {children}
  {activeTab && onTabChange && (
- <nav className="fixed bottom-0 inset-x-0 z-40">
+ <nav data-tutorial="tab-bar" className="fixed bottom-0 inset-x-0 z-40">
  <div className="absolute inset-0 bg-card/70 backdrop-blur-2xl" />
  <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
  <div className="absolute inset-0 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)]" />

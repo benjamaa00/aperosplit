@@ -335,6 +335,7 @@ export const BalancesTab = memo(function BalancesTab({
 
  {suggestedTransactions.length > 0 ? (
  <div>
+ <div data-tutorial="balance-simplified">
  <h3 className="text-sm font-semibold mb-1 flex items-center gap-2">
  <Sparkles size={14} className="text-primary" />
  Remboursements optimisés
@@ -386,9 +387,10 @@ export const BalancesTab = memo(function BalancesTab({
  </div>
  );
  })}
- </div>
- </div>
- ) : (
+  </div>
+  </div>
+  </div>
+  ) : (
  <EmptyState
  icon={Scale}
  title="Tout est equilibre"

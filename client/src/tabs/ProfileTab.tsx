@@ -210,7 +210,7 @@ export const ProfileTab = memo(function ProfileTab({
  <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3 px-1">Paramètres</p>
 
  {/* Devise */}
- <div className="glass-card-enhanced rounded-[1.25rem] overflow-hidden mb-3">
+ <div data-tutorial="profile-settings" className="glass-card-enhanced rounded-[1.25rem] overflow-hidden mb-3">
  <SettingRow
  icon={<DollarSign size={20} className="text-primary" />}
  iconBg="bg-primary/10"
@@ -308,7 +308,7 @@ export const ProfileTab = memo(function ProfileTab({
  </div>
 
  {/* Notifications */}
- <div className="glass-card-enhanced rounded-[1.25rem] overflow-hidden mb-3">
+ <div data-tutorial="profile-notifications" className="glass-card-enhanced rounded-[1.25rem] overflow-hidden mb-3">
  <div className="p-4 pb-2 flex items-center gap-2">
  <Bell size={14} className="text-muted-foreground" />
  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Notifications</p>
@@ -352,7 +352,7 @@ export const ProfileTab = memo(function ProfileTab({
  </div>
 
  {/* Sécurité & Confidentialité */}
- <div className="glass-card-enhanced rounded-[1.25rem] overflow-hidden mb-3">
+ <div data-tutorial="profile-security" className="glass-card-enhanced rounded-[1.25rem] overflow-hidden mb-3">
  <div className="p-4 pb-2 flex items-center gap-2">
  <Shield size={14} className="text-muted-foreground" />
  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Sécurité</p>
@@ -416,6 +416,7 @@ export const ProfileTab = memo(function ProfileTab({
  )}
  {onOpenCategories && currentMember.role === "admin" && (
  <button
+ data-tutorial="profile-categories"
  onClick={() => { haptic("light"); onOpenCategories(); }}
  className="w-full p-4 flex items-center justify-between bg-card/50 border border-border rounded-2xl"
  >
@@ -585,9 +586,7 @@ export const ProfileTab = memo(function ProfileTab({
 
  {/* Members */}
  <div
- 
- 
- 
+ data-tutorial="profile-members"
  className="glass-card-enhanced rounded-[1.25rem] overflow-hidden"
  >
  <div className="p-4 pb-2 flex items-center justify-between">

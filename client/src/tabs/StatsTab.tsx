@@ -146,7 +146,7 @@ export const StatsTab = memo(function StatsTab({ expenses, members, currentMembe
  </header>
 
  {/* Period Selector */}
- <div className="flex gap-2 bg-card/30 border border-border rounded-2xl p-1">
+ <div data-tutorial="stats-controls" className="flex gap-2 bg-card/30 border border-border rounded-2xl p-1">
  {([["week", "Semaine"], ["month", "Mois"], ["year", "Année"], ["all", "Tout"]] as [Period, string][]).map(([key, label]) => (
  <button key={key} onClick={() => setPeriod(key)}
  className={`flex-1 py-2.5 rounded-xl text-xs font-semibold transition-all ${period === key ? "bg-primary text-primary-foreground shadow-lg shadow-primary/30" : "text-muted-foreground hover:text-foreground"}`}>

@@ -239,14 +239,14 @@ export const ExpensesTab = memo(function ExpensesTab({
  Rechercher...
  </button>
 
- <div className="relative">
- <Search
- size={16}
- className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground/60"
- />
- <input
- type="text"
- placeholder="Filtrer les depenses..."
+  <div data-tutorial="expense-filter" className="relative">
+  <Search
+  size={16}
+  className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground/60"
+  />
+  <input
+  type="text"
+  placeholder="Filtrer les depenses..."
  value={search}
  onChange={(e) => setSearch(e.target.value)}
  className="w-full bg-card/50 backdrop-blur-sm border border-border rounded-2xl pl-10 pr-4 py-3 text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/20 transition-all"
@@ -322,14 +322,15 @@ export const ExpensesTab = memo(function ExpensesTab({
  {formatCurrency(exp.amount, currency)}
  </p>
  <div className="relative">
- <button
- onClick={(e) => {
- e.stopPropagation();
- setOpenMenuId(openMenuId === exp.id ? null : exp.id);
- }}
- className="w-7 h-7 rounded-full bg-muted/50 flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors"
- >
- <MoreVertical size={13} />
+  <button
+  data-tutorial={i === 0 ? "expense-quick-actions" : undefined}
+  onClick={(e) => {
+  e.stopPropagation();
+  setOpenMenuId(openMenuId === exp.id ? null : exp.id);
+  }}
+  className="w-7 h-7 rounded-full bg-muted/50 flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors"
+  >
+  <MoreVertical size={13} />
  </button>
  
  {openMenuId === exp.id && (
