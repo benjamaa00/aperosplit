@@ -1,15 +1,6 @@
 import { useState, useEffect, memo, useCallback, useRef } from "react";
 
-const SPLASH_KEY = "equilibra_splash_seen";
 const SPLASH_DURATION = 5200;
-
-function hasSeenSplash(): boolean {
-  try {
-    return localStorage.getItem(SPLASH_KEY) === "1";
-  } catch {
-    return false;
-  }
-}
 
 export const SplashScreen = memo(function SplashScreen({ onComplete }: { onComplete: () => void }) {
   const [done, setDone] = useState(false);
@@ -20,9 +11,6 @@ export const SplashScreen = memo(function SplashScreen({ onComplete }: { onCompl
   }, []);
 
   useEffect(() => {
-    if (hasSeenSplash()) { onComplete(); return; }
-    try { localStorage.setItem(SPLASH_KEY, "1"); } catch {}
-
     schedule(() => setDone(true), SPLASH_DURATION);
     schedule(onComplete, SPLASH_DURATION + 400);
     return () => { timersRef.current.forEach(clearTimeout); timersRef.current = [];

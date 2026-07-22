@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, memo, useEffect } from "react";
-import { ChevronRight, ArrowRight, Sparkles } from "lucide-react";
+import { ArrowRight, Sparkles } from "lucide-react";
 
 const ONBOARDING_KEY = "equilibra_onboarding_done";
 
@@ -12,7 +12,7 @@ function markOnboardingDone() {
 }
 
 interface OnboardingPage {
-  emoji: string;
+  image: string;
   gradient: string;
   glowColor: string;
   title: string;
@@ -21,42 +21,42 @@ interface OnboardingPage {
 
 const PAGES: OnboardingPage[] = [
   {
-    emoji: "🥂",
+    image: "/onboarding/welcome.png",
     gradient: "linear-gradient(135deg, #7B2FF7, #C9A6FF)",
     glowColor: "rgba(123, 47, 247, 0.25)",
     title: "Bienvenue sur\nAperoSplit",
     description: "L'application qui simplifie le partage de dépenses entre amis. Fini les calculs compliqués et les oublis.",
   },
   {
-    emoji: "💸",
+    image: "/onboarding/expense.png",
     gradient: "linear-gradient(135deg, #F97316, #FBBF24)",
     glowColor: "rgba(249, 115, 22, 0.25)",
     title: "Enregistrez vos\ndépenses en 2 secondes",
     description: "Ajoutez un achat, choisissez les participants, c'est fait. La répartition est automatique et instantanée.",
   },
   {
-    emoji: "⚖️",
+    image: "/onboarding/balance.png",
     gradient: "linear-gradient(135deg, #10B981, #34D399)",
     glowColor: "rgba(16, 185, 129, 0.25)",
     title: "Soldes\nintelligents",
     description: "Notre algorithme réduit le nombre de remboursements nécessaires. Moins de virements, plus de simplicité.",
   },
   {
-    emoji: "📊",
+    image: "/onboarding/stats.png",
     gradient: "linear-gradient(135deg, #3B82F6, #60A5FA)",
     glowColor: "rgba(59, 130, 246, 0.25)",
-    title: "Statistiques\n détaillées",
+    title: "Statistiques\ndétaillées",
     description: "Visualisez où va votre argent avec des graphiques élégants. Catégories, tendances, budgets, tout est là.",
   },
   {
-    emoji: "🔒",
+    image: "/onboarding/security.png",
     gradient: "linear-gradient(135deg, #8B5CF6, #A78BFA)",
     glowColor: "rgba(139, 92, 246, 0.25)",
     title: "Sécurité\ntotale",
     description: "Verrouillage biométrique, mode privé pour masquer les montants. Vos données restent entre vous.",
   },
   {
-    emoji: "🚀",
+    image: "/onboarding/rocket.png",
     gradient: "linear-gradient(135deg, #EC4899, #F472B6)",
     glowColor: "rgba(236, 72, 153, 0.25)",
     title: "C'est parti !",
@@ -125,27 +125,23 @@ export const OnboardingScreen = memo(function OnboardingScreen({ onComplete }: {
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
-      {/* Background gradient */}
       <div className="onboarding-bg" style={{ background: current.gradient, opacity: exiting ? 0 : 1 }} />
-
-      {/* Glow orb */}
       <div className="onboarding-glow" style={{ background: `radial-gradient(circle, ${current.glowColor}, transparent 70%)` }} />
 
-      {/* Skip button */}
       {!isLast && (
         <button onClick={skip} className="onboarding-skip" type="button">
           Passer
         </button>
       )}
 
-      {/* Content */}
       <div className="onboarding-content">
-        <div
-          className="onboarding-emoji"
-          key={page}
-          style={{ background: "rgba(255,255,255,0.15)", backdropFilter: "blur(20px)" }}
-        >
-          <span>{current.emoji}</span>
+        <div className="onboarding-illustration-wrapper" key={page}>
+          <img
+            src={current.image}
+            alt={current.title.replace("\n", " ")}
+            className="onboarding-image"
+            draggable={false}
+          />
         </div>
 
         <h2 className="onboarding-title" key={`t-${page}`}>
@@ -156,9 +152,7 @@ export const OnboardingScreen = memo(function OnboardingScreen({ onComplete }: {
         </p>
       </div>
 
-      {/* Bottom section */}
       <div className="onboarding-bottom">
-        {/* Page dots */}
         <div className="onboarding-dots">
           {PAGES.map((_, i) => (
             <div
@@ -169,7 +163,6 @@ export const OnboardingScreen = memo(function OnboardingScreen({ onComplete }: {
           ))}
         </div>
 
-        {/* Next / CTA button */}
         <button onClick={goNext} className="onboarding-next" type="button">
           {isLast ? (
             <>
