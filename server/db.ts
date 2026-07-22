@@ -204,20 +204,23 @@ export function initializeDatabase(): Promise<void> {
           created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         );
         -- Performance indexes
-        CREATE INDEX IF NOT EXISTS idx_expenses_group_id ON expenses(group_id);
-        CREATE INDEX IF NOT EXISTS idx_expenses_payer_id ON expenses(payer_id);
-        CREATE INDEX IF NOT EXISTS idx_expenses_category ON expenses(category);
-        CREATE INDEX IF NOT EXISTS idx_expenses_date ON expenses(date);
-        CREATE INDEX IF NOT EXISTS idx_expenses_created_at ON expenses(created_at);
-        CREATE INDEX IF NOT EXISTS idx_payments_group_id ON payments(group_id);
-        CREATE INDEX IF NOT EXISTS idx_payments_from_id ON payments(from_id);
-        CREATE INDEX IF NOT EXISTS idx_payments_to_id ON payments(to_id);
-        CREATE INDEX IF NOT EXISTS idx_payments_status ON payments(status);
-        CREATE INDEX IF NOT EXISTS idx_notifications_member_id ON notifications(member_id);
-        CREATE INDEX IF NOT EXISTS idx_notifications_read ON notifications(read);
-        CREATE INDEX IF NOT EXISTS idx_group_members_group_id ON group_members(group_id);
-        CREATE INDEX IF NOT EXISTS idx_group_members_member_id ON group_members(member_id);
-        CREATE INDEX IF NOT EXISTS idx_expense_categories_group_id ON expense_categories(group_id);
+        DO $$ BEGIN
+          CREATE INDEX IF NOT EXISTS idx_expenses_group_id ON expenses(group_id);
+          CREATE INDEX IF NOT EXISTS idx_expenses_payer_id ON expenses(payer_id);
+          CREATE INDEX IF NOT EXISTS idx_expenses_category ON expenses(category);
+          CREATE INDEX IF NOT EXISTS idx_expenses_date ON expenses(date);
+          CREATE INDEX IF NOT EXISTS idx_expenses_created_at ON expenses(created_at);
+          CREATE INDEX IF NOT EXISTS idx_payments_group_id ON payments(group_id);
+          CREATE INDEX IF NOT EXISTS idx_payments_from_id ON payments(from_id);
+          CREATE INDEX IF NOT EXISTS idx_payments_to_id ON payments(to_id);
+          CREATE INDEX IF NOT EXISTS idx_payments_status ON payments(status);
+          CREATE INDEX IF NOT EXISTS idx_notifications_member_id ON notifications(member_id);
+          CREATE INDEX IF NOT EXISTS idx_notifications_read ON notifications(read);
+          CREATE INDEX IF NOT EXISTS idx_group_members_group_id ON group_members(group_id);
+          CREATE INDEX IF NOT EXISTS idx_group_members_member_id ON group_members(id);
+          CREATE INDEX IF NOT EXISTS idx_expense_categories_group_id ON expense_categories(group_id);
+        EXCEPTION WHEN OTHERS THEN RAISE NOTICE 'Index creation: %', SQLERRM;
+        END $$;
       `);
       await dbPool.query(`
         DO $$ BEGIN
