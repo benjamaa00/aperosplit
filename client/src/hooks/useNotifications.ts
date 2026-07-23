@@ -22,8 +22,8 @@ export function useNotifications() {
     if ("Notification" in window && Notification.permission === "granted") {
       new Notification(title, {
         body,
-        icon: icon || "/icon.svg",
-        badge: "/icon.svg",
+        icon: icon || "/logo.jpg",
+        badge: "/logo.jpg",
         tag: "equilibra",
         requireInteraction: true,
       });
