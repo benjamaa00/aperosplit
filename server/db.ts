@@ -293,6 +293,22 @@ export function initializeDatabase(): Promise<void> {
           CREATE INDEX IF NOT EXISTS idx_expense_subcategories_category_id ON expense_subcategories(category_id);
         `);
       } catch {}
+      try {
+        await dbPool.query(`
+          CREATE TABLE IF NOT EXISTS push_subscriptions (
+            id VARCHAR(128) PRIMARY KEY,
+            member_id VARCHAR(128) NOT NULL,
+            group_id VARCHAR(128) NOT NULL,
+            endpoint TEXT NOT NULL,
+            p256dh TEXT NOT NULL,
+            auth TEXT NOT NULL,
+            user_agent TEXT,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+          );
+          CREATE INDEX IF NOT EXISTS idx_push_subscriptions_member ON push_subscriptions(member_id);
+          CREATE INDEX IF NOT EXISTS idx_push_subscriptions_group ON push_subscriptions(group_id);
+        `);
+      } catch {}
     } catch (error) {
       console.error("[DB] Database initialization failed:", error);
       pool = undefined;
@@ -979,6 +995,7 @@ export async function addNotification(memberId: string, groupId: string, type: s
     `INSERT INTO notifications (id, group_id, member_id, type, title, message, data) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
     [id, groupId, memberId, type, title, message, data ? JSON.stringify(data) : null]
   );
+  sendPushToMember(memberId, title, message).catch(() => {});
   return true;
 }
 
@@ -1180,4 +1197,137 @@ export async function resetAllGroupData(groupId: string) {
   await db.query(`DELETE FROM group_invites WHERE group_id = $1`, [groupId]);
   await db.query(`UPDATE groups SET share_url = NULL WHERE id = $1`, [groupId]);
   return true;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Push Notification Subscription Management
+// ═══════════════════════════════════════════════════════════════
+
+import webpush from "web-push";
+import { ENV } from "./_core/env";
+
+let vapidConfigured = false;
+function ensureVapid() {
+  if (vapidConfigured) return true;
+  if (!ENV.vapidPublicKey || !ENV.vapidPrivateKey) return false;
+  webpush.setVapidDetails(ENV.vapidSubject, ENV.vapidPublicKey, ENV.vapidPrivateKey);
+  vapidConfigured = true;
+  return true;
+}
+
+export async function savePushSubscription(memberId: string, groupId: string, subscription: { endpoint: string; p256dh: string; auth: string }, userAgent?: string) {
+  const db = await ready();
+  if (!db) return true;
+  const id = `psub_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  await db.query(
+    `DELETE FROM push_subscriptions WHERE member_id = $1 AND endpoint = $2`,
+    [memberId, subscription.endpoint]
+  );
+  await db.query(
+    `INSERT INTO push_subscriptions (id, member_id, group_id, endpoint, p256dh, auth, user_agent) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+    [id, memberId, groupId, subscription.endpoint, subscription.p256dh, subscription.auth, userAgent || null]
+  );
+  return true;
+}
+
+export async function removePushSubscription(memberId: string, endpoint: string) {
+  const db = await ready();
+  if (!db) return true;
+  await db.query(`DELETE FROM push_subscriptions WHERE member_id = $1 AND endpoint = $2`, [memberId, endpoint]);
+  return true;
+}
+
+export async function removePushSubscriptionByEndpoint(endpoint: string) {
+  const db = await ready();
+  if (!db) return true;
+  await db.query(`DELETE FROM push_subscriptions WHERE endpoint = $1`, [endpoint]);
+  return true;
+}
+
+export async function getPushSubscriptionsForMember(memberId: string) {
+  const db = await ready();
+  if (!db) return [];
+  const result = await db.query(
+    `SELECT endpoint, p256dh, auth FROM push_subscriptions WHERE member_id = $1`,
+    [memberId]
+  );
+  return result.rows;
+}
+
+export async function getPushSubscriptionsForGroup(groupId: string) {
+  const db = await ready();
+  if (!db) return [];
+  const result = await db.query(
+    `SELECT id, member_id AS "memberId", endpoint, p256dh, auth FROM push_subscriptions WHERE group_id = $1`,
+    [groupId]
+  );
+  return result.rows;
+}
+
+export async function sendPushToMember(memberId: string, title: string, body: string, url?: string) {
+  if (!ensureVapid()) return 0;
+  const subs = await getPushSubscriptionsForMember(memberId);
+  if (subs.length === 0) return 0;
+  const payload = JSON.stringify({
+    title,
+    body,
+    icon: "/icon.svg",
+    badge: "/icon.svg",
+    url: url || "/",
+    tag: "equilibra",
+    timestamp: Date.now(),
+  });
+  let sent = 0;
+  for (const sub of subs) {
+    try {
+      await webpush.sendNotification(
+        { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+        payload
+      );
+      sent++;
+    } catch (err: any) {
+      if (err.statusCode === 404 || err.statusCode === 410) {
+        await removePushSubscriptionByEndpoint(sub.endpoint).catch(() => {});
+      }
+    }
+  }
+  return sent;
+}
+
+export async function sendPushToGroup(groupId: string, excludeMemberId: string, title: string, body: string, url?: string) {
+  const subs = await getPushSubscriptionsForGroup(groupId);
+  if (subs.length === 0) return 0;
+  if (!ensureVapid()) return 0;
+  const payload = JSON.stringify({
+    title,
+    body,
+    icon: "/icon.svg",
+    badge: "/icon.svg",
+    url: url || "/",
+    tag: "equilibra",
+    timestamp: Date.now(),
+  });
+  let sent = 0;
+  const memberMap = new Map<string, typeof subs>();
+  for (const sub of subs) {
+    if (sub.memberId === excludeMemberId) continue;
+    if (!memberMap.has(sub.memberId)) memberMap.set(sub.memberId, []);
+    memberMap.get(sub.memberId)!.push(sub);
+  }
+  for (const memberSubs of Array.from(memberMap.values())) {
+    for (const sub of memberSubs) {
+      try {
+        await webpush.sendNotification(
+          { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+          payload
+        );
+        sent++;
+      } catch (err: any) {
+        if (err.statusCode === 404 || err.statusCode === 410) {
+          await removePushSubscriptionByEndpoint(sub.endpoint).catch(() => {});
+        }
+      }
+    }
+  }
+  return sent;
 }

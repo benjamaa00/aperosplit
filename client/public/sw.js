@@ -21,11 +21,76 @@ function startPing() {
   pingTimer = setInterval(() => {
     fetch(PING_URL, { cache: 'no-store' }).catch(() => {});
   }, PING_INTERVAL);
-  // Also ping immediately on activation
   fetch(PING_URL, { cache: 'no-store' }).catch(() => {});
 }
 
-// Periodic Background Sync (Chrome/Edge - works even when app is closed)
+// ── Push Notification Handler ──
+self.addEventListener('push', (event) => {
+  let data = { title: 'AperoSplit', body: '', url: '/', tag: 'equilibra', icon: '/icon.svg' };
+  try {
+    if (event.data) {
+      const json = event.data.json();
+      data = { ...data, ...json };
+    }
+  } catch {
+    try { data.body = event.data ? event.data.text() : ''; } catch {}
+  }
+
+  event.waitUntil(
+    self.registration.showNotification(data.title, {
+      body: data.body,
+      icon: data.icon || '/icon.svg',
+      badge: '/icon.svg',
+      tag: data.tag || 'equilibra',
+      renotify: true,
+      requireInteraction: false,
+      vibrate: [100, 50, 100],
+      data: { url: data.url || '/', timestamp: data.timestamp || Date.now() },
+      actions: [
+        { action: 'open', title: 'Ouvrir' },
+      ],
+    })
+  );
+});
+
+// ── Notification Click Handler ──
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = (event.notification.data && event.notification.data.url) || '/';
+
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      // Focus existing window if open
+      for (const client of clientList) {
+        if (client.url.includes(self.registration.scope) && 'focus' in client) {
+          client.focus();
+          if (client.navigate) client.navigate(url);
+          return;
+        }
+      }
+      // Open new window
+      if (self.clients.openWindow) {
+        return self.clients.openWindow(url);
+      }
+    })
+  );
+});
+
+// ── Push Subscription Change Handler ──
+self.addEventListener('pushsubscriptionchange', (event) => {
+  event.waitUntil(
+    self.registration.pushManager.subscribe(event.oldSubscription.options).then((subscription) => {
+      // Notify the app about the new subscription
+      self.clients.matchAll({ type: 'window' }).then((clientList) => {
+        for (const client of clientList) {
+          client.postMessage({ type: 'PUSH_SUBSCRIPTION_CHANGED', subscription: subscription.toJSON() });
+        }
+      });
+    })
+  );
+});
+
+// ── Periodic Background Sync (Chrome/Edge) ──
 self.addEventListener('periodicsync', (event) => {
   if (event.tag === 'keep-alive') {
     event.waitUntil(
@@ -37,13 +102,9 @@ self.addEventListener('periodicsync', (event) => {
 self.addEventListener('fetch', (event) => {
   const { request } = event;
 
-  // Skip non-GET requests
   if (request.method !== 'GET') return;
-
-  // Skip API requests (tRPC, etc.)
   if (request.url.includes('/api/')) return;
 
-  // Navigation requests: network-first (SPA shell)
   if (request.mode === 'navigate') {
     event.respondWith(
       fetch(request).catch(() => caches.match('/'))
@@ -51,7 +112,6 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Static assets (JS, CSS, images): cache-first
   if (request.url.match(/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2)$/)) {
     event.respondWith(
       caches.match(request).then((cached) => {
@@ -68,7 +128,6 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Everything else: network-first
   event.respondWith(
     fetch(request).catch(() => caches.match(request))
   );
@@ -77,7 +136,6 @@ self.addEventListener('fetch', (event) => {
 self.addEventListener('activate', (event) => {
   self.clients.claim();
   startPing();
-  // Register periodic sync if available
   if (self.registration.periodicSync) {
     self.registration.periodicSync.register('keep-alive', {
       minInterval: PING_INTERVAL,

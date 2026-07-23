@@ -9,6 +9,7 @@ import { formatCurrency } from "./utils/currency";
 import { simplifyDebts } from "./utils/debts";
 import { checkBiometricAvailable, registerBiometric, authenticateBiometric } from "./utils/biometric";
 import { storePhotoAvatar } from "./utils/avatarStorage";
+import { subscribeToPush, unsubscribeFromPush, getCurrentPushSubscription } from "./utils/pushSubscription";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { useNotifications } from "./hooks/useNotifications";
 import { useHaptic } from "./hooks/useHaptic";
@@ -129,6 +130,9 @@ export default function App() {
  const updateMemberProfileMutation = trpc.equilibra.updateMemberProfile.useMutation();
  const updateMemberBiometricMutation = trpc.equilibra.updateMemberBiometric.useMutation();
  const addMemberDirectMutation = trpc.equilibra.addMemberDirect.useMutation();
+ const vapidPublicKeyQuery = trpc.equilibra.getVapidPublicKey.useQuery(undefined, { enabled: !isNetlify, staleTime: 3600000 });
+ const subscribePushMutation = trpc.equilibra.subscribePush.useMutation();
+ const unsubscribePushMutation = trpc.equilibra.unsubscribePush.useMutation();
 
  const { data: groupData, refetch, isLoading: isGroupLoading, isError: isGroupError, error: groupError } = trpc.equilibra.getGroupData.useQuery(undefined, {
  enabled: !isNetlify,
@@ -174,6 +178,46 @@ export default function App() {
  return () => { document.removeEventListener("click", handler); document.removeEventListener("touchstart", handler); };
  }
  }, [notificationPermission, requestPermission]);
+
+ // Auto-subscribe to push notifications if enabled
+ useEffect(() => {
+   if (isNetlify || !pushNotifications || !currentMemberId || !vapidPublicKeyQuery.data?.publicKey) return;
+   let cancelled = false;
+   (async () => {
+     const existing = await getCurrentPushSubscription();
+     if (cancelled) return;
+     if (!existing) {
+       const sub = await subscribeToPush(vapidPublicKeyQuery.data!.publicKey, currentMemberId);
+       if (!cancelled && sub) {
+         subscribePushMutation.mutate({
+           memberId: currentMemberId,
+           subscription: sub,
+           userAgent: navigator.userAgent,
+         });
+       }
+     }
+   })();
+   return () => { cancelled = true; };
+ }, [pushNotifications, currentMemberId, vapidPublicKeyQuery.data]);
+
+ // Listen for push subscription changes from Service Worker
+ useEffect(() => {
+   if (!('serviceWorker' in navigator)) return;
+   const handler = (event: MessageEvent) => {
+     if (event.data?.type === 'PUSH_SUBSCRIPTION_CHANGED' && event.data.subscription && currentMemberId) {
+       const sub = event.data.subscription;
+       if (sub.endpoint && sub.keys) {
+         subscribePushMutation.mutate({
+           memberId: currentMemberId,
+           subscription: { endpoint: sub.endpoint, p256dh: sub.keys.p256dh || '', auth: sub.keys.auth || '' },
+           userAgent: navigator.userAgent,
+         });
+       }
+     }
+   };
+   navigator.serviceWorker.addEventListener('message', handler);
+   return () => navigator.serviceWorker.removeEventListener('message', handler);
+ }, [currentMemberId, subscribePushMutation]);
 
  // ─── Sync notification settings to server ─────────────────
  const notifSettingsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -697,7 +741,31 @@ export default function App() {
 
  // ─── Stable Toggle Callbacks (functional updaters = no deps) ───
  const togglePrivacy = useCallback(() => setPrivacyMode(p => !p), []);
- const togglePushNotifications = useCallback(() => setPushNotifications(p => !p), []);
+ const togglePushNotifications = useCallback(async () => {
+   if (!pushNotifications) {
+     const granted = await requestPermission();
+     if (!granted) return;
+     // Subscribe to push
+     const vapidKey = vapidPublicKeyQuery.data?.publicKey;
+     if (vapidKey && currentMemberId) {
+       const sub = await subscribeToPush(vapidKey, currentMemberId);
+       if (sub) {
+         subscribePushMutation.mutate({
+           memberId: currentMemberId,
+           subscription: sub,
+           userAgent: navigator.userAgent,
+         });
+       }
+     }
+   } else {
+     // Unsubscribe from push
+     const endpoint = await unsubscribeFromPush();
+     if (endpoint && currentMemberId) {
+       unsubscribePushMutation.mutate({ memberId: currentMemberId, endpoint });
+     }
+   }
+   setPushNotifications(p => !p);
+ }, [pushNotifications, requestPermission, currentMemberId, vapidPublicKeyQuery.data, subscribePushMutation, unsubscribePushMutation]);
  const toggleAutoReminders = useCallback(() => setAutoReminders(p => !p), []);
  const toggleOfflineMode = useCallback(() => setOfflineMode(p => !p), []);
 

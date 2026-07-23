@@ -1,8 +1,9 @@
 import { useCallback } from "react";
+import { areHapticsEnabled } from "../utils/haptics";
 
 export function useHaptic() {
   const trigger = useCallback((type: "light" | "medium" | "heavy" | "success" | "error" | "selection") => {
-    if (!navigator.vibrate) return;
+    if (!navigator.vibrate || !areHapticsEnabled()) return;
 
     switch (type) {
       case "light":

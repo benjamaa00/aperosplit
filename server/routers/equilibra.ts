@@ -53,6 +53,10 @@ import {
   addPaymentComment as dbAddPaymentComment,
   getPaymentComments as dbGetPaymentComments,
   updateMemberProfile as dbUpdateMemberProfile,
+  savePushSubscription,
+  removePushSubscription,
+  sendPushToMember,
+  sendPushToGroup,
 } from "../db";
 
 const GROUP_ID = "equilibra-fixed-group";
@@ -759,5 +763,36 @@ export const equilibraRouter = router({
       const { resetAllGroupData } = await import("../db");
       const success = await resetAllGroupData(GROUP_ID);
       return { success };
+    }),
+
+  getVapidPublicKey: publicProcedure.query(() => {
+    return { publicKey: ENV.vapidPublicKey || "" };
+  }),
+
+  subscribePush: groupProcedure
+    .input(z.object({
+      memberId: z.string().min(1).max(128),
+      subscription: z.object({
+        endpoint: z.string(),
+        p256dh: z.string(),
+        auth: z.string(),
+      }),
+      userAgent: z.string().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      await savePushSubscription(input.memberId, GROUP_ID, input.subscription, input.userAgent);
+      await updateNotificationSettings(input.memberId, GROUP_ID, { pushEnabled: true });
+      return { success: true };
+    }),
+
+  unsubscribePush: groupProcedure
+    .input(z.object({
+      memberId: z.string().min(1).max(128),
+      endpoint: z.string(),
+    }))
+    .mutation(async ({ input }) => {
+      await removePushSubscription(input.memberId, input.endpoint);
+      await updateNotificationSettings(input.memberId, GROUP_ID, { pushEnabled: false });
+      return { success: true };
     }),
 });

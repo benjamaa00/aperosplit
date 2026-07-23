@@ -317,7 +317,7 @@ export const ProfileTab = memo(function ProfileTab({
  icon={<Bell size={20} className="text-blue-500" />}
  iconBg="bg-blue-500/10"
  title="Notifications push"
- subtitle="Recevoir les alertes sur cet appareil"
+ subtitle={pushNotifications ? "Activ\u00e9es \u2014 vous recevrez des alertes" : "D\u00e9sactiv\u00e9es"}
  >
  <Toggle enabled={pushNotifications} onToggle={onTogglePushNotifications} />
  </SettingRow>
