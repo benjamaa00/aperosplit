@@ -162,6 +162,19 @@ export const equilibraRouter = router({
           amount: input.amount.toString(),
           date: new Date(),
         });
+        // Notify participants (except the payer)
+        const { getGroupData: gd } = await import("../db");
+        const groupData = await gd(GROUP_ID);
+        const payerMember = groupData?.members?.find((m: any) => m.id === input.payerId);
+        const payerName = payerMember?.name || "Un membre";
+        for (const pid of input.participants) {
+          if (pid === input.payerId) continue;
+          await addNotification(pid, GROUP_ID, "expense_added",
+            "Nouvelle dépense",
+            `${payerName} a ajouté « ${input.description} » — ${(input.amount / input.participants.length).toFixed(2)} MAD`,
+            { expenseId, payerId: input.payerId }
+          );
+        }
       }
       return { success, expenseId };
     }),
@@ -480,6 +493,21 @@ export const equilibraRouter = router({
       const result = await joinGroupByPin(input.groupId, input.pinCode, {
         id: input.memberId, name: input.memberName, avatar: input.memberAvatar,
       });
+      if (result.success) {
+        const { getGroupData: gd } = await import("../db");
+        const groupData = await gd(input.groupId);
+        if (groupData?.members) {
+          for (const m of groupData.members) {
+            if (m.id !== input.memberId) {
+              await addNotification(m.id, input.groupId, "member_joined",
+                "Nouveau membre",
+                `${input.memberName} a rejoint le groupe`,
+                { newMemberId: input.memberId }
+              );
+            }
+          }
+        }
+      }
       return result;
     }),
 
@@ -497,6 +525,19 @@ export const equilibraRouter = router({
         id: input.memberId, name: input.memberName, avatar: input.memberAvatar,
       });
       if (result.success) {
+        const { getGroupData: gd } = await import("../db");
+        const groupData = await gd(GROUP_ID);
+        if (groupData?.members) {
+          for (const m of groupData.members) {
+            if (m.id !== input.memberId) {
+              await addNotification(m.id, GROUP_ID, "member_joined",
+                "Nouveau membre",
+                `${input.memberName} a rejoint le groupe`,
+                { newMemberId: input.memberId }
+              );
+            }
+          }
+        }
         return { ...result, accessPin: ENV.groupAccessPin || undefined };
       }
       return result;
@@ -540,6 +581,20 @@ export const equilibraRouter = router({
       const newMemberId = `member_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
       const avatar = input.avatar || `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50" fill="%236366f1"/><text x="50" y="55" text-anchor="middle" fill="white" font-size="36" font-family="sans-serif">${input.name.charAt(0).toUpperCase()}</text></svg>`)}`;
       await addMembers(GROUP_ID, [{ id: newMemberId, name: input.name, avatar, role: "member", status: "active" }]);
+      // Notify existing members about the new member
+      const { getGroupData: gd } = await import("../db");
+      const groupData = await gd(GROUP_ID);
+      if (groupData?.members) {
+        for (const m of groupData.members) {
+          if (m.id !== input.memberId) {
+            await addNotification(m.id, GROUP_ID, "member_joined",
+              "Nouveau membre",
+              `${input.name} a rejoint le groupe`,
+              { newMemberId, addedBy: input.memberId }
+            );
+          }
+        }
+      }
       return { success: true, memberId: newMemberId, accessPin: ENV.groupAccessPin || undefined };
     }),
 

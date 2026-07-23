@@ -1,6 +1,8 @@
 import pg from "pg";
+import webpush from "web-push";
 import { readStorage, writeStorage, getStorage, updateStorage, clearAllStorage } from "./jsonStorage";
 import type { User } from "./drizzle/schema";
+import { ENV } from "./_core/env";
 
 const { Pool } = pg;
 let pool: InstanceType<typeof Pool> | undefined;
@@ -1202,9 +1204,6 @@ export async function resetAllGroupData(groupId: string) {
 // ═══════════════════════════════════════════════════════════════
 // Push Notification Subscription Management
 // ═══════════════════════════════════════════════════════════════
-
-import webpush from "web-push";
-import { ENV } from "./_core/env";
 
 let vapidConfigured = false;
 function ensureVapid() {

@@ -455,12 +455,18 @@ export default function App() {
  if (!lockedMember) { localStorage.removeItem("equilibra_locked_member"); } else { showNotification("Accès verrouillé", `Compte verrouillé sur ${lockedMember.name}`); return; }
  }
  setCurrentMemberId(id);
+ // Auto-subscribe to push on identity selection
+ if (pushNotifications && vapidPublicKeyQuery.data?.publicKey) {
+   subscribeToPush(vapidPublicKeyQuery.data.publicKey, id).then((sub) => {
+     if (sub) subscribePushMutation.mutate({ memberId: id, subscription: sub, userAgent: navigator.userAgent });
+   });
+ }
  if (biometricEnabled[id] && biometricAvailable) {
  setScreen("lock");
  } else {
  setScreen("main");
  }
- }, [members, showNotification, biometricEnabled, biometricAvailable]);
+ }, [members, showNotification, biometricEnabled, biometricAvailable, pushNotifications, vapidPublicKeyQuery.data, subscribePushMutation]);
 
  const handleBiometricUnlock = useCallback(async () => {
  try {

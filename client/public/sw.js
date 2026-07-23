@@ -44,11 +44,29 @@ self.addEventListener('push', (event) => {
       tag: data.tag || 'equilibra',
       renotify: true,
       requireInteraction: false,
-      vibrate: [100, 50, 100],
+      vibrate: [200, 100, 200, 100, 200],
+      silent: false,
       data: { url: data.url || '/', timestamp: data.timestamp || Date.now() },
       actions: [
         { action: 'open', title: 'Ouvrir' },
       ],
+    }).then(() => {
+      // Play notification sound via AudioContext for maximum compatibility
+      try {
+        const ctx = new AudioContext();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(880, ctx.currentTime);
+        osc.frequency.setValueAtTime(1100, ctx.currentTime + 0.1);
+        osc.frequency.setValueAtTime(880, ctx.currentTime + 0.2);
+        gain.gain.setValueAtTime(0.3, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.4);
+      } catch {}
     })
   );
 });
