@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef, lazy, Suspense } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
@@ -58,6 +59,7 @@ function prepareAvatar(memberId: string, avatar: string): string {
 }
 
 export default function App() {
+ const queryClient = useQueryClient();
  const [screen, setScreen] = useState<Screen>("identity");
  const [accessCode, setAccessCode] = useState<string>(() => localStorage.getItem("equilibra_access") || localStorage.getItem("aperosplit_access") || "");
  const [members, setMembers] = useState<Member[]>([]);
@@ -113,8 +115,12 @@ export default function App() {
  const joinGroupByInviteMutation = trpc.equilibra.joinGroupByInvite.useMutation();
  const expelMemberMutation = trpc.equilibra.expelMember.useMutation();
  const changeMemberRoleMutation = trpc.equilibra.changeMemberRole.useMutation();
- const markNotificationReadMutation = trpc.equilibra.markNotificationRead.useMutation();
- const markAllNotificationsReadMutation = trpc.equilibra.markAllNotificationsRead.useMutation();
+ const markNotificationReadMutation = trpc.equilibra.markNotificationRead.useMutation({
+   onSuccess: () => queryClient.invalidateQueries({ queryKey: ["equilibra.getNotifications"] }),
+ });
+ const markAllNotificationsReadMutation = trpc.equilibra.markAllNotificationsRead.useMutation({
+   onSuccess: () => queryClient.invalidateQueries({ queryKey: ["equilibra.getNotifications"] }),
+ });
  const exportCSVMutation = trpc.equilibra.exportCSV.useMutation();
  const confirmReceiptMutation = trpc.equilibra.confirmReceipt.useMutation();
  const resetAllDataMutation = trpc.equilibra.resetAllData.useMutation();
