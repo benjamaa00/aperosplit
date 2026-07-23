@@ -15,80 +15,52 @@ interface OnboardingPage {
   image: string;
   gradient: string;
   glowColor: string;
-  title: string;
-  description: string;
 }
 
 const PAGES: OnboardingPage[] = [
-  {
-    image: "/onboarding/welcome.png",
-    gradient: "linear-gradient(135deg, #7B2FF7, #C9A6FF)",
-    glowColor: "rgba(123, 47, 247, 0.25)",
-    title: "Bienvenue sur\nAperoSplit",
-    description: "L'application qui simplifie le partage de dépenses entre amis. Fini les calculs compliqués et les oublis.",
-  },
-  {
-    image: "/onboarding/expense.png",
-    gradient: "linear-gradient(135deg, #F97316, #FBBF24)",
-    glowColor: "rgba(249, 115, 22, 0.25)",
-    title: "Enregistrez vos\ndépenses en 2 secondes",
-    description: "Ajoutez un achat, choisissez les participants, c'est fait. La répartition est automatique et instantanée.",
-  },
-  {
-    image: "/onboarding/balance.png",
-    gradient: "linear-gradient(135deg, #10B981, #34D399)",
-    glowColor: "rgba(16, 185, 129, 0.25)",
-    title: "Soldes\nintelligents",
-    description: "Notre algorithme réduit le nombre de remboursements nécessaires. Moins de virements, plus de simplicité.",
-  },
-  {
-    image: "/onboarding/stats.png",
-    gradient: "linear-gradient(135deg, #3B82F6, #60A5FA)",
-    glowColor: "rgba(59, 130, 246, 0.25)",
-    title: "Statistiques\ndétaillées",
-    description: "Visualisez où va votre argent avec des graphiques élégants. Catégories, tendances, budgets, tout est là.",
-  },
-  {
-    image: "/onboarding/security.png",
-    gradient: "linear-gradient(135deg, #8B5CF6, #A78BFA)",
-    glowColor: "rgba(139, 92, 246, 0.25)",
-    title: "Sécurité\ntotale",
-    description: "Verrouillage biométrique, mode privé pour masquer les montants. Vos données restent entre vous.",
-  },
-  {
-    image: "/onboarding/rocket.png",
-    gradient: "linear-gradient(135deg, #EC4899, #F472B6)",
-    glowColor: "rgba(236, 72, 153, 0.25)",
-    title: "C'est parti !",
-    description: "Créez votre groupe, invitez vos amis et commencez à partager vos dépenses en toute simplicité.",
-  },
+  { image: "/onboarding/welcome.png", gradient: "linear-gradient(135deg, #7B2FF7, #C9A6FF)", glowColor: "rgba(123, 47, 247, 0.25)" },
+  { image: "/onboarding/expense.png", gradient: "linear-gradient(135deg, #F97316, #FBBF24)", glowColor: "rgba(249, 115, 22, 0.25)" },
+  { image: "/onboarding/balance.png", gradient: "linear-gradient(135deg, #10B981, #34D399)", glowColor: "rgba(16, 185, 129, 0.25)" },
+  { image: "/onboarding/stats.png", gradient: "linear-gradient(135deg, #3B82F6, #60A5FA)", glowColor: "rgba(59, 130, 246, 0.25)" },
+  { image: "/onboarding/security.png", gradient: "linear-gradient(135deg, #8B5CF6, #A78BFA)", glowColor: "rgba(139, 92, 246, 0.25)" },
+  { image: "/onboarding/rocket.png", gradient: "linear-gradient(135deg, #EC4899, #F472B6)", glowColor: "rgba(236, 72, 153, 0.25)" },
 ];
 
 export const OnboardingScreen = memo(function OnboardingScreen({ onComplete }: { onComplete: () => void }) {
   const [page, setPage] = useState(0);
+  const [slideDir, setSlideDir] = useState<1 | -1>(1);
   const [exiting, setExiting] = useState(false);
+  const [entered, setEntered] = useState(false);
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);
-  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const t = requestAnimationFrame(() => setEntered(true));
+    return () => cancelAnimationFrame(t);
+  }, []);
 
   const goNext = useCallback(() => {
     if (page < PAGES.length - 1) {
+      setSlideDir(1);
       setPage((p) => p + 1);
     } else {
       setExiting(true);
       markOnboardingDone();
-      setTimeout(onComplete, 450);
+      setTimeout(onComplete, 500);
     }
   }, [page, onComplete]);
 
   const goPrev = useCallback(() => {
-    if (page > 0) setPage((p) => p - 1);
+    if (page > 0) {
+      setSlideDir(-1);
+      setPage((p) => p - 1);
+    }
   }, [page]);
 
   const skip = useCallback(() => {
     setExiting(true);
     markOnboardingDone();
-    setTimeout(onComplete, 450);
+    setTimeout(onComplete, 500);
   }, [onComplete]);
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
@@ -120,8 +92,7 @@ export const OnboardingScreen = memo(function OnboardingScreen({ onComplete }: {
 
   return (
     <div
-      className={`onboarding-screen ${exiting ? "onboarding-exit" : ""}`}
-      ref={containerRef}
+      className={`onboarding-screen ${exiting ? "onboarding-exit" : ""} ${entered ? "onboarding-entered" : ""}`}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
@@ -134,10 +105,10 @@ export const OnboardingScreen = memo(function OnboardingScreen({ onComplete }: {
         </button>
       )}
 
-      <div className="onboarding-illustration-wrapper" key={page}>
+      <div className={`onboarding-page-container ${slideDir > 0 ? "slide-left" : "slide-right"}`} key={page}>
         <img
           src={current.image}
-          alt={current.title.replace("\n", " ")}
+          alt=""
           className="onboarding-image"
           draggable={false}
         />
@@ -152,7 +123,10 @@ export const OnboardingScreen = memo(function OnboardingScreen({ onComplete }: {
               <div
                 key={i}
                 className={`onboarding-dot ${i === page ? "active" : ""} ${i < page ? "done" : ""}`}
-                onClick={() => setPage(i)}
+                onClick={() => {
+                  setSlideDir(i > page ? 1 : -1);
+                  setPage(i);
+                }}
               />
             ))}
           </div>

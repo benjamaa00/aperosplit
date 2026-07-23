@@ -944,13 +944,26 @@ export default function App() {
 
  return (
  <>
- {showSplash && <SplashScreen onComplete={() => setShowSplash(false)} />}
- {!showSplash && showOnboarding && <OnboardingScreen onComplete={() => setShowOnboarding(false)} />}
+ {/* Splash — stays mounted during its 500ms fade-out for overlap */}
+ {showSplash && (
+   <SplashScreen onComplete={() => {
+     setShowSplash(false);
+   }} />
+ )}
+
+ {/* Onboarding — renders behind splash (both black bg), fades in via onboarding-entered class */}
+ {showOnboarding && (
+   <OnboardingScreen onComplete={() => setShowOnboarding(false)} />
+ )}
+
+ {/* Main app — renders behind everything, fades in with app-entrance */}
  {!showSplash && !showOnboarding && (
+ <div className="app-entrance">
  <ThemeProvider memberId={currentMemberId}>
  <ThemeToaster />
  {content}
  </ThemeProvider>
+ </div>
  )}
  {activeTutorial && ALL_TUTORIALS[activeTutorial as keyof typeof ALL_TUTORIALS] && (
  <GuidedTour

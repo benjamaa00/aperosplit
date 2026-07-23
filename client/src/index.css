@@ -528,7 +528,13 @@
     align-items: center;
     justify-content: center;
     overflow: hidden;
-    animation: appleSplashFade 400ms ease 4800ms forwards;
+    opacity: 1;
+    transition: opacity 500ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .apple-splash.apple-splash-fading {
+    opacity: 0;
+    pointer-events: none;
   }
 
   .apple-splash-canvas {
@@ -543,7 +549,7 @@
     text-align: center;
     opacity: 0;
     transform: translateY(20px);
-    animation: appleBrandIn 800ms cubic-bezier(0.16, 1, 0.3, 1) 3200ms forwards;
+    animation: appleBrandIn 700ms cubic-bezier(0.16, 1, 0.3, 1) 1800ms forwards;
   }
 
   .apple-splash-logo-text {
@@ -566,13 +572,10 @@
     text-transform: uppercase;
   }
 
-  .apple-splash-fade {
+  .apple-splash-fade-overlay {
     position: absolute;
     inset: 0;
-    background: #000;
-    opacity: 0;
     pointer-events: none;
-    animation: appleSplashFade 400ms ease 4800ms forwards;
   }
 
   @keyframes appleBrandIn {
@@ -583,6 +586,36 @@
   @keyframes appleSplashFade {
     from { opacity: 0; }
     to   { opacity: 1; pointer-events: none; }
+  }
+
+  /* ═══ Smooth cross-fade transition layers ═══ */
+  .transition-layer {
+    position: fixed;
+    inset: 0;
+    z-index: 9998;
+    opacity: 0;
+    transition: opacity 500ms cubic-bezier(0.4, 0, 0.2, 1);
+    pointer-events: none;
+  }
+
+  .transition-layer-active {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .transition-layer-exiting {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  /* ═══ App entrance animation ═══ */
+  .app-entrance {
+    animation: appFadeSlideIn 600ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  @keyframes appFadeSlideIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
   }
 
   /* ═══════════════════════════════════════════════════════════
@@ -597,10 +630,18 @@
     background: #000;
     overflow: hidden;
     touch-action: pan-y;
+    opacity: 0;
+    transition: opacity 500ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .onboarding-screen.onboarding-entered {
+    opacity: 1;
   }
 
   .onboarding-screen.onboarding-exit {
-    animation: onboardingExit 450ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 400ms cubic-bezier(0.4, 0, 1, 1);
   }
 
   .onboarding-bg {
@@ -674,8 +715,36 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    animation: onboardingEmojiIn 600ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation: onboardingEmojiIn 500ms cubic-bezier(0.16, 1, 0.3, 1) both;
     z-index: 1;
+  }
+
+  .onboarding-page-container {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+    animation: onboardingPageIn 450ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .onboarding-page-container.slide-left {
+    animation-name: onboardingPageIn;
+  }
+
+  .onboarding-page-container.slide-right {
+    animation-name: onboardingPageInRight;
+  }
+
+  @keyframes onboardingPageIn {
+    from { opacity: 0; transform: translateX(40px) scale(0.95); }
+    to   { opacity: 1; transform: translateX(0) scale(1); }
+  }
+
+  @keyframes onboardingPageInRight {
+    from { opacity: 0; transform: translateX(-40px) scale(0.95); }
+    to   { opacity: 1; transform: translateX(0) scale(1); }
   }
 
   .onboarding-image {
@@ -776,8 +845,8 @@
   }
 
   @keyframes onboardingExit {
-    from { opacity: 1; transform: scale(1); }
-    to   { opacity: 0; transform: scale(0.95); pointer-events: none; }
+    from { opacity: 1; }
+    to   { opacity: 0; pointer-events: none; }
   }
 
   /* Skeleton Loaders */
@@ -909,6 +978,10 @@
   .apple-splash {
     background: var(--background) !important;
   }
+  .apple-splash.apple-splash-fading {
+    opacity: 0 !important;
+    transition: none !important;
+  }
   .onboarding-screen,
   .onboarding-screen * {
     animation-duration: 0.01ms !important;
@@ -917,6 +990,13 @@
   .onboarding-screen.onboarding-exit {
     opacity: 0 !important;
     transition: none !important;
+  }
+  .transition-layer {
+    transition: none !important;
+  }
+  .app-entrance {
+    animation: none !important;
+    opacity: 1 !important;
   }
 }
 
