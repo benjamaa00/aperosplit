@@ -22,8 +22,8 @@ export function useNotifications() {
     if ("Notification" in window && Notification.permission === "granted") {
       new Notification(title, {
         body,
-        icon: icon || "/logo.jpg",
-        badge: "/logo.jpg",
+        icon: icon || "/AperoSplit_Logo.jpeg",
+        badge: "/AperoSplit_Logo.jpeg",
         tag: "equilibra",
         requireInteraction: true,
       });

@@ -9,7 +9,7 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(STATIC_CACHE).then((cache) => cache.addAll([
       '/manifest.json',
-      '/icon.svg',
+      '/AperoSplit_Logo.jpeg',
     ]))
   );
 });
@@ -26,7 +26,7 @@ function startPing() {
 
 // ── Push Notification Handler ──
 self.addEventListener('push', (event) => {
-  let data = { title: 'AperoSplit', body: '', url: '/', tag: 'equilibra', icon: '/icon.svg' };
+  let data = { title: 'AperoSplit', body: '', url: '/', tag: 'equilibra', icon: '/AperoSplit_Logo.jpeg' };
   try {
     if (event.data) {
       const json = event.data.json();
@@ -39,8 +39,8 @@ self.addEventListener('push', (event) => {
   event.waitUntil(
     self.registration.showNotification(data.title, {
       body: data.body,
-      icon: data.icon || '/icon.svg',
-      badge: '/icon.svg',
+      icon: data.icon || '/AperoSplit_Logo.jpeg',
+      badge: '/AperoSplit_Logo.jpeg',
       tag: data.tag || 'equilibra',
       renotify: true,
       requireInteraction: false,
