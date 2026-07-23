@@ -139,7 +139,7 @@ function SplashCanvas() {
       // ── Phase 2: Separate to final positions (2.6–3.4s) ──
       const separateT = t < 2.6 ? 0 : Math.min(1, (t - 2.6) / 0.8);
       const separateSpring = separateT >= 1 ? 1 : spring(separateT, 0.5, 2);
-      const separateOffset = separateSpring * 110;
+      const separateOffset = separateSpring * 85;
 
       const orbOffset = convergeOffset + separateOffset;
 

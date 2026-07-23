@@ -146,13 +146,6 @@ export const OnboardingScreen = memo(function OnboardingScreen({ onComplete }: {
       <div className="onboarding-bottom-overlay" />
 
       <div className="onboarding-content">
-        <h2 className="onboarding-title" key={`t-${page}`}>
-          {current.title}
-        </h2>
-        <p className="onboarding-desc" key={`d-${page}`}>
-          {current.description}
-        </p>
-
         <div className="onboarding-bottom">
           <div className="onboarding-dots">
             {PAGES.map((_, i) => (

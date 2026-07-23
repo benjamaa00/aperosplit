@@ -650,8 +650,8 @@
     align-items: center;
     justify-content: flex-end;
     padding: 0 24px;
-    padding-bottom: 48px;
-    padding-bottom: calc(48px + env(safe-area-inset-bottom, 0));
+    padding-bottom: 64px;
+    padding-bottom: calc(64px + env(safe-area-inset-bottom, 0));
     padding-top: env(safe-area-inset-top, 0);
     gap: 0;
     z-index: 5;
