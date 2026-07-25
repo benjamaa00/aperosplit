@@ -9,7 +9,9 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(STATIC_CACHE).then((cache) => cache.addAll([
       '/manifest.json',
-      '/AperoSplit_Logo.jpeg',
+      '/icon-512.png',
+      '/icon-192.png',
+      '/apple-touch-icon.png',
     ]))
   );
 });
@@ -26,7 +28,7 @@ function startPing() {
 
 // ── Push Notification Handler ──
 self.addEventListener('push', (event) => {
-  let data = { title: 'AperoSplit', body: '', url: '/', tag: 'equilibra', icon: '/AperoSplit_Logo.jpeg' };
+  let data = { title: 'AperoSplit', body: '', url: '/', tag: 'equilibra', icon: '/icon-512.png' };
   try {
     if (event.data) {
       const json = event.data.json();
@@ -39,8 +41,8 @@ self.addEventListener('push', (event) => {
   event.waitUntil(
     self.registration.showNotification(data.title, {
       body: data.body,
-      icon: data.icon || '/AperoSplit_Logo.jpeg',
-      badge: '/AperoSplit_Logo.jpeg',
+      icon: data.icon || '/icon-512.png',
+      badge: '/icon-512.png',
       tag: data.tag || 'equilibra',
       renotify: true,
       requireInteraction: false,
