@@ -281,11 +281,37 @@ function SplashCanvas() {
         ctx.arc(R * 0.05, R * 0.07, R * 0.50, 0, Math.PI * 2);
         ctx.fill();
 
-        // ── RIM — very thin, 0.7px, minimal ──
+        // ── TOP CONTOUR SHADOW — darker than base, arc at top ──
         ctx.globalCompositeOperation = "source-over";
-        ctx.globalAlpha = alpha * 0.06;
-        ctx.strokeStyle = `rgba(${rgb(pal.highlight)},0.22)`;
-        ctx.lineWidth = 0.7;
+        ctx.globalAlpha = alpha * 0.55;
+        const topShadow = ctx.createRadialGradient(0, -R * 0.85, R * 0.15, 0, -R * 0.3, R * 0.9);
+        topShadow.addColorStop(0, `rgba(${rgb(pal.edge)},0.55)`);
+        topShadow.addColorStop(0.35, `rgba(${rgb(pal.glowOuter)},0.25)`);
+        topShadow.addColorStop(0.7, `rgba(${rgb(pal.glowOuter)},0.04)`);
+        topShadow.addColorStop(1, `rgba(${rgb(pal.glowOuter)},0)`);
+        ctx.fillStyle = topShadow;
+        ctx.beginPath();
+        ctx.arc(0, 0, R, 0, Math.PI * 2);
+        ctx.fill();
+
+        // ── BOTTOM CONTOUR GLOW — luminous edge at bottom ──
+        ctx.globalCompositeOperation = "lighter";
+        ctx.globalAlpha = alpha * 0.18;
+        const bottomGlow = ctx.createRadialGradient(0, R * 0.78, R * 0.08, 0, R * 0.45, R * 0.65);
+        bottomGlow.addColorStop(0, `rgba(${rgb(pal.highlight)},0.30)`);
+        bottomGlow.addColorStop(0.35, `rgba(${rgb(pal.subsurface)},0.14)`);
+        bottomGlow.addColorStop(0.7, `rgba(${rgb(pal.glowInner)},0.04)`);
+        bottomGlow.addColorStop(1, `rgba(${rgb(pal.glowOuter)},0)`);
+        ctx.fillStyle = bottomGlow;
+        ctx.beginPath();
+        ctx.arc(0, 0, R, 0, Math.PI * 2);
+        ctx.fill();
+
+        // ── RIM — very thin edge definition ──
+        ctx.globalCompositeOperation = "source-over";
+        ctx.globalAlpha = alpha * 0.05;
+        ctx.strokeStyle = `rgba(${rgb(pal.highlight)},0.18)`;
+        ctx.lineWidth = 0.6;
         ctx.beginPath();
         ctx.arc(0, 0, R * 0.97, 0, Math.PI * 2);
         ctx.stroke();
