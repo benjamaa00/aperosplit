@@ -14,6 +14,8 @@ const TAB_ICONS: Record<Tab, LucideIcon> = {
   profile: User,
 };
 
+const NAV_TABS: Tab[] = ["home", "balances", "history", "profile"];
+
 interface AppShellProps {
   children: ReactNode;
   activeTab?: Tab;
@@ -21,6 +23,7 @@ interface AppShellProps {
   onAddExpense?: () => void;
 }
 
+function clamp(v: number, min: number, max: number) { return v < min ? min : v > max ? max : v; }
 function lerp(a: number, b: number, t: number) { return a + (b - a) * t; }
 
 const AppShell = memo(({ children, activeTab, onTabChange, onAddExpense }: AppShellProps) => {
@@ -31,16 +34,23 @@ const AppShell = memo(({ children, activeTab, onTabChange, onAddExpense }: AppSh
 
   const [pillStyle, setPillStyle] = useState({ left: 0, width: 0, ready: false });
 
-  // ── Drag state ──
   const drag = useRef({
     active: false,
     startX: 0,
     hasMoved: false,
+    sourceTab: null as Tab | null,
+    sourceLeft: 0,
+    sourceWidth: 0,
     columns: [] as { tab: Tab; cx: number; left: number; width: number }[],
-    currentX: 0, targetX: 0,
-    currentW: 0, targetW: 0,
+    pillLeft: 0,
+    pillWidth: 0,
+    targetLeft: 0,
+    targetWidth: 0,
+    velocity: 0,
+    lastX: 0,
+    lastTime: 0,
+    highlightX: 0.5,
     hoveredTab: null as Tab | null,
-    highlightX: 0.5, targetHighlightX: 0.5,
   });
 
   const [dragUI, setDragUI] = useState({
@@ -69,12 +79,22 @@ const AppShell = memo(({ children, activeTab, onTabChange, onAddExpense }: AppSh
     const tick = () => {
       if (!alive || !drag.current.active) return;
       const d = drag.current;
-      d.currentX = lerp(d.currentX, d.targetX, 0.24);
-      d.currentW = lerp(d.currentW, d.targetW, 0.24);
-      d.highlightX = lerp(d.highlightX, d.targetHighlightX, 0.16);
+
+      d.pillLeft = lerp(d.pillLeft, d.targetLeft, 0.32);
+      d.pillWidth = lerp(d.pillWidth, d.targetWidth, 0.22);
+      d.highlightX = lerp(d.highlightX, d.highlightX, 0.16);
+
+      if (Math.abs(d.pillLeft - d.targetLeft) < 0.5 && Math.abs(d.pillWidth - d.targetWidth) < 0.5) {
+        d.pillLeft = d.targetLeft;
+        d.pillWidth = d.targetWidth;
+      }
+
       setDragUI({
-        active: true, left: d.currentX, width: d.currentW,
-        highlightX: d.highlightX, hoverTab: d.hoveredTab,
+        active: true,
+        left: d.pillLeft,
+        width: d.pillWidth,
+        highlightX: d.highlightX,
+        hoverTab: d.hoveredTab,
       });
       rafRef.current = requestAnimationFrame(tick);
     };
@@ -98,8 +118,7 @@ const AppShell = memo(({ children, activeTab, onTabChange, onAddExpense }: AppSh
     const bar = barRef.current;
     if (!bar) return [];
     const br = bar.getBoundingClientRect();
-    const tabs: Tab[] = ["home", "balances", "history", "profile"];
-    return tabs.map((tab) => {
+    return NAV_TABS.map((tab) => {
       const el = tabRefs.current.get(tab);
       if (!el) return null;
       const r = el.getBoundingClientRect();
@@ -130,19 +149,23 @@ const AppShell = memo(({ children, activeTab, onTabChange, onAddExpense }: AppSh
     const d = drag.current;
     d.active = true;
     d.startX = e.clientX;
+    d.lastX = e.clientX;
+    d.lastTime = performance.now();
     d.hasMoved = false;
+    d.velocity = 0;
     d.columns = getColumns();
     const m = measurePill(activeTab || "home");
-    d.currentX = m ? m.left : 0;
-    d.targetX = d.currentX;
-    d.currentW = m ? m.width : 52;
-    d.targetW = d.currentW;
+    d.sourceTab = activeTab || "home";
+    d.sourceLeft = m ? m.left : 0;
+    d.sourceWidth = m ? m.width : 52;
+    d.pillLeft = d.sourceLeft;
+    d.pillWidth = d.sourceWidth;
+    d.targetLeft = d.sourceLeft;
+    d.targetWidth = d.sourceWidth;
     d.highlightX = x / br.width;
-    d.targetHighlightX = x / br.width;
     d.hoveredTab = null;
 
     startDragLoop();
-
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
   }, [getColumns, measurePill, activeTab]);
 
@@ -158,12 +181,24 @@ const AppShell = memo(({ children, activeTab, onTabChange, onAddExpense }: AppSh
     const br = bar.getBoundingClientRect();
     const x = e.clientX - br.left;
 
+    const now = performance.now();
+    const dt = now - d.lastTime;
+    if (dt > 0) {
+      d.velocity = (e.clientX - d.lastX) / dt;
+    }
+    d.lastX = e.clientX;
+    d.lastTime = now;
+
+    d.highlightX = clamp(x / br.width, 0, 1);
+
     const nearest = findNearest(x);
     if (!nearest) return;
 
-    d.targetX = x - nearest.width / 2;
-    d.targetW = nearest.width;
-    d.targetHighlightX = x / br.width;
+    const pillW = nearest.width;
+    const pillX = clamp(x - pillW / 2, 0, br.width - pillW);
+
+    d.targetLeft = pillX;
+    d.targetWidth = pillW;
 
     if (nearest.tab !== d.hoveredTab) {
       d.hoveredTab = nearest.tab;
@@ -199,7 +234,7 @@ const AppShell = memo(({ children, activeTab, onTabChange, onAddExpense }: AppSh
     <ErrorBoundary>
       <TooltipProvider>
         <div className="relative min-h-[100dvh]" style={{ background: "var(--background, #08080D)" }}>
-          {/* ── Scroll container — content scrolls here, behind the nav ── */}
+          {/* ── Scroll container ── */}
           <div
             ref={scrollRef}
             className="h-[100dvh] overflow-y-auto overflow-x-hidden scrollbar-hidden"
@@ -212,118 +247,114 @@ const AppShell = memo(({ children, activeTab, onTabChange, onAddExpense }: AppSh
             {children}
           </div>
 
-          {/* ── Scroll edge gradient — subtle contrast behind nav ── */}
           {activeTab && onTabChange && <div className="bottom-nav-scroll-edge" />}
 
-          {/* ── Liquid Glass Nav — fixed, sibling of scroll container ── */}
+          {/* ── Floating FAB — separate layer above nav ── */}
+          {activeTab && onTabChange && (
+            <button
+              onClick={handleFab}
+              className="nav-fab group cursor-pointer"
+              style={{
+                position: "fixed",
+                left: "50%",
+                bottom: "calc(68px + env(safe-area-inset-bottom, 10px))",
+                transform: "translateX(-50%)",
+                zIndex: 1001,
+                WebkitTapHighlightColor: "transparent",
+              }}
+              aria-label="Ajouter une dépense"
+            >
+              <div
+                className="absolute -inset-3 rounded-full blur-xl nav-fab-glow pointer-events-none"
+                style={{ background: "radial-gradient(circle, rgba(126,87,255,0.20) 0%, rgba(92,54,220,0.06) 60%, transparent 100%)" }}
+              />
+              <div
+                className="relative w-[58px] h-[58px] rounded-full flex items-center justify-center transition-transform duration-[200ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] group-active:scale-[0.88]"
+                style={{
+                  background: "radial-gradient(circle at 35% 25%, rgba(255,255,255,0.30), rgba(126,87,255,0.72) 40%, rgba(88,50,200,0.78) 100%)",
+                  backdropFilter: "blur(20px) saturate(190%)",
+                  WebkitBackdropFilter: "blur(20px) saturate(190%)",
+                  border: "1px solid rgba(255,255,255,0.22)",
+                  boxShadow: "0 10px 32px rgba(91,61,220,0.40), inset 0 1px 0 rgba(255,255,255,0.28), inset 0 -1px 0 rgba(0,0,0,0.08)",
+                }}
+              >
+                <Plus size={22} strokeWidth={2.4} className="relative z-10 text-white" />
+              </div>
+            </button>
+          )}
+
+          {/* ── Liquid Glass Nav ── */}
           {activeTab && onTabChange && (
             <nav
               ref={barRef}
               data-tutorial="tab-bar"
               className="bottom-nav"
-              style={{ height: "74px" }}
               onPointerDown={handlePointerDown}
               onPointerMove={handlePointerMove}
               onPointerUp={handlePointerUp}
               onPointerCancel={handlePointerCancel}
             >
-              {/* ═══ Drag refraction highlight ═══ */}
+              {/* Drag refraction highlight */}
               {dragUI.active && (
                 <div
-                  className="absolute inset-0 pointer-events-none overflow-hidden"
+                  className="pointer-events-none overflow-hidden"
                   style={{
-                    zIndex: 1,
+                    position: "absolute",
+                    inset: 0,
                     borderRadius: "inherit",
+                    zIndex: 1,
                   }}
                 >
                   <div
                     className="absolute top-0 h-full"
                     style={{
                       left: `${dragUI.highlightX * 100}%`,
-                      width: "100px",
+                      width: "120px",
                       transform: "translateX(-50%)",
-                      background: "radial-gradient(ellipse at center, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 40%, transparent 70%)",
+                      background: "radial-gradient(ellipse at center, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.03) 40%, transparent 70%)",
+                      transition: "left 40ms linear",
                     }}
                   />
                 </div>
               )}
 
-              {/* ═══ Content grid ═══ */}
-              <div
-                className="bottom-nav-content"
-                style={{ height: "100%" }}
-              >
-                <GridTab
-                  id="home" label="Accueil" col={1}
-                  activeTab={activeTab} onSwitch={switchTab}
-                  tabRefs={tabRefs}
-                  highlight={dragUI.active && dragUI.hoverTab === "home"}
-                />
-                <GridTab
-                  id="balances" label="Soldes" col={2}
-                  activeTab={activeTab} onSwitch={switchTab}
-                  tabRefs={tabRefs}
-                  highlight={dragUI.active && dragUI.hoverTab === "balances"}
-                />
-                {/* Col 3: FAB */}
-                <div className="flex items-center justify-center" style={{ gridColumn: 3 }}>
-                  <button
-                    onClick={handleFab}
-                    className="nav-fab group cursor-pointer relative"
-                    style={{
-                      WebkitTapHighlightColor: "transparent",
-                      transform: "translateY(-14px)",
-                    }}
-                    aria-label="Ajouter une dépense"
-                  >
-                    <div
-                      className="absolute -inset-2.5 rounded-full blur-lg nav-fab-glow pointer-events-none"
-                      style={{ background: "radial-gradient(circle, rgba(126,87,255,0.16) 0%, rgba(92,54,220,0.04) 60%, transparent 100%)" }}
-                    />
-                    <div
-                      className="relative w-[62px] h-[62px] rounded-full flex items-center justify-center transition-transform duration-[220ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] group-active:scale-[0.92]"
-                      style={{
-                        background: "radial-gradient(circle at 35% 25%, rgba(255,255,255,0.28), rgba(126,87,255,0.70) 40%, rgba(92,54,220,0.74) 100%)",
-                        backdropFilter: "blur(18px) saturate(185%)",
-                        WebkitBackdropFilter: "blur(18px) saturate(185%)",
-                        border: "1px solid rgba(255,255,255,0.20)",
-                        boxShadow: "0 8px 28px rgba(91,61,220,0.38), inset 0 1px 0 rgba(255,255,255,0.26), inset 0 -1px 0 rgba(0,0,0,0.08)",
-                      }}
-                    >
-                      <Plus size={22} strokeWidth={2.4} className="relative z-10 text-white" />
-                    </div>
-                  </button>
-                </div>
-                <GridTab
-                  id="history" label="Historique" col={4}
-                  activeTab={activeTab} onSwitch={switchTab}
-                  tabRefs={tabRefs}
-                  highlight={dragUI.active && dragUI.hoverTab === "history"}
-                />
-                <GridTab
-                  id="profile" label="Profil" col={5}
-                  activeTab={activeTab} onSwitch={switchTab}
-                  tabRefs={tabRefs}
-                  highlight={dragUI.active && dragUI.hoverTab === "profile"}
-                />
+              {/* Content grid */}
+              <div className="bottom-nav-content" style={{ height: "100%" }}>
+                {NAV_TABS.map((tab, i) => (
+                  <GridTab
+                    key={tab}
+                    id={tab}
+                    label={tab === "home" ? "Accueil" : tab === "balances" ? "Soldes" : tab === "history" ? "Historique" : "Profil"}
+                    col={i + 1}
+                    activeTab={activeTab}
+                    onSwitch={switchTab}
+                    tabRefs={tabRefs}
+                    highlight={dragUI.active && dragUI.hoverTab === tab}
+                  />
+                ))}
               </div>
 
-              {/* ═══ Active indicator pill ═══ */}
+              {/* Active indicator pill */}
               {showPill.ready && (
                 <div
-                  className={`absolute top-1/2 -translate-y-1/2 rounded-[18px] nav-pill pointer-events-none ${
-                    dragUI.active ? "transition-none" : "transition-all duration-[300ms] ease-[cubic-bezier(0.34,1.56,0.64,1)]"
-                  }`}
+                  className="nav-pill"
                   style={{
+                    position: "absolute",
+                    top: "50%",
+                    transform: "translateY(-50%)",
                     left: showPill.left,
                     width: showPill.width,
                     height: "36px",
+                    borderRadius: "18px",
+                    pointerEvents: "none",
+                    zIndex: 1,
+                    transition: dragUI.active ? "none" : "left 320ms cubic-bezier(0.34,1.56,0.64,1), width 320ms cubic-bezier(0.34,1.56,0.64,1)",
                     background: dragUI.active
-                      ? "linear-gradient(180deg, rgba(255,255,255,0.13) 0%, rgba(255,255,255,0.07) 100%)"
+                      ? "linear-gradient(180deg, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0.06) 100%)"
                       : "rgba(255,255,255,0.08)",
-                    border: "1px solid rgba(255,255,255,0.08)",
+                    border: "1px solid rgba(255,255,255,0.09)",
                     boxShadow: dragUI.active
-                      ? "inset 0 1px 0 rgba(255,255,255,0.14), 0 4px 16px rgba(0,0,0,0.14)"
+                      ? "inset 0 1px 0 rgba(255,255,255,0.16), 0 4px 18px rgba(0,0,0,0.16)"
                       : "inset 0 1px 0 rgba(255,255,255,0.10), 0 4px 12px rgba(0,0,0,0.10)",
                   }}
                 />
@@ -365,10 +396,18 @@ const GridTab = memo(({
         <Icon
           size={22}
           strokeWidth={lit ? 2 : 1.5}
-          className={`transition-all duration-[220ms] ${lit ? "text-white drop-shadow-[0_0_5px_rgba(128,80,240,0.40)]" : "text-white/45"}`}
+          className="transition-all duration-[200ms]"
+          style={{
+            color: lit ? "rgba(255,255,255,1)" : "rgba(255,255,255,0.40)",
+            filter: lit ? "drop-shadow(0 0 6px rgba(128,80,240,0.45))" : "none",
+          }}
         />
         <span
-          className={`text-[11px] font-medium tracking-wide leading-none transition-opacity duration-[220ms] ${lit ? "text-white opacity-100" : "text-white/45 opacity-60"}`}
+          className="text-[11px] font-medium tracking-wide leading-none transition-opacity duration-[200ms]"
+          style={{
+            color: lit ? "rgba(255,255,255,1)" : "rgba(255,255,255,0.40)",
+            opacity: lit ? 1 : 0.6,
+          }}
         >
           {label}
         </span>
