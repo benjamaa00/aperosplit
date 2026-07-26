@@ -548,8 +548,17 @@
     left: 0; right: 0;
     text-align: center;
     opacity: 0;
-    transform: translateY(20px);
-    animation: appleBrandIn 700ms cubic-bezier(0.16, 1, 0.3, 1) 1800ms forwards;
+    transform: translateY(16px) scale(0.96);
+    transition: opacity 600ms cubic-bezier(0.16, 1, 0.3, 1), transform 600ms cubic-bezier(0.16, 1, 0.3, 1);
+    pointer-events: none;
+  }
+  .apple-splash-brand.visible {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  .apple-splash-brand.fading {
+    opacity: 0;
+    transition-duration: 800ms;
   }
 
   .apple-splash-logo-text {
@@ -978,9 +987,9 @@
   .apple-splash {
     background: var(--background) !important;
   }
-  .apple-splash.apple-splash-fading {
-    opacity: 0 !important;
+  .apple-splash-brand {
     transition: none !important;
+  }
   }
   .onboarding-screen,
   .onboarding-screen * {
