@@ -26,7 +26,6 @@ function lerp(a: number, b: number, t: number) { return a + (b - a) * t; }
 const AppShell = memo(({ children, activeTab, onTabChange, onAddExpense }: AppShellProps) => {
   const tabRefs = useRef<Map<Tab, HTMLDivElement>>(new Map());
   const barRef = useRef<HTMLDivElement>(null);
-  const gridRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const rafRef = useRef<number>(0);
 
@@ -48,7 +47,6 @@ const AppShell = memo(({ children, activeTab, onTabChange, onAddExpense }: AppSh
     active: false, left: 0, width: 0, highlightX: 0.5, hoverTab: null as Tab | null,
   });
 
-  // ── Measure pill position from grid column ──
   const measurePill = useCallback((tab: Tab) => {
     const el = tabRefs.current.get(tab);
     const bar = barRef.current;
@@ -65,7 +63,6 @@ const AppShell = memo(({ children, activeTab, onTabChange, onAddExpense }: AppSh
     if (m) setPillStyle({ left: m.left, width: m.width, ready: true });
   }, [activeTab, dragUI.active, measurePill]);
 
-  // ── rAF loop for smooth drag tracking ──
   useEffect(() => {
     if (!drag.current.active) return;
     let alive = true;
@@ -97,7 +94,6 @@ const AppShell = memo(({ children, activeTab, onTabChange, onAddExpense }: AppSh
     onAddExpense?.();
   }, [onAddExpense]);
 
-  // ── Get column positions ──
   const getColumns = useCallback(() => {
     const bar = barRef.current;
     if (!bar) return [];
@@ -122,7 +118,6 @@ const AppShell = memo(({ children, activeTab, onTabChange, onAddExpense }: AppSh
     return best;
   }, []);
 
-  // ── Pointer handlers ──
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
     if (e.button !== 0) return;
     const t = e.target as HTMLElement;
@@ -198,171 +193,140 @@ const AppShell = memo(({ children, activeTab, onTabChange, onAddExpense }: AppSh
     ? { left: dragUI.left, width: dragUI.width, ready: true }
     : pillStyle;
 
-  const TAB_ORDER: { tab: Tab; label: string; col: number }[] = [
-    { tab: "home", label: "Accueil", col: 1 },
-    { tab: "balances", label: "Soldes", col: 2 },
-    { tab: "history", label: "Historique", col: 4 },
-    { tab: "profile", label: "Profil", col: 5 },
-  ];
-
   return (
     <ErrorBoundary>
       <TooltipProvider>
-        <div className="h-screen flex flex-col overflow-hidden">
-          {/* ── Scrollable content — padded at bottom for nav ── */}
+        <div className="relative min-h-[100dvh]" style={{ background: "var(--background, #08080D)" }}>
+          {/* ── Scroll container — content scrolls here, behind the nav ── */}
           <div
             ref={scrollRef}
-            className="flex-1 min-h-0 overflow-y-auto scrollbar-hidden"
-            style={{ paddingBottom: "calc(110px + env(safe-area-inset-bottom, 10px))" }}
+            className="h-[100dvh] overflow-y-auto overflow-x-hidden scrollbar-hidden"
+            style={{
+              WebkitOverflowScrolling: "touch",
+              overscrollBehaviorY: "contain",
+              paddingBottom: "calc(110px + env(safe-area-inset-bottom, 10px))",
+            }}
           >
-            <div className="min-h-full">
-              {children}
-            </div>
+            {children}
           </div>
 
-          {/* ── Fixed Liquid Glass Nav ── */}
+          {/* ── Scroll edge gradient — subtle contrast behind nav ── */}
+          {activeTab && onTabChange && <div className="bottom-nav-scroll-edge" />}
+
+          {/* ── Liquid Glass Nav — fixed, sibling of scroll container ── */}
           {activeTab && onTabChange && (
-            <div
-              className="fixed left-4 right-4 z-[1000] pointer-events-none"
-              style={{ bottom: "calc(10px + env(safe-area-inset-bottom, 10px))" }}
+            <nav
+              ref={barRef}
+              data-tutorial="tab-bar"
+              className="bottom-nav"
+              style={{ height: "74px" }}
+              onPointerDown={handlePointerDown}
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
+              onPointerCancel={handlePointerCancel}
             >
-              <nav
-                ref={barRef}
-                data-tutorial="tab-bar"
-                className="pointer-events-auto mx-auto max-w-md relative rounded-[30px] overflow-visible touch-none select-none"
-                style={{ height: "74px" }}
-                onPointerDown={handlePointerDown}
-                onPointerMove={handlePointerMove}
-                onPointerUp={handlePointerUp}
-                onPointerCancel={handlePointerCancel}
-              >
-                {/* ═══ Glass surface ═══ */}
+              {/* ═══ Drag refraction highlight ═══ */}
+              {dragUI.active && (
                 <div
-                  className="absolute inset-0 rounded-[30px]"
+                  className="absolute inset-0 pointer-events-none overflow-hidden"
                   style={{
-                    background: "linear-gradient(180deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.035) 100%)",
-                    backdropFilter: "blur(24px) saturate(150%)",
-                    WebkitBackdropFilter: "blur(24px) saturate(150%)",
-                    border: "1px solid rgba(255,255,255,0.12)",
-                    boxShadow: [
-                      "0 14px 38px rgba(0,0,0,0.28)",
-                      "inset 0 1px 0 rgba(255,255,255,0.14)",
-                    ].join(", "),
+                    zIndex: 1,
+                    borderRadius: "inherit",
                   }}
-                />
-
-                {/* ═══ Top highlight band ═══ */}
-                <div
-                  className="absolute top-0 left-[10%] right-[10%] h-[1px] rounded-full pointer-events-none"
-                  style={{
-                    background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.18) 30%, rgba(255,255,255,0.24) 50%, rgba(255,255,255,0.18) 70%, transparent)",
-                  }}
-                />
-
-                {/* ═══ Refraction highlight during drag ═══ */}
-                {dragUI.active && (
-                  <div className="absolute inset-0 rounded-[30px] pointer-events-none overflow-hidden" style={{ zIndex: 1 }}>
-                    <div
-                      className="absolute top-0 h-full"
-                      style={{
-                        left: `${dragUI.highlightX * 100}%`,
-                        width: "100px",
-                        transform: "translateX(-50%)",
-                        background: "radial-gradient(ellipse at center, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 40%, transparent 70%)",
-                      }}
-                    />
-                  </div>
-                )}
-
-                {/* ═══ 5-column grid ═══ */}
-                <div
-                  ref={gridRef}
-                  className="relative z-10 grid h-full items-center"
-                  style={{ gridTemplateColumns: "repeat(5, minmax(0, 1fr))" }}
                 >
-                  {/* Col 1: Home */}
-                  <GridTab
-                    id="home" label="Accueil" col={1}
-                    activeTab={activeTab} onSwitch={switchTab}
-                    tabRefs={tabRefs}
-                    highlight={dragUI.active && dragUI.hoverTab === "home"}
-                  />
-                  {/* Col 2: Balances */}
-                  <GridTab
-                    id="balances" label="Soldes" col={2}
-                    activeTab={activeTab} onSwitch={switchTab}
-                    tabRefs={tabRefs}
-                    highlight={dragUI.active && dragUI.hoverTab === "balances"}
-                  />
-                  {/* Col 3: Add Expense FAB */}
-                  <div className="flex items-center justify-center" style={{ gridColumn: 3 }}>
-                    <button
-                      onClick={handleFab}
-                      className="nav-fab group cursor-pointer relative"
-                      style={{
-                        WebkitTapHighlightColor: "transparent",
-                        transform: "translateY(-18px)",
-                      }}
-                      aria-label="Ajouter une dépense"
-                    >
-                      {/* Glow */}
-                      <div
-                        className="absolute -inset-2.5 rounded-full blur-lg nav-fab-glow pointer-events-none"
-                        style={{ background: "radial-gradient(circle, rgba(126,87,255,0.16) 0%, rgba(92,54,220,0.04) 60%, transparent 100%)" }}
-                      />
-                      {/* Button body */}
-                      <div
-                        className="relative w-[62px] h-[62px] rounded-full flex items-center justify-center transition-transform duration-[220ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] group-active:scale-[0.92]"
-                        style={{
-                          background: "radial-gradient(circle at 35% 25%, rgba(255,255,255,0.28), rgba(126,87,255,0.70) 40%, rgba(92,54,220,0.74) 100%)",
-                          backdropFilter: "blur(18px) saturate(170%)",
-                          WebkitBackdropFilter: "blur(18px) saturate(170%)",
-                          border: "1px solid rgba(255,255,255,0.20)",
-                          boxShadow: "0 8px 28px rgba(91,61,220,0.38), inset 0 1px 0 rgba(255,255,255,0.26), inset 0 -1px 0 rgba(0,0,0,0.08)",
-                        }}
-                      >
-                        <Plus size={22} strokeWidth={2.4} className="relative z-10 text-white" />
-                      </div>
-                    </button>
-                  </div>
-                  {/* Col 4: History */}
-                  <GridTab
-                    id="history" label="Historique" col={4}
-                    activeTab={activeTab} onSwitch={switchTab}
-                    tabRefs={tabRefs}
-                    highlight={dragUI.active && dragUI.hoverTab === "history"}
-                  />
-                  {/* Col 5: Profile */}
-                  <GridTab
-                    id="profile" label="Profil" col={5}
-                    activeTab={activeTab} onSwitch={switchTab}
-                    tabRefs={tabRefs}
-                    highlight={dragUI.active && dragUI.hoverTab === "profile"}
-                  />
-                </div>
-
-                {/* ═══ Active indicator pill ═══ */}
-                {showPill.ready && (
                   <div
-                    className={`absolute top-1/2 -translate-y-1/2 rounded-[18px] nav-pill pointer-events-none ${
-                      dragUI.active ? "transition-none" : "transition-all duration-[300ms] ease-[cubic-bezier(0.34,1.56,0.64,1)]"
-                    }`}
+                    className="absolute top-0 h-full"
                     style={{
-                      left: showPill.left,
-                      width: showPill.width,
-                      height: "36px",
-                      background: dragUI.active
-                        ? "linear-gradient(180deg, rgba(255,255,255,0.13) 0%, rgba(255,255,255,0.07) 100%)"
-                        : "rgba(255,255,255,0.08)",
-                      border: "1px solid rgba(255,255,255,0.08)",
-                      boxShadow: dragUI.active
-                        ? "inset 0 1px 0 rgba(255,255,255,0.14), 0 4px 16px rgba(0,0,0,0.14)"
-                        : "inset 0 1px 0 rgba(255,255,255,0.10), 0 4px 12px rgba(0,0,0,0.10)",
+                      left: `${dragUI.highlightX * 100}%`,
+                      width: "100px",
+                      transform: "translateX(-50%)",
+                      background: "radial-gradient(ellipse at center, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 40%, transparent 70%)",
                     }}
                   />
-                )}
-              </nav>
-            </div>
+                </div>
+              )}
+
+              {/* ═══ Content grid ═══ */}
+              <div
+                className="bottom-nav-content"
+                style={{ height: "100%" }}
+              >
+                <GridTab
+                  id="home" label="Accueil" col={1}
+                  activeTab={activeTab} onSwitch={switchTab}
+                  tabRefs={tabRefs}
+                  highlight={dragUI.active && dragUI.hoverTab === "home"}
+                />
+                <GridTab
+                  id="balances" label="Soldes" col={2}
+                  activeTab={activeTab} onSwitch={switchTab}
+                  tabRefs={tabRefs}
+                  highlight={dragUI.active && dragUI.hoverTab === "balances"}
+                />
+                {/* Col 3: FAB */}
+                <div className="flex items-center justify-center" style={{ gridColumn: 3 }}>
+                  <button
+                    onClick={handleFab}
+                    className="nav-fab group cursor-pointer relative"
+                    style={{
+                      WebkitTapHighlightColor: "transparent",
+                      transform: "translateY(-14px)",
+                    }}
+                    aria-label="Ajouter une dépense"
+                  >
+                    <div
+                      className="absolute -inset-2.5 rounded-full blur-lg nav-fab-glow pointer-events-none"
+                      style={{ background: "radial-gradient(circle, rgba(126,87,255,0.16) 0%, rgba(92,54,220,0.04) 60%, transparent 100%)" }}
+                    />
+                    <div
+                      className="relative w-[62px] h-[62px] rounded-full flex items-center justify-center transition-transform duration-[220ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] group-active:scale-[0.92]"
+                      style={{
+                        background: "radial-gradient(circle at 35% 25%, rgba(255,255,255,0.28), rgba(126,87,255,0.70) 40%, rgba(92,54,220,0.74) 100%)",
+                        backdropFilter: "blur(18px) saturate(185%)",
+                        WebkitBackdropFilter: "blur(18px) saturate(185%)",
+                        border: "1px solid rgba(255,255,255,0.20)",
+                        boxShadow: "0 8px 28px rgba(91,61,220,0.38), inset 0 1px 0 rgba(255,255,255,0.26), inset 0 -1px 0 rgba(0,0,0,0.08)",
+                      }}
+                    >
+                      <Plus size={22} strokeWidth={2.4} className="relative z-10 text-white" />
+                    </div>
+                  </button>
+                </div>
+                <GridTab
+                  id="history" label="Historique" col={4}
+                  activeTab={activeTab} onSwitch={switchTab}
+                  tabRefs={tabRefs}
+                  highlight={dragUI.active && dragUI.hoverTab === "history"}
+                />
+                <GridTab
+                  id="profile" label="Profil" col={5}
+                  activeTab={activeTab} onSwitch={switchTab}
+                  tabRefs={tabRefs}
+                  highlight={dragUI.active && dragUI.hoverTab === "profile"}
+                />
+              </div>
+
+              {/* ═══ Active indicator pill ═══ */}
+              {showPill.ready && (
+                <div
+                  className={`absolute top-1/2 -translate-y-1/2 rounded-[18px] nav-pill pointer-events-none ${
+                    dragUI.active ? "transition-none" : "transition-all duration-[300ms] ease-[cubic-bezier(0.34,1.56,0.64,1)]"
+                  }`}
+                  style={{
+                    left: showPill.left,
+                    width: showPill.width,
+                    height: "36px",
+                    background: dragUI.active
+                      ? "linear-gradient(180deg, rgba(255,255,255,0.13) 0%, rgba(255,255,255,0.07) 100%)"
+                      : "rgba(255,255,255,0.08)",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                    boxShadow: dragUI.active
+                      ? "inset 0 1px 0 rgba(255,255,255,0.14), 0 4px 16px rgba(0,0,0,0.14)"
+                      : "inset 0 1px 0 rgba(255,255,255,0.10), 0 4px 12px rgba(0,0,0,0.10)",
+                  }}
+                />
+              )}
+            </nav>
           )}
         </div>
       </TooltipProvider>
@@ -372,7 +336,6 @@ const AppShell = memo(({ children, activeTab, onTabChange, onAddExpense }: AppSh
 
 AppShell.displayName = "AppShell";
 
-// ── Grid tab — explicit column placement ──
 const GridTab = memo(({
   id, label, col, activeTab, onSwitch, tabRefs, highlight,
 }: {
@@ -395,16 +358,12 @@ const GridTab = memo(({
         onClick={() => onSwitch(id)}
         aria-label={label}
         className="flex flex-col items-center justify-center gap-1 min-w-[50px] px-1 py-1 cursor-pointer select-none"
-        style={{
-          WebkitTapHighlightColor: "transparent",
-          transition: "opacity 220ms ease, transform 220ms ease",
-        }}
+        style={{ WebkitTapHighlightColor: "transparent" }}
       >
         <Icon
           size={22}
           strokeWidth={lit ? 2 : 1.5}
           className={`transition-all duration-[220ms] ${lit ? "text-white drop-shadow-[0_0_5px_rgba(128,80,240,0.40)]" : "text-white/45"}`}
-          style={{ transition: "opacity 220ms ease, transform 220ms ease" }}
         />
         <span
           className={`text-[11px] font-medium tracking-wide leading-none transition-opacity duration-[220ms] ${lit ? "text-white opacity-100" : "text-white/45 opacity-60"}`}
