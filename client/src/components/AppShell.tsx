@@ -263,42 +263,13 @@ const AppShell = memo(({ children, activeTab, onTabChange, onAddExpense }: AppSh
               onPointerUp={handlePointerUp}
               onPointerCancel={handlePointerCancel}
             >
-              {/* Drag refraction highlight */}
-              {dragUI.active && (
-                <div
-                  className="pointer-events-none overflow-hidden"
-                  style={{
-                    position: "absolute",
-                    inset: 0,
-                    borderRadius: "28px",
-                    zIndex: 1,
-                  }}
-                >
-                  <div
-                    className="absolute top-0 h-full"
-                    style={{
-                      left: `${dragUI.highlightX * 100}%`,
-                      width: "120px",
-                      transform: "translateX(-50%)",
-                      background: "radial-gradient(ellipse at center, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.03) 40%, transparent 70%)",
-                      transition: "left 40ms linear",
-                    }}
-                  />
-                </div>
-              )}
+              {/* Concave notch overlay */}
+              <div className="bottom-nav-notch" />
 
-              {/* FAB button — sits in the notch */}
+              {/* FAB button */}
               <button
                 onClick={handleFab}
                 className="nav-fab group cursor-pointer"
-                style={{
-                  position: "absolute",
-                  left: "50%",
-                  top: "-28px",
-                  transform: "translateX(-50%)",
-                  zIndex: 10,
-                  WebkitTapHighlightColor: "transparent",
-                }}
                 aria-label="Ajouter une dépense"
               >
                 <div
@@ -341,13 +312,14 @@ const AppShell = memo(({ children, activeTab, onTabChange, onAddExpense }: AppSh
                   className="nav-pill"
                   style={{
                     position: "absolute",
-                    bottom: "18px",
+                    top: "50%",
+                    transform: "translateY(-50%)",
                     left: showPill.left,
                     width: showPill.width,
                     height: "36px",
                     borderRadius: "18px",
                     pointerEvents: "none",
-                    zIndex: 1,
+                    zIndex: 3,
                     transition: dragUI.active ? "none" : "left 320ms cubic-bezier(0.34,1.56,0.64,1), width 320ms cubic-bezier(0.34,1.56,0.64,1)",
                     background: dragUI.active
                       ? "linear-gradient(180deg, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0.06) 100%)"
