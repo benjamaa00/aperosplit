@@ -5,6 +5,22 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { haptics } from "../utils/haptics";
 import type { Tab } from "../types";
 
+const TAB_ICONS: Record<Tab, LucideIcon> = {
+  home: Home,
+  expenses: Home,
+  balances: Scale,
+  stats: Scale,
+  history: History,
+  profile: User,
+};
+
+const NAV_TABS: { id: Tab; label: string }[] = [
+  { id: "home", label: "Accueil" },
+  { id: "balances", label: "Soldes" },
+  { id: "history", label: "Historique" },
+  { id: "profile", label: "Profil" },
+];
+
 interface AppShellProps {
   children: ReactNode;
   activeTab?: Tab;
@@ -13,10 +29,12 @@ interface AppShellProps {
 }
 
 const AppShell = memo(({ children, activeTab, onTabChange, onAddExpense }: AppShellProps) => {
-  const tabRefs = useRef<Map<Tab, HTMLButtonElement>>(new Map());
+  const tabRefs = useRef<Map<Tab, HTMLDivElement>>(new Map());
   const navRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const [pill, setPill] = useState({ left: 0, width: 0, ready: false });
 
+  // Measure active tab pill position
   useEffect(() => {
     if (!activeTab || !tabRefs.current.has(activeTab)) return;
     const el = tabRefs.current.get(activeTab)!;
@@ -31,6 +49,8 @@ const AppShell = memo(({ children, activeTab, onTabChange, onAddExpense }: AppSh
     if (!onTabChange) return;
     haptics.light();
     onTabChange(tab);
+    // Scroll to top when switching tabs
+    scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
   }, [onTabChange]);
 
   const handleFab = useCallback(() => {
@@ -41,165 +61,166 @@ const AppShell = memo(({ children, activeTab, onTabChange, onAddExpense }: AppSh
   return (
     <ErrorBoundary>
       <TooltipProvider>
-        {/* ── Content scrolls behind the fixed nav ── */}
-        <div
-          className="min-h-screen overflow-y-auto scrollbar-hidden"
-          style={{ paddingBottom: activeTab ? "calc(110px + env(safe-area-inset-bottom, 0px))" : undefined }}
-        >
-          {children}
-        </div>
-
-        {/* ── Liquid Glass Navigation Bar — fixed, CSS Grid ── */}
-        {activeTab && onTabChange && (
-          <nav
-            data-tutorial="tab-bar"
-            className="fixed left-4 right-4 z-50"
-            style={{ bottom: "calc(10px + env(safe-area-inset-bottom, 0px))" }}
+        {/* ── Full-screen scroll container ── */}
+        <div className="h-screen flex flex-col overflow-hidden">
+          <div
+            ref={scrollRef}
+            className="flex-1 min-h-0 overflow-y-auto scrollbar-hidden"
           >
-            {/* ── Glass bar surface ── */}
-            <div
-              ref={navRef}
-              className="relative mx-auto max-w-md rounded-[32px] overflow-visible"
-              style={{
-                height: "74px",
-                background: "linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0.035))",
-                backdropFilter: "blur(24px) saturate(150%)",
-                WebkitBackdropFilter: "blur(24px) saturate(150%)",
-                border: "1px solid rgba(255,255,255,0.12)",
-                boxShadow: "0 14px 38px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.14)",
-              }}
-            >
-              {/* ── 5-column Grid ── */}
+            {/* ── Page content ── */}
+            <div className="min-h-full">
+              {children}
+            </div>
+
+            {/* ── Liquid Glass Nav — sticky bottom, in-flow, NOT fixed ── */}
+            {activeTab && onTabChange && (
               <div
-                className="grid h-full items-center px-1"
-                style={{ gridTemplateColumns: "repeat(5, minmax(0, 1fr))" }}
+                className="sticky bottom-0 z-50 px-3 pointer-events-none"
+                style={{ paddingBottom: "max(10px, env(safe-area-inset-bottom, 10px))" }}
               >
-                {/* ── Column 1: Accueil ── */}
-                <TabButton
-                  id="home"
-                  label="Accueil"
-                  activeTab={activeTab}
-                  onSwitch={switchTab}
-                  tabRefs={tabRefs}
-                  gridCol={1}
-                />
+                <nav
+                  data-tutorial="tab-bar"
+                  className="pointer-events-auto mx-auto max-w-md relative rounded-[28px] overflow-visible"
+                  style={{
+                    height: "72px",
+                  }}
+                >
+                  {/* ═══ Liquid Glass Surface — multi-layer ═══ */}
+                  <div
+                    ref={navRef}
+                    className="absolute inset-0 rounded-[28px]"
+                    style={{
+                      /* Layer 1: Base glass */
+                      background: "linear-gradient(180deg, rgba(255,255,255,0.11) 0%, rgba(255,255,255,0.05) 40%, rgba(255,255,255,0.03) 100%)",
+                      backdropFilter: "blur(26px) saturate(155%) brightness(103%)",
+                      WebkitBackdropFilter: "blur(26px) saturate(155%) brightness(103%)",
+                      /* Layer 2: Border + shadow */
+                      border: "1px solid rgba(255,255,255,0.13)",
+                      boxShadow: [
+                        "0 12px 40px rgba(0,0,0,0.28)",
+                        "0 2px 8px rgba(0,0,0,0.12)",
+                        "inset 0 1px 0 rgba(255,255,255,0.16)",
+                        "inset 0 -0.5px 0 rgba(255,255,255,0.05)",
+                        "inset 0 0 20px rgba(255,255,255,0.03)",
+                      ].join(", "),
+                    }}
+                  />
 
-                {/* ── Column 2: Soldes ── */}
-                <TabButton
-                  id="balances"
-                  label="Soldes"
-                  activeTab={activeTab}
-                  onSwitch={switchTab}
-                  tabRefs={tabRefs}
-                  gridCol={2}
-                />
-
-                {/* ── Column 3: Add button (center) ── */}
-                <div className="flex items-center justify-center" style={{ gridColumn: 3 }}>
-                  <button
-                    onClick={handleFab}
-                    className="nav-fab group cursor-pointer relative -top-3"
-                    style={{ WebkitTapHighlightColor: "transparent" }}
-                    aria-label="Ajouter une dépense"
+                  {/* ── 5-column Grid ── */}
+                  <div
+                    className="relative z-10 grid h-full items-center px-1"
+                    style={{ gridTemplateColumns: "repeat(5, minmax(0, 1fr))" }}
                   >
-                    {/* Breathing glow */}
+                    {/* Column 1 */}
+                    <GridTab
+                      id="home" label="Accueil"
+                      activeTab={activeTab} onSwitch={switchTab}
+                      tabRefs={tabRefs} col={1}
+                    />
+                    {/* Column 2 */}
+                    <GridTab
+                      id="balances" label="Soldes"
+                      activeTab={activeTab} onSwitch={switchTab}
+                      tabRefs={tabRefs} col={2}
+                    />
+                    {/* Column 3: Center FAB */}
+                    <div className="flex items-center justify-center" style={{ gridColumn: 3 }}>
+                      <button
+                        onClick={handleFab}
+                        className="nav-fab group cursor-pointer relative -top-3"
+                        style={{ WebkitTapHighlightColor: "transparent" }}
+                        aria-label="Ajouter une dépense"
+                      >
+                        <div
+                          className="absolute -inset-3 rounded-full blur-xl nav-fab-glow pointer-events-none"
+                          style={{ background: "radial-gradient(circle, rgba(126,87,255,0.18) 0%, rgba(92,54,220,0.06) 60%, transparent 100%)" }}
+                        />
+                        <div
+                          className="relative w-[60px] h-[60px] rounded-full flex items-center justify-center transition-transform duration-[250ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] group-active:scale-[0.94]"
+                          style={{
+                            background: "radial-gradient(circle at 35% 25%, rgba(255,255,255,0.28), rgba(126,87,255,0.68) 40%, rgba(92,54,220,0.72) 100%)",
+                            backdropFilter: "blur(18px) saturate(170%)",
+                            WebkitBackdropFilter: "blur(18px) saturate(170%)",
+                            border: "1px solid rgba(255,255,255,0.20)",
+                            boxShadow: "0 8px 28px rgba(91,61,220,0.35), inset 0 1px 0 rgba(255,255,255,0.28), inset 0 -1px 0 rgba(0,0,0,0.10)",
+                          }}
+                        >
+                          <Plus size={22} strokeWidth={2.5} className="relative z-10 text-white" />
+                        </div>
+                      </button>
+                    </div>
+                    {/* Column 4 */}
+                    <GridTab
+                      id="history" label="Historique"
+                      activeTab={activeTab} onSwitch={switchTab}
+                      tabRefs={tabRefs} col={4}
+                    />
+                    {/* Column 5 */}
+                    <GridTab
+                      id="profile" label="Profil"
+                      activeTab={activeTab} onSwitch={switchTab}
+                      tabRefs={tabRefs} col={5}
+                    />
+                  </div>
+
+                  {/* ── Active capsule pill ── */}
+                  {pill.ready && (
                     <div
-                      className="absolute -inset-3 rounded-full blur-xl nav-fab-glow pointer-events-none"
+                      className="absolute top-1/2 -translate-y-1/2 rounded-[16px] nav-pill pointer-events-none transition-all duration-[280ms] ease-[cubic-bezier(0.34,1.56,0.64,1)]"
                       style={{
-                        background: "radial-gradient(circle, rgba(126,87,255,0.20) 0%, rgba(92,54,220,0.08) 60%, transparent 100%)",
+                        left: pill.left,
+                        width: pill.width,
+                        height: "34px",
+                        background: "rgba(255,255,255,0.09)",
+                        border: "1px solid rgba(255,255,255,0.08)",
+                        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.12), 0 4px 14px rgba(0,0,0,0.12)",
                       }}
                     />
-                    {/* Button body — Liquid Glass violet lens */}
-                    <div
-                      className="relative w-[62px] h-[62px] rounded-full flex items-center justify-center transition-transform duration-[250ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] group-active:scale-[0.94]"
-                      style={{
-                        background: "radial-gradient(circle at 35% 25%, rgba(255,255,255,0.30), rgba(126,87,255,0.72) 42%, rgba(92,54,220,0.76) 100%)",
-                        backdropFilter: "blur(22px) saturate(180%)",
-                        WebkitBackdropFilter: "blur(22px) saturate(180%)",
-                        border: "1px solid rgba(255,255,255,0.22)",
-                        boxShadow: "0 10px 30px rgba(91,61,220,0.38), inset 0 1px 0 rgba(255,255,255,0.30)",
-                      }}
-                    >
-                      <Plus size={24} strokeWidth={2.5} className="relative z-10 text-white" />
-                    </div>
-                  </button>
-                </div>
-
-                {/* ── Column 4: Historique ── */}
-                <TabButton
-                  id="history"
-                  label="Historique"
-                  activeTab={activeTab}
-                  onSwitch={switchTab}
-                  tabRefs={tabRefs}
-                  gridCol={4}
-                />
-
-                {/* ── Column 5: Profil ── */}
-                <TabButton
-                  id="profile"
-                  label="Profil"
-                  activeTab={activeTab}
-                  onSwitch={switchTab}
-                  tabRefs={tabRefs}
-                  gridCol={5}
-                />
+                  )}
+                </nav>
               </div>
-
-              {/* ── Active capsule pill ── */}
-              {pill.ready && (
-                <div
-                  className="absolute top-1/2 -translate-y-1/2 rounded-[18px] nav-pill pointer-events-none transition-all duration-[300ms] ease-[cubic-bezier(0.34,1.56,0.64,1)]"
-                  style={{
-                    left: pill.left,
-                    width: pill.width,
-                    height: "36px",
-                    background: "rgba(255,255,255,0.10)",
-                    border: "1px solid rgba(255,255,255,0.10)",
-                    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.14), 0 6px 18px rgba(0,0,0,0.16)",
-                  }}
-                />
-              )}
-            </div>
-          </nav>
-        )}
+            )}
+          </div>
+        </div>
       </TooltipProvider>
     </ErrorBoundary>
   );
 });
 
-// ── Tab button sub-component ──
-const TabButton = memo(({
-  id, label, activeTab, onSwitch, tabRefs, gridCol,
+AppShell.displayName = "AppShell";
+
+// ── Grid tab button ──
+const GridTab = memo(({
+  id, label, activeTab, onSwitch, tabRefs, col,
 }: {
-  id: Tab;
-  label: string;
-  activeTab: Tab;
+  id: Tab; label: string; activeTab: Tab;
   onSwitch: (tab: Tab) => void;
-  tabRefs: React.MutableRefObject<Map<Tab, HTMLButtonElement>>;
-  gridCol: number;
+  tabRefs: React.MutableRefObject<Map<Tab, HTMLDivElement>>;
+  col: number;
 }) => {
   const isActive = activeTab === id;
   const Icon = TAB_ICONS[id];
 
   return (
-    <div className="flex items-center justify-center" style={{ gridColumn: gridCol }}>
+    <div
+      ref={(el) => { if (el) tabRefs.current.set(id, el); }}
+      className="flex items-center justify-center"
+      style={{ gridColumn: col }}
+    >
       <button
-        ref={(el) => { if (el) tabRefs.current.set(id, el); }}
-        data-tutorial={`tab-${id}`}
         onClick={() => onSwitch(id)}
         aria-label={label}
-        className={`flex flex-col items-center justify-center gap-1 min-w-[52px] px-2 py-1 rounded-2xl transition-all duration-[250ms] ease-out cursor-pointer ${
-          isActive ? "text-white" : "text-white/55"
+        className={`flex flex-col items-center justify-center gap-0.5 min-w-[50px] px-1 py-1 rounded-2xl transition-all duration-[220ms] ease-out cursor-pointer select-none ${
+          isActive ? "text-white" : "text-white/50"
         }`}
         style={{ WebkitTapHighlightColor: "transparent" }}
       >
         <Icon
-          size={22}
+          size={21}
           strokeWidth={isActive ? 2 : 1.5}
-          className={`transition-all duration-[250ms] ${isActive ? "drop-shadow-[0_0_6px_rgba(128,80,240,0.5)]" : ""}`}
+          className={`transition-all duration-[220ms] ${isActive ? "drop-shadow-[0_0_5px_rgba(128,80,240,0.45)]" : ""}`}
         />
-        <span className={`text-[11px] font-medium tracking-wide transition-opacity duration-200 ${isActive ? "opacity-100" : "opacity-55"}`}>
+        <span className={`text-[10px] font-medium tracking-wide leading-none transition-opacity duration-200 ${isActive ? "opacity-100" : "opacity-50"}`}>
           {label}
         </span>
       </button>
@@ -207,18 +228,6 @@ const TabButton = memo(({
   );
 });
 
-TabButton.displayName = "TabButton";
-
-// ── Icon lookup ──
-const TAB_ICONS: Record<Tab, LucideIcon> = {
-  home: Home,
-  expenses: Home,
-  balances: Scale,
-  stats: Scale,
-  history: History,
-  profile: User,
-};
-
-AppShell.displayName = "AppShell";
+GridTab.displayName = "GridTab";
 
 export { AppShell };
