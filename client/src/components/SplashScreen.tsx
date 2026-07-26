@@ -1,79 +1,28 @@
-import { useState, useEffect, memo, useRef, useCallback } from "react";
+import { useState, useEffect, memo, useRef } from "react";
 
 const SPLASH_DURATION = 5400;
-const CROSSFADE_START = 3.1;
-const CROSSFADE_END = 3.55;
 const FADE_START = 4.4;
 const FADE_END = 5.4;
 
-const LOGO_SRC = "/assets/aperosplit-logo.png";
-
 export const SplashScreen = memo(function SplashScreen({ onComplete }: { onComplete: () => void }) {
-  const [imageLoaded, setImageLoaded] = useState(false);
-  const [crossfadeProgress, setCrossfadeProgress] = useState(0);
-  const [globalFade, setGlobalFade] = useState(0);
+  const [brandVisible, setBrandVisible] = useState(false);
+  const [brandFading, setBrandFading] = useState(false);
   const onCompleteRef = useRef(onComplete);
   onCompleteRef.current = onComplete;
 
-  const handleImageLoad = useCallback(() => setImageLoaded(true), []);
-
   useEffect(() => {
-    const img = new Image();
-    img.src = LOGO_SRC;
-    img.onload = handleImageLoad;
-
-    const start = performance.now();
-    let raf: number;
-
-    function tick(now: number) {
-      const t = (now - start) / 1000;
-
-      if (t < CROSSFADE_START) {
-        setCrossfadeProgress(0);
-      } else if (t < CROSSFADE_END) {
-        const p = (t - CROSSFADE_START) / (CROSSFADE_END - CROSSFADE_START);
-        const eased = p * p * (3 - 2 * p);
-        setCrossfadeProgress(eased);
-      } else {
-        setCrossfadeProgress(1);
-      }
-
-      if (t > FADE_START) {
-        setGlobalFade(Math.min(1, (t - FADE_START) / (FADE_END - FADE_START)));
-      }
-
-      if (t >= SPLASH_DURATION / 1000 + 0.1) {
-        onCompleteRef.current();
-        return;
-      }
-
-      raf = requestAnimationFrame(tick);
-    }
-
-    raf = requestAnimationFrame(tick);
-    return () => {
-      cancelAnimationFrame(raf);
-      img.onload = null;
-    };
-  }, [handleImageLoad]);
+    const t1 = setTimeout(() => setBrandVisible(true), 3200);
+    const t2 = setTimeout(() => setBrandFading(true), FADE_START * 1000);
+    const t3 = setTimeout(() => onCompleteRef.current(), SPLASH_DURATION + 100);
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
+  }, []);
 
   return (
-    <div
-      className={`apple-splash ${globalFade > 0 ? "apple-splash-fading" : ""}`}
-      style={{ background: "#0C0C0E" }}
-    >
-      <div className="splash-logo-stage">
-        <div className="procedural-animation" style={{ opacity: 1 - crossfadeProgress }}>
-          <SplashCanvas crossfadeStart={CROSSFADE_START} crossfadeEnd={CROSSFADE_END} />
-        </div>
-
-        <img
-          className="official-final-logo"
-          src={LOGO_SRC}
-          alt="AperoSplit"
-          draggable={false}
-          style={{ opacity: crossfadeProgress }}
-        />
+    <div className="apple-splash" style={{ background: "#0C0C0E" }}>
+      <SplashCanvas />
+      <div className={`apple-splash-brand ${brandVisible ? "visible" : ""} ${brandFading ? "fading" : ""}`}>
+        <div className="apple-splash-logo-text">AperoSplit</div>
+        <div className="apple-splash-tagline">Partagez, équilibrez</div>
       </div>
     </div>
   );
@@ -81,7 +30,7 @@ export const SplashScreen = memo(function SplashScreen({ onComplete }: { onCompl
 
 SplashScreen.displayName = "SplashScreen";
 
-function SplashCanvas({ crossfadeStart, crossfadeEnd }: { crossfadeStart: number; crossfadeEnd: number }) {
+function SplashCanvas() {
   const ref = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -121,34 +70,36 @@ function SplashCanvas({ crossfadeStart, crossfadeEnd }: { crossfadeStart: number
     const R = Math.min(W, H) * 0.12;
     const LOGO_GAP = R * 0.76;
 
+    // LEFT SPHERE — Deep dark purple
     const LEFT = {
-      c0: [114, 64, 252],
-      c1: [122, 82, 255],
-      c2: [134, 90, 254],
-      c3: [145, 101, 251],
-      c4: [109, 58, 252],
-      c5: [106, 68, 214],
-      edge: [96, 52, 200],
-      glowInner: [110, 71, 247],
-      glowMid: [139, 108, 251],
-      glowOuter: [96, 52, 230],
-      highlight: [166, 139, 250],
-      subsurface: [140, 105, 252],
+      c0: [88, 40, 180],
+      c1: [95, 50, 195],
+      c2: [100, 55, 200],
+      c3: [108, 62, 210],
+      c4: [78, 35, 170],
+      c5: [65, 28, 145],
+      edge: [45, 18, 110],
+      glowInner: [80, 45, 175],
+      glowMid: [105, 70, 200],
+      glowOuter: [55, 25, 130],
+      highlight: [120, 85, 210],
+      subsurface: [90, 50, 185],
     };
 
+    // RIGHT SPHERE — Deep dark mauve
     const RIGHT = {
-      c0: [195, 179, 250],
-      c1: [209, 198, 255],
-      c2: [213, 198, 252],
-      c3: [205, 192, 252],
-      c4: [194, 177, 252],
-      c5: [180, 167, 226],
-      edge: [168, 155, 215],
-      glowInner: [207, 194, 250],
-      glowMid: [226, 218, 255],
-      glowOuter: [195, 180, 240],
-      highlight: [220, 212, 252],
-      subsurface: [200, 188, 250],
+      c0: [130, 105, 180],
+      c1: [140, 115, 195],
+      c2: [145, 120, 198],
+      c3: [138, 112, 190],
+      c4: [125, 100, 175],
+      c5: [110, 88, 155],
+      edge: [85, 65, 125],
+      glowInner: [135, 110, 185],
+      glowMid: [155, 130, 205],
+      glowOuter: [100, 78, 145],
+      highlight: [150, 125, 195],
+      subsurface: [120, 95, 170],
     };
 
     function drawBackground(alpha: number) {
@@ -167,8 +118,9 @@ function SplashCanvas({ crossfadeStart, crossfadeEnd }: { crossfadeStart: number
     function draw(now: number) {
       if (!alive) return;
       const t = (now - start) / 1000;
+      const globalFade = t > FADE_START ? clamp01(1 - (t - FADE_START) / (FADE_END - FADE_START)) : 1;
 
-      drawBackground(1);
+      drawBackground(globalFade);
 
       let o1x = cx, o1y = cy, o2x = cx, o2y = cy;
       let o1a = 0, o2a = 0, o1s = 0, o2s = 0;
@@ -213,14 +165,12 @@ function SplashCanvas({ crossfadeStart, crossfadeEnd }: { crossfadeStart: number
         o1a = 1; o1s = sp; o2a = 1; o2s = sp;
         o1x = cx - LOGO_GAP; o1y = cy;
         o2x = cx + LOGO_GAP; o2y = cy;
-      } else if (t < crossfadeStart) {
+      } else if (t < FADE_START) {
         o1a = 1; o1s = 1; o2a = 1; o2s = 1;
         o1x = cx - LOGO_GAP; o1y = cy;
         o2x = cx + LOGO_GAP; o2y = cy;
       } else {
-        const cf = clamp01((t - crossfadeStart) / (crossfadeEnd - crossfadeStart));
-        const fade = 1 - cf;
-        o1a = fade; o1s = 1; o2a = fade; o2s = 1;
+        o1a = globalFade; o1s = 1; o2a = globalFade; o2s = 1;
         o1x = cx - LOGO_GAP; o1y = cy;
         o2x = cx + LOGO_GAP; o2y = cy;
       }
@@ -235,31 +185,34 @@ function SplashCanvas({ crossfadeStart, crossfadeEnd }: { crossfadeStart: number
         ctx.translate(ox, oy);
         ctx.scale(sx * scale, sy * scale);
 
+        // Ambient glow
         ctx.globalCompositeOperation = "lighter";
-        ctx.globalAlpha = alpha * 0.06;
+        ctx.globalAlpha = alpha * 0.04;
         const ambGlow = ctx.createRadialGradient(0, 0, R * 0.6, 0, 0, R * 2.8);
-        ambGlow.addColorStop(0, `rgba(${rgb(pal.glowInner)},0.10)`);
-        ambGlow.addColorStop(0.5, `rgba(${rgb(pal.glowOuter)},0.03)`);
+        ambGlow.addColorStop(0, `rgba(${rgb(pal.glowInner)},0.08)`);
+        ambGlow.addColorStop(0.5, `rgba(${rgb(pal.glowOuter)},0.02)`);
         ambGlow.addColorStop(1, `rgba(${rgb(pal.glowOuter)},0)`);
         ctx.fillStyle = ambGlow;
         ctx.beginPath();
         ctx.arc(0, 0, R * 2.8, 0, Math.PI * 2);
         ctx.fill();
 
-        ctx.globalAlpha = alpha * 0.14;
+        // Medium glow
+        ctx.globalAlpha = alpha * 0.10;
         const midGlow = ctx.createRadialGradient(0, 0, R * 0.4, 0, 0, R * 1.5);
-        midGlow.addColorStop(0, `rgba(${rgb(pal.glowMid)},0.20)`);
-        midGlow.addColorStop(0.5, `rgba(${rgb(pal.glowOuter)},0.07)`);
+        midGlow.addColorStop(0, `rgba(${rgb(pal.glowMid)},0.15)`);
+        midGlow.addColorStop(0.5, `rgba(${rgb(pal.glowOuter)},0.05)`);
         midGlow.addColorStop(1, `rgba(${rgb(pal.glowOuter)},0)`);
         ctx.fillStyle = midGlow;
         ctx.beginPath();
         ctx.arc(0, 0, R * 1.5, 0, Math.PI * 2);
         ctx.fill();
 
-        ctx.globalAlpha = alpha * 0.22;
+        // Close glow
+        ctx.globalAlpha = alpha * 0.16;
         const closeGlow = ctx.createRadialGradient(0, 0, R * 0.35, 0, 0, R * 1.10);
-        closeGlow.addColorStop(0, `rgba(${rgb(pal.glowInner)},0.32)`);
-        closeGlow.addColorStop(0.5, `rgba(${rgb(pal.glowMid)},0.12)`);
+        closeGlow.addColorStop(0, `rgba(${rgb(pal.glowInner)},0.22)`);
+        closeGlow.addColorStop(0.5, `rgba(${rgb(pal.glowMid)},0.08)`);
         closeGlow.addColorStop(1, `rgba(${rgb(pal.glowOuter)},0)`);
         ctx.fillStyle = closeGlow;
         ctx.beginPath();
@@ -268,61 +221,66 @@ function SplashCanvas({ crossfadeStart, crossfadeEnd }: { crossfadeStart: number
 
         ctx.globalCompositeOperation = "source-over";
 
+        // Glass body
         ctx.globalAlpha = alpha;
         const body = ctx.createRadialGradient(-R * 0.05, -R * 0.05, 0, 0, 0, R);
-        body.addColorStop(0.00, `rgba(${rgb(pal.c0)},0.98)`);
-        body.addColorStop(0.15, `rgba(${rgb(pal.c1)},0.97)`);
-        body.addColorStop(0.30, `rgba(${rgb(pal.c2)},0.95)`);
-        body.addColorStop(0.48, `rgba(${rgb(pal.c3)},0.93)`);
-        body.addColorStop(0.65, `rgba(${rgb(pal.c4)},0.88)`);
-        body.addColorStop(0.80, `rgba(${rgb(pal.c5)},0.70)`);
-        body.addColorStop(0.92, `rgba(${rgb(pal.edge)},0.35)`);
-        body.addColorStop(1.00, `rgba(${rgb(pal.edge)},0.06)`);
+        body.addColorStop(0.00, `rgba(${rgb(pal.c0)},0.95)`);
+        body.addColorStop(0.15, `rgba(${rgb(pal.c1)},0.93)`);
+        body.addColorStop(0.30, `rgba(${rgb(pal.c2)},0.90)`);
+        body.addColorStop(0.48, `rgba(${rgb(pal.c3)},0.85)`);
+        body.addColorStop(0.65, `rgba(${rgb(pal.c4)},0.75)`);
+        body.addColorStop(0.80, `rgba(${rgb(pal.c5)},0.55)`);
+        body.addColorStop(0.92, `rgba(${rgb(pal.edge)},0.28)`);
+        body.addColorStop(1.00, `rgba(${rgb(pal.edge)},0.04)`);
         ctx.fillStyle = body;
         ctx.beginPath();
         ctx.arc(0, 0, R, 0, Math.PI * 2);
         ctx.fill();
 
+        // Diffused highlight
         ctx.globalCompositeOperation = "lighter";
-        ctx.globalAlpha = alpha * 0.30;
+        ctx.globalAlpha = alpha * 0.22;
         const hl = ctx.createRadialGradient(-R * 0.22, -R * 0.25, 0, -R * 0.10, -R * 0.12, R * 0.42);
-        hl.addColorStop(0.00, `rgba(${rgb(pal.highlight)},0.35)`);
-        hl.addColorStop(0.25, `rgba(${rgb(pal.highlight)},0.18)`);
-        hl.addColorStop(0.55, `rgba(${rgb(pal.glowInner)},0.06)`);
-        hl.addColorStop(0.85, `rgba(${rgb(pal.glowOuter)},0.02)`);
+        hl.addColorStop(0.00, `rgba(${rgb(pal.highlight)},0.28)`);
+        hl.addColorStop(0.25, `rgba(${rgb(pal.highlight)},0.14)`);
+        hl.addColorStop(0.55, `rgba(${rgb(pal.glowInner)},0.04)`);
+        hl.addColorStop(0.85, `rgba(${rgb(pal.glowOuter)},0.01)`);
         hl.addColorStop(1.00, `rgba(${rgb(pal.glowOuter)},0)`);
         ctx.fillStyle = hl;
         ctx.beginPath();
         ctx.arc(-R * 0.14, -R * 0.16, R * 0.42, 0, Math.PI * 2);
         ctx.fill();
 
+        // Top shadow
         ctx.globalCompositeOperation = "source-over";
-        ctx.globalAlpha = alpha * 0.60;
+        ctx.globalAlpha = alpha * 0.55;
         const topShadow = ctx.createRadialGradient(0, -R * 0.92, R * 0.08, 0, -R * 0.20, R * 0.85);
-        topShadow.addColorStop(0, `rgba(${rgb(pal.edge)},0.65)`);
-        topShadow.addColorStop(0.30, `rgba(${rgb(pal.glowOuter)},0.30)`);
-        topShadow.addColorStop(0.60, `rgba(${rgb(pal.glowOuter)},0.06)`);
+        topShadow.addColorStop(0, `rgba(${rgb(pal.edge)},0.60)`);
+        topShadow.addColorStop(0.30, `rgba(${rgb(pal.glowOuter)},0.25)`);
+        topShadow.addColorStop(0.60, `rgba(${rgb(pal.glowOuter)},0.04)`);
         topShadow.addColorStop(1, `rgba(${rgb(pal.glowOuter)},0)`);
         ctx.fillStyle = topShadow;
         ctx.beginPath();
         ctx.arc(0, 0, R, 0, Math.PI * 2);
         ctx.fill();
 
+        // Bottom luminosity
         ctx.globalCompositeOperation = "lighter";
-        ctx.globalAlpha = alpha * 0.22;
+        ctx.globalAlpha = alpha * 0.16;
         const bottomGlow = ctx.createRadialGradient(0, R * 0.82, R * 0.06, 0, R * 0.40, R * 0.60);
-        bottomGlow.addColorStop(0, `rgba(${rgb(pal.highlight)},0.38)`);
-        bottomGlow.addColorStop(0.25, `rgba(${rgb(pal.subsurface)},0.18)`);
-        bottomGlow.addColorStop(0.55, `rgba(${rgb(pal.glowInner)},0.06)`);
+        bottomGlow.addColorStop(0, `rgba(${rgb(pal.highlight)},0.28)`);
+        bottomGlow.addColorStop(0.25, `rgba(${rgb(pal.subsurface)},0.12)`);
+        bottomGlow.addColorStop(0.55, `rgba(${rgb(pal.glowInner)},0.04)`);
         bottomGlow.addColorStop(1, `rgba(${rgb(pal.glowOuter)},0)`);
         ctx.fillStyle = bottomGlow;
         ctx.beginPath();
         ctx.arc(0, 0, R, 0, Math.PI * 2);
         ctx.fill();
 
+        // Rim
         ctx.globalCompositeOperation = "source-over";
-        ctx.globalAlpha = alpha * 0.05;
-        ctx.strokeStyle = `rgba(${rgb(pal.highlight)},0.18)`;
+        ctx.globalAlpha = alpha * 0.04;
+        ctx.strokeStyle = `rgba(${rgb(pal.highlight)},0.14)`;
         ctx.lineWidth = 0.6;
         ctx.beginPath();
         ctx.arc(0, 0, R * 0.97, 0, Math.PI * 2);
@@ -334,15 +292,16 @@ function SplashCanvas({ crossfadeStart, crossfadeEnd }: { crossfadeStart: number
       drawSphere(o1x, o1y, o1s, o1a, stretchXS, stretchYS, LEFT);
       drawSphere(o2x, o2y, o2s, o2a, 1, 1, RIGHT);
 
+      // Ambient atmosphere
       if (o1a > 0.3 && o2a > 0.3) {
         ctx.save();
         ctx.globalCompositeOperation = "lighter";
-        ctx.globalAlpha = Math.min(o1a, o2a) * 0.10;
+        ctx.globalAlpha = Math.min(o1a, o2a) * 0.06 * globalFade;
         const atmo = ctx.createRadialGradient(cx, cy, R * 0.4, cx, cy, R * 4.0);
-        atmo.addColorStop(0, "rgba(114,64,252,0.12)");
-        atmo.addColorStop(0.35, "rgba(110,71,247,0.05)");
-        atmo.addColorStop(0.7, "rgba(96,52,230,0.02)");
-        atmo.addColorStop(1, "rgba(80,40,200,0)");
+        atmo.addColorStop(0, "rgba(80,40,160,0.08)");
+        atmo.addColorStop(0.35, "rgba(65,30,140,0.03)");
+        atmo.addColorStop(0.7, "rgba(50,22,110,0.01)");
+        atmo.addColorStop(1, "rgba(40,18,90,0)");
         ctx.fillStyle = atmo;
         ctx.beginPath();
         ctx.arc(cx, cy, R * 4.0, 0, Math.PI * 2);
@@ -350,6 +309,7 @@ function SplashCanvas({ crossfadeStart, crossfadeEnd }: { crossfadeStart: number
         ctx.restore();
       }
 
+      // Intersection
       if (o1a > 0.4 && o2a > 0.4) {
         const halfDist = Math.abs(o2x - o1x) / 2;
         if (halfDist < R) {
@@ -358,23 +318,25 @@ function SplashCanvas({ crossfadeStart, crossfadeEnd }: { crossfadeStart: number
           if (overlapRatio > 0.05) {
             const intX = (o1x + o2x) / 2;
             const intY = cy;
-            const blendA = Math.min(o1a, o2a);
+            const blendA = Math.min(o1a, o2a) * globalFade;
 
+            // Merged glow
             ctx.save();
             ctx.globalCompositeOperation = "lighter";
-            ctx.globalAlpha = blendA * overlapRatio * 0.18;
+            ctx.globalAlpha = blendA * overlapRatio * 0.12;
             const mg = ctx.createRadialGradient(intX, intY, 0, intX, intY, R * 3.2);
-            mg.addColorStop(0, "rgba(198,184,255,0.28)");
-            mg.addColorStop(0.20, "rgba(180,165,252,0.14)");
-            mg.addColorStop(0.45, "rgba(140,115,245,0.06)");
-            mg.addColorStop(0.70, `rgba(${rgb(LEFT.glowOuter)},0.02)`);
-            mg.addColorStop(1, `rgba(${rgb(LEFT.glowOuter)},0)`);
+            mg.addColorStop(0, "rgba(110,70,180,0.20)");
+            mg.addColorStop(0.20, "rgba(95,55,165,0.10)");
+            mg.addColorStop(0.45, "rgba(75,40,140,0.04)");
+            mg.addColorStop(0.70, "rgba(55,28,120,0.01)");
+            mg.addColorStop(1, "rgba(40,18,100,0)");
             ctx.fillStyle = mg;
             ctx.beginPath();
             ctx.arc(intX, intY, R * 3.2, 0, Math.PI * 2);
             ctx.fill();
             ctx.restore();
 
+            // Intersection body
             ctx.save();
             const acosVal = Math.acos(clamp01(halfDist / R));
             ctx.beginPath();
@@ -385,24 +347,25 @@ function SplashCanvas({ crossfadeStart, crossfadeEnd }: { crossfadeStart: number
 
             const gw = overlapHalf * 2;
             const ig = ctx.createLinearGradient(intX - gw / 2, intY, intX + gw / 2, intY);
-            ig.addColorStop(0.00, "rgba(160,136,249,0.80)");
-            ig.addColorStop(0.15, "rgba(166,139,250,0.84)");
-            ig.addColorStop(0.35, "rgba(190,175,254,0.88)");
-            ig.addColorStop(0.50, "rgba(230,222,254,0.86)");
-            ig.addColorStop(0.65, "rgba(210,198,254,0.84)");
-            ig.addColorStop(0.85, "rgba(195,178,250,0.80)");
-            ig.addColorStop(1.00, "rgba(195,178,250,0.76)");
+            ig.addColorStop(0.00, "rgba(90,55,160,0.70)");
+            ig.addColorStop(0.15, "rgba(100,65,175,0.74)");
+            ig.addColorStop(0.35, "rgba(115,80,190,0.78)");
+            ig.addColorStop(0.50, "rgba(130,100,200,0.76)");
+            ig.addColorStop(0.65, "rgba(120,90,190,0.74)");
+            ig.addColorStop(0.85, "rgba(115,85,185,0.70)");
+            ig.addColorStop(1.00, "rgba(110,80,180,0.66)");
 
-            ctx.globalAlpha = blendA * 0.88;
+            ctx.globalAlpha = blendA * 0.80;
             ctx.fillStyle = ig;
             ctx.fillRect(intX - gw / 2 - 5, intY - R, gw + 10, R * 2);
 
+            // Inner luminosity
             ctx.globalCompositeOperation = "lighter";
-            ctx.globalAlpha = blendA * overlapRatio * 0.32;
+            ctx.globalAlpha = blendA * overlapRatio * 0.22;
             const il = ctx.createRadialGradient(intX, intY, 0, intX, intY, overlapHalf * 1.3);
-            il.addColorStop(0.00, "rgba(230,222,254,0.38)");
-            il.addColorStop(0.30, "rgba(198,184,255,0.18)");
-            il.addColorStop(0.65, `rgba(${rgb(LEFT.glowMid)},0.05)`);
+            il.addColorStop(0.00, "rgba(130,100,200,0.28)");
+            il.addColorStop(0.30, "rgba(110,75,180,0.12)");
+            il.addColorStop(0.65, `rgba(${rgb(LEFT.glowMid)},0.03)`);
             il.addColorStop(1.00, `rgba(${rgb(LEFT.glowOuter)},0)`);
             ctx.fillStyle = il;
             ctx.beginPath();
@@ -414,27 +377,28 @@ function SplashCanvas({ crossfadeStart, crossfadeEnd }: { crossfadeStart: number
         }
       }
 
+      // Split flash
       if (t > 1.55 && t < 2.05) {
         const ft = clamp01((t - 1.55) / 0.50);
         const fa = ft < 0.1 ? ft / 0.1 : Math.pow(1 - (ft - 0.1) / 0.9, 3);
-        const intensity = 0.55 * fa;
+        const intensity = 0.35 * fa * globalFade;
 
         ctx.save();
         ctx.globalCompositeOperation = "lighter";
 
         ctx.globalAlpha = intensity;
         const fc1 = ctx.createRadialGradient(cx, cy, 0, cx, cy, R * 1.2);
-        fc1.addColorStop(0, "rgba(230,222,254,0.50)");
-        fc1.addColorStop(0.25, "rgba(198,184,255,0.28)");
-        fc1.addColorStop(0.60, `rgba(${rgb(LEFT.glowMid)},0.10)`);
+        fc1.addColorStop(0, "rgba(120,80,190,0.35)");
+        fc1.addColorStop(0.25, "rgba(100,60,170,0.18)");
+        fc1.addColorStop(0.60, `rgba(${rgb(LEFT.glowMid)},0.06)`);
         fc1.addColorStop(1, `rgba(${rgb(LEFT.glowOuter)},0)`);
         ctx.fillStyle = fc1;
         ctx.beginPath(); ctx.arc(cx, cy, R * 1.2, 0, Math.PI * 2); ctx.fill();
 
-        ctx.globalAlpha = intensity * 0.22;
+        ctx.globalAlpha = intensity * 0.18;
         const fc2 = ctx.createRadialGradient(cx, cy, 0, cx, cy, R * 4.0);
-        fc2.addColorStop(0, "rgba(198,184,255,0.15)");
-        fc2.addColorStop(0.35, `rgba(${rgb(LEFT.glowMid)},0.04)`);
+        fc2.addColorStop(0, "rgba(100,60,170,0.10)");
+        fc2.addColorStop(0.35, `rgba(${rgb(LEFT.glowMid)},0.03)`);
         fc2.addColorStop(1, `rgba(${rgb(LEFT.glowOuter)},0)`);
         ctx.fillStyle = fc2;
         ctx.beginPath(); ctx.arc(cx, cy, R * 4.0, 0, Math.PI * 2); ctx.fill();
@@ -442,24 +406,25 @@ function SplashCanvas({ crossfadeStart, crossfadeEnd }: { crossfadeStart: number
         ctx.restore();
       }
 
-      if (t > 3.0 && t < crossfadeStart + 0.3) {
+      // Divider line
+      if (t > 3.0 && t < FADE_START + 0.1) {
         const lineIn = smoothstep(3.0, 3.5, t);
-        const lineOut = t > crossfadeStart ? smoothstep(crossfadeEnd + 0.3, crossfadeStart, t) : 1;
+        const lineOut = t > FADE_START ? smoothstep(FADE_END, FADE_START, t) : 1;
         const lineH = R * 2.5 * easeOutExpo(lineIn) * lineOut;
-        const lineAlpha = lineIn * lineOut;
+        const lineAlpha = lineIn * lineOut * globalFade;
 
         ctx.save();
 
-        ctx.globalAlpha = lineAlpha * 0.12;
-        ctx.shadowColor = "rgba(198,184,255,0.30)";
-        ctx.shadowBlur = 8;
+        ctx.globalAlpha = lineAlpha * 0.08;
+        ctx.shadowColor = "rgba(110,70,170,0.20)";
+        ctx.shadowBlur = 6;
         ctx.lineWidth = 2;
         const gl = ctx.createLinearGradient(cx, cy - lineH / 2, cx, cy + lineH / 2);
-        gl.addColorStop(0, "rgba(251,249,254,0)");
-        gl.addColorStop(0.12, "rgba(228,224,241,0.25)");
-        gl.addColorStop(0.5, "rgba(197,193,213,0.35)");
-        gl.addColorStop(0.88, "rgba(228,224,241,0.25)");
-        gl.addColorStop(1, "rgba(251,249,254,0)");
+        gl.addColorStop(0, "rgba(180,170,200,0)");
+        gl.addColorStop(0.12, "rgba(150,140,170,0.18)");
+        gl.addColorStop(0.5, "rgba(130,120,155,0.25)");
+        gl.addColorStop(0.88, "rgba(150,140,170,0.18)");
+        gl.addColorStop(1, "rgba(180,170,200,0)");
         ctx.strokeStyle = gl;
         ctx.beginPath();
         ctx.moveTo(cx, cy - lineH / 2);
@@ -467,16 +432,16 @@ function SplashCanvas({ crossfadeStart, crossfadeEnd }: { crossfadeStart: number
         ctx.stroke();
 
         ctx.shadowBlur = 0;
-        ctx.globalAlpha = lineAlpha * 0.65;
+        ctx.globalAlpha = lineAlpha * 0.50;
         ctx.lineWidth = 1;
         const cl = ctx.createLinearGradient(cx, cy - lineH / 2, cx, cy + lineH / 2);
-        cl.addColorStop(0, "rgba(251,249,254,0)");
-        cl.addColorStop(0.08, "rgba(228,224,241,0.50)");
-        cl.addColorStop(0.20, "rgba(251,249,254,0.72)");
-        cl.addColorStop(0.50, "rgba(251,249,254,0.72)");
-        cl.addColorStop(0.80, "rgba(251,249,254,0.72)");
-        cl.addColorStop(0.92, "rgba(228,224,241,0.50)");
-        cl.addColorStop(1, "rgba(251,249,254,0)");
+        cl.addColorStop(0, "rgba(180,170,200,0)");
+        cl.addColorStop(0.08, "rgba(150,140,170,0.35)");
+        cl.addColorStop(0.20, "rgba(170,160,195,0.55)");
+        cl.addColorStop(0.50, "rgba(170,160,195,0.55)");
+        cl.addColorStop(0.80, "rgba(170,160,195,0.55)");
+        cl.addColorStop(0.92, "rgba(150,140,170,0.35)");
+        cl.addColorStop(1, "rgba(180,170,200,0)");
         ctx.strokeStyle = cl;
         ctx.beginPath();
         ctx.moveTo(cx, cy - lineH / 2);
@@ -486,8 +451,9 @@ function SplashCanvas({ crossfadeStart, crossfadeEnd }: { crossfadeStart: number
         ctx.restore();
       }
 
+      // Vignette
       if (t > 0.15) {
-        const va = Math.min(0.30, (t - 0.15) * 0.18);
+        const va = Math.min(0.30, (t - 0.15) * 0.18) * (t < FADE_START ? 1 : globalFade);
         ctx.globalAlpha = va;
         const vg = ctx.createRadialGradient(cx, cy, Math.min(W, H) * 0.14, cx, cy, Math.max(W, H) * 0.68);
         vg.addColorStop(0, "rgba(12,12,14,0)");
@@ -497,9 +463,16 @@ function SplashCanvas({ crossfadeStart, crossfadeEnd }: { crossfadeStart: number
         ctx.fillRect(0, 0, W, H);
       }
 
+      // Final fade
+      if (t > FADE_START) {
+        ctx.globalAlpha = clamp01((t - FADE_START) / (FADE_END - FADE_START));
+        ctx.fillStyle = "#0C0C0E";
+        ctx.fillRect(0, 0, W, H);
+      }
+
       ctx.globalAlpha = 1;
 
-      if (t >= crossfadeEnd + 0.1) {
+      if (t >= FADE_END + 0.05) {
         ctx.fillStyle = "#0C0C0E";
         ctx.fillRect(0, 0, W, H);
         return;
@@ -510,7 +483,7 @@ function SplashCanvas({ crossfadeStart, crossfadeEnd }: { crossfadeStart: number
 
     raf = requestAnimationFrame(draw);
     return () => { alive = false; cancelAnimationFrame(raf); };
-  }, [crossfadeStart, crossfadeEnd]);
+  }, []);
 
   return <canvas ref={ref} className="apple-splash-canvas" />;
 }

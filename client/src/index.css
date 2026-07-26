@@ -542,35 +542,43 @@
     inset: 0;
   }
 
-  .splash-logo-stage {
-    position: relative;
-    width: min(100vw, 1536px);
-    height: min(100vh, 1024px);
-    display: grid;
-    place-items: center;
-  }
-
-  .procedural-animation,
-  .official-final-logo {
+  .apple-splash-brand {
     position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-  }
-
-  .procedural-animation {
-    display: grid;
-    place-items: center;
-  }
-
-  .official-final-logo {
-    object-fit: contain;
-    object-position: center;
-    aspect-ratio: 3 / 2;
-    pointer-events: none;
-    user-select: none;
-    -webkit-user-drag: none;
+    bottom: 28%;
+    left: 0; right: 0;
+    text-align: center;
     opacity: 0;
+    transform: translateY(16px) scale(0.96);
+    transition: opacity 600ms cubic-bezier(0.16, 1, 0.3, 1), transform 600ms cubic-bezier(0.16, 1, 0.3, 1);
+    pointer-events: none;
+  }
+  .apple-splash-brand.visible {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  .apple-splash-brand.fading {
+    opacity: 0;
+    transition-duration: 800ms;
+  }
+
+  .apple-splash-logo-text {
+    font-size: 2.4rem;
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    background: linear-gradient(135deg, #D7CAFB 0%, #C0B0F0 25%, #8050F0 55%, #6030F0 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 0 24px rgba(96, 48, 240, 0.5));
+  }
+
+  .apple-splash-tagline {
+    margin-top: 8px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: rgba(255,255,255,0.45);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
   }
 
   /* ═══ Smooth cross-fade transition layers ═══ */
@@ -963,8 +971,7 @@
   .apple-splash {
     background: #050505 !important;
   }
-  .official-final-logo,
-  .procedural-animation {
+  .apple-splash-brand {
     transition: none !important;
   }
   .onboarding-screen,
