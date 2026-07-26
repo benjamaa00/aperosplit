@@ -72,7 +72,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text('0', style: theme.textTheme.bodySmall),
-                      Text('10 000 ${_currency}',
+                      Text('10 000 $_currency',
                           style: theme.textTheme.bodySmall),
                     ],
                   ),

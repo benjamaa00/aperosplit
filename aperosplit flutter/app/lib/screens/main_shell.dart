@@ -21,7 +21,7 @@ class _MainShellState extends ConsumerState<MainShell> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final appState = ref.watch(appStateProvider);
+    ref.watch(appStateProvider);
 
     return Scaffold(
       body: widget.child,

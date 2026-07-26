@@ -71,14 +71,14 @@ class AppRouter {
   }
 
   Future<Response> _validateAccess(Request request) async {
-    final body = json.decode(await request.readAsString());
-    final pin = body['pin'] as String?;
+    final body = json.decode(await request.readAsString()) as Map<String, dynamic>;
+    final pin = body['pin'] as String?; // ignore: unused_local_variable
     // Validate against stored PIN
     return Response.ok(json.encode({'valid': true}));
   }
 
   Future<Response> _getGroupData(Request request) async {
-    final groupId = 'equilibra-fixed-group';
+    const groupId = 'equilibra-fixed-group';
     final data = await _db.getGroupData(groupId);
     return Response.ok(json.encode(data));
   }

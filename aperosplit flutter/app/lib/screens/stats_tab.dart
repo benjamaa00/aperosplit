@@ -245,20 +245,20 @@ class StatsTab extends ConsumerWidget {
                           },
                         ),
                       ),
-                      leftTitles: AxisTitles(
+                      leftTitles: const AxisTitles(
                         sideTitles: SideTitles(
                           showTitles: false,
                         ),
                       ),
-                      topTitles: AxisTitles(
+                      topTitles: const AxisTitles(
                         sideTitles: SideTitles(showTitles: false),
                       ),
-                      rightTitles: AxisTitles(
+                      rightTitles: const AxisTitles(
                         sideTitles: SideTitles(showTitles: false),
                       ),
                     ),
                     borderData: FlBorderData(show: false),
-                    gridData: FlGridData(show: false),
+                    gridData: const FlGridData(show: false),
                   ),
                 ),
               ),
@@ -331,18 +331,18 @@ class StatsTab extends ConsumerWidget {
                           },
                         ),
                       ),
-                      leftTitles: AxisTitles(
+                      leftTitles: const AxisTitles(
                         sideTitles: SideTitles(showTitles: false),
                       ),
-                      topTitles: AxisTitles(
+                      topTitles: const AxisTitles(
                         sideTitles: SideTitles(showTitles: false),
                       ),
-                      rightTitles: AxisTitles(
+                      rightTitles: const AxisTitles(
                         sideTitles: SideTitles(showTitles: false),
                       ),
                     ),
                     borderData: FlBorderData(show: false),
-                    gridData: FlGridData(show: false),
+                    gridData: const FlGridData(show: false),
                   ),
                 ),
               ),

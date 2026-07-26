@@ -15,7 +15,7 @@ class DatabaseService {
 
   Future<void> initialize() async {
     try {
-      final databaseUrl = const String.fromEnvironment(
+      const databaseUrl = String.fromEnvironment(
         'DATABASE_URL',
         defaultValue: '',
       );

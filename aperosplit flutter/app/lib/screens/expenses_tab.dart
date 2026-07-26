@@ -279,14 +279,11 @@ class _AddExpenseSheetState extends State<_AddExpenseSheet> {
   final _descController = TextEditingController();
   final _amountController = TextEditingController();
   String _selectedCategory = 'Autres';
-  String _selectedCategoryEmoji = '📦';
   String? _selectedPayerId;
-  List<String> _selectedParticipants = [];
 
   @override
   void initState() {
     super.initState();
-    _selectedParticipants = widget.members.map<String>((m) => m.id as String).toList();
   }
 
   @override
@@ -342,7 +339,7 @@ class _AddExpenseSheetState extends State<_AddExpenseSheet> {
           const SizedBox(height: 12),
           // Category selector (simplified)
           DropdownButtonFormField<String>(
-            value: _selectedCategory,
+            initialValue: _selectedCategory,
             decoration: const InputDecoration(labelText: 'Catégorie'),
             items: widget.categories
                 .map<DropdownMenuItem<String>>((c) => DropdownMenuItem(
@@ -352,10 +349,8 @@ class _AddExpenseSheetState extends State<_AddExpenseSheet> {
                 .toList(),
             onChanged: (v) {
               if (v != null) {
-                final cat = widget.categories.firstWhere((c) => c.name == v);
                 setState(() {
                   _selectedCategory = v;
-                  _selectedCategoryEmoji = cat.emoji;
                 });
               }
             },
@@ -363,7 +358,7 @@ class _AddExpenseSheetState extends State<_AddExpenseSheet> {
           const SizedBox(height: 12),
           // Payer selector
           DropdownButtonFormField<String>(
-            value: _selectedPayerId,
+            initialValue: _selectedPayerId,
             decoration: const InputDecoration(labelText: 'Payé par'),
             items: widget.members
                 .map<DropdownMenuItem<String>>((m) => DropdownMenuItem(

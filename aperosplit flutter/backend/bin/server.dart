@@ -1,43 +1,51 @@
-import 'dart:io';
 import 'package:shelf/shelf.dart';
 import 'package:shelf/shelf_io.dart' as io;
-import 'package:shelf_router/shelf_router.dart';
-import 'package:shelf_cors/shelf_cors.dart';
 import 'package:dotenv/dotenv.dart';
-import 'src/database/database.dart';
-import 'src/router/app_router.dart';
+import 'package:equilibra_backend/src/database/database.dart';
+import 'package:equilibra_backend/src/router/app_router.dart';
 
 void main(List<String> args) async {
-  // Load environment
   final env = DotEnv()..load();
 
   final host = env['HOST'] ?? '0.0.0.0';
   final port = int.parse(env['PORT'] ?? '3000');
 
-  // Initialize database
   await DatabaseService.instance.initialize();
 
-  // Configure middleware
-  final corsMiddleware = cors(
-    allowOrigin: ['*'],
-    allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowHeaders: ['Content-Type', 'X-Group-Access-Key', 'Authorization'],
-  );
+  final corsMiddleware = _cors();
 
   final loggingMiddleware = logRequests();
 
-  final Pipeline pipeline = const Pipeline()
+  final handler = const Pipeline()
       .addMiddleware(loggingMiddleware)
       .addMiddleware(corsMiddleware)
       .addMiddleware(_securityHeaders)
       .addMiddleware(_contentTypeJson)
-      .addHandler(AppRouter().handler);
+      .addHandler(AppRouter().router.call);
 
-  // Start server
-  final server = await io.serve(pipeline, host, port);
-  print('🚀 Equilibra Backend running on http://${server.address.host}:${server.port}');
-  print('📡 Environment: ${env['ENV'] ?? 'development'}');
+  final server = await io.serve(handler, host, port);
+  print('Equilibra Backend running on http://${server.address.host}:${server.port}');
+  print('Environment: ${env['ENV'] ?? 'development'}');
 }
+
+Middleware _cors() => (Handler innerHandler) {
+      return (Request request) async {
+        if (request.method == 'OPTIONS') {
+          return Response.ok('', headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, X-Group-Access-Key, Authorization',
+            'Access-Control-Max-Age': '86400',
+          });
+        }
+        final response = await innerHandler(request);
+        return response.change(headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, X-Group-Access-Key, Authorization',
+        });
+      };
+    };
 
 Middleware get _securityHeaders => (Handler innerHandler) {
       return (Request request) async {
