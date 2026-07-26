@@ -34,8 +34,23 @@ const AppShell = memo(({ children, activeTab, onTabChange, onAddExpense }: AppSh
   const scrollRef = useRef<HTMLDivElement>(null);
   const [pill, setPill] = useState({ left: 0, width: 0, ready: false });
 
+  // ── Drag state ──
+  const dragState = useRef({
+    dragging: false,
+    startX: 0,
+    tabPositions: [] as { tab: Tab; cx: number; left: number; width: number }[],
+    dragPillX: 0,
+    dragPillW: 0,
+    hasMoved: false,
+    hoveredTab: null as Tab | null,
+  });
+  const [dragPill, setDragPill] = useState<{ left: number; width: number; active: boolean; hoverTab: Tab | null }>({
+    left: 0, width: 0, active: false, hoverTab: null,
+  });
+
   // Measure active tab pill position
   useEffect(() => {
+    if (dragPill.active) return; // don't override during drag
     if (!activeTab || !tabRefs.current.has(activeTab)) return;
     const el = tabRefs.current.get(activeTab)!;
     const nav = navRef.current;
@@ -43,13 +58,12 @@ const AppShell = memo(({ children, activeTab, onTabChange, onAddExpense }: AppSh
     const e = el.getBoundingClientRect();
     const n = nav.getBoundingClientRect();
     setPill({ left: e.left - n.left, width: e.width, ready: true });
-  }, [activeTab]);
+  }, [activeTab, dragPill.active]);
 
   const switchTab = useCallback((tab: Tab) => {
     if (!onTabChange) return;
     haptics.light();
     onTabChange(tab);
-    // Scroll to top when switching tabs
     scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
   }, [onTabChange]);
 
@@ -58,21 +72,137 @@ const AppShell = memo(({ children, activeTab, onTabChange, onAddExpense }: AppSh
     onAddExpense?.();
   }, [onAddExpense]);
 
+  // ── Pointer drag on nav bar — liquid glass slide gesture ──
+  const getTabPositions = useCallback(() => {
+    const nav = navRef.current;
+    if (!nav) return [];
+    const nRect = nav.getBoundingClientRect();
+    const positions: { tab: Tab; cx: number; left: number; width: number }[] = [];
+    NAV_TABS.forEach(({ id }) => {
+      const el = tabRefs.current.get(id);
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      positions.push({
+        tab: id,
+        cx: r.left + r.width / 2 - nRect.left,
+        left: r.left - nRect.left,
+        width: r.width,
+      });
+    });
+    return positions;
+  }, []);
+
+  const findNearestTab = useCallback((x: number) => {
+    const positions = dragState.current.tabPositions;
+    let best = positions[0];
+    let bestDist = Infinity;
+    for (const p of positions) {
+      const dist = Math.abs(x - p.cx);
+      if (dist < bestDist) { bestDist = dist; best = p; }
+    }
+    return best;
+  }, []);
+
+  const handlePointerDown = useCallback((e: React.PointerEvent) => {
+    // Ignore right-click or non-primary
+    if (e.button !== 0) return;
+    // Ignore if they tapped the FAB
+    const target = e.target as HTMLElement;
+    if (target.closest(".nav-fab") || target.closest("button[aria-label='Ajouter une dépense']")) return;
+
+    const nav = navRef.current;
+    if (!nav) return;
+    const nRect = nav.getBoundingClientRect();
+    const x = e.clientX - nRect.left;
+
+    const positions = getTabPositions();
+    if (positions.length === 0) return;
+
+    dragState.current = {
+      dragging: true,
+      startX: e.clientX,
+      tabPositions: positions,
+      dragPillX: pill.left,
+      dragPillW: pill.width,
+      hasMoved: false,
+      hoveredTab: null,
+    };
+
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  }, [getTabPositions, pill.left, pill.width]);
+
+  const handlePointerMove = useCallback((e: React.PointerEvent) => {
+    const ds = dragState.current;
+    if (!ds.dragging) return;
+
+    const dx = Math.abs(e.clientX - ds.startX);
+    if (dx < 8 && !ds.hasMoved) return; // dead zone
+    ds.hasMoved = true;
+
+    const nav = navRef.current;
+    if (!nav) return;
+    const nRect = nav.getBoundingClientRect();
+    const x = e.clientX - nRect.left;
+
+    const nearest = findNearestTab(x);
+    if (!nearest) return;
+
+    // Smooth pill follow finger
+    const pillLeft = x - nearest.width / 2;
+    const clamped = Math.max(0, Math.min(nRect.width - nearest.width, pillLeft));
+
+    if (nearest.tab !== ds.hoveredTab) {
+      ds.hoveredTab = nearest.tab;
+      haptics.light();
+    }
+
+    ds.dragPillX = clamped;
+    ds.dragPillW = nearest.width;
+    setDragPill({ left: clamped, width: nearest.width, active: true, hoverTab: nearest.tab });
+  }, [findNearestTab]);
+
+  const handlePointerUp = useCallback((e: React.PointerEvent) => {
+    const ds = dragState.current;
+    if (!ds.dragging) return;
+    ds.dragging = false;
+
+    const nav = navRef.current;
+    if (!nav) return;
+    const nRect = nav.getBoundingClientRect();
+    const x = e.clientX - nRect.left;
+
+    const target = ds.hasMoved ? findNearestTab(x) : ds.tabPositions.find(p => p.tab === activeTab);
+
+    setDragPill({ left: 0, width: 0, active: false, hoverTab: null });
+
+    if (target && ds.hasMoved) {
+      switchTab(target.tab);
+    }
+  }, [findNearestTab, switchTab, activeTab]);
+
+  const handlePointerCancel = useCallback(() => {
+    dragState.current.dragging = false;
+    setDragPill({ left: 0, width: 0, active: false, hoverTab: null });
+  }, []);
+
+  // Choose which pill state to show
+  const showPill = dragPill.active
+    ? { left: dragPill.left, width: dragPill.width, ready: true }
+    : pill;
+
   return (
     <ErrorBoundary>
       <TooltipProvider>
-        {/* ── Full-screen scroll container ── */}
         <div className="h-screen flex flex-col overflow-hidden">
           <div
             ref={scrollRef}
             className="flex-1 min-h-0 overflow-y-auto scrollbar-hidden"
           >
-            {/* ── Page content ── */}
             <div className="min-h-full">
               {children}
             </div>
 
-            {/* ── Liquid Glass Nav — sticky bottom, in-flow, NOT fixed ── */}
+            {/* ── Liquid Glass Nav — sticky bottom, in-flow, draggable ── */}
             {activeTab && onTabChange && (
               <div
                 className="sticky bottom-0 z-50 px-3 pointer-events-none"
@@ -80,21 +210,21 @@ const AppShell = memo(({ children, activeTab, onTabChange, onAddExpense }: AppSh
               >
                 <nav
                   data-tutorial="tab-bar"
-                  className="pointer-events-auto mx-auto max-w-md relative rounded-[28px] overflow-visible"
-                  style={{
-                    height: "72px",
-                  }}
+                  className="pointer-events-auto mx-auto max-w-md relative rounded-[28px] overflow-visible touch-none select-none"
+                  style={{ height: "72px" }}
+                  onPointerDown={handlePointerDown}
+                  onPointerMove={handlePointerMove}
+                  onPointerUp={handlePointerUp}
+                  onPointerCancel={handlePointerCancel}
                 >
-                  {/* ═══ Liquid Glass Surface — multi-layer ═══ */}
+                  {/* ═══ Liquid Glass Surface ═══ */}
                   <div
                     ref={navRef}
                     className="absolute inset-0 rounded-[28px]"
                     style={{
-                      /* Layer 1: Base glass */
                       background: "linear-gradient(180deg, rgba(255,255,255,0.11) 0%, rgba(255,255,255,0.05) 40%, rgba(255,255,255,0.03) 100%)",
                       backdropFilter: "blur(26px) saturate(155%) brightness(103%)",
                       WebkitBackdropFilter: "blur(26px) saturate(155%) brightness(103%)",
-                      /* Layer 2: Border + shadow */
                       border: "1px solid rgba(255,255,255,0.13)",
                       boxShadow: [
                         "0 12px 40px rgba(0,0,0,0.28)",
@@ -111,19 +241,19 @@ const AppShell = memo(({ children, activeTab, onTabChange, onAddExpense }: AppSh
                     className="relative z-10 grid h-full items-center px-1"
                     style={{ gridTemplateColumns: "repeat(5, minmax(0, 1fr))" }}
                   >
-                    {/* Column 1 */}
                     <GridTab
                       id="home" label="Accueil"
                       activeTab={activeTab} onSwitch={switchTab}
                       tabRefs={tabRefs} col={1}
+                      highlight={dragPill.active && dragPill.hoverTab === "home"}
                     />
-                    {/* Column 2 */}
                     <GridTab
                       id="balances" label="Soldes"
                       activeTab={activeTab} onSwitch={switchTab}
                       tabRefs={tabRefs} col={2}
+                      highlight={dragPill.active && dragPill.hoverTab === "balances"}
                     />
-                    {/* Column 3: Center FAB */}
+                    {/* Column 3: FAB */}
                     <div className="flex items-center justify-center" style={{ gridColumn: 3 }}>
                       <button
                         onClick={handleFab}
@@ -149,31 +279,39 @@ const AppShell = memo(({ children, activeTab, onTabChange, onAddExpense }: AppSh
                         </div>
                       </button>
                     </div>
-                    {/* Column 4 */}
                     <GridTab
                       id="history" label="Historique"
                       activeTab={activeTab} onSwitch={switchTab}
                       tabRefs={tabRefs} col={4}
+                      highlight={dragPill.active && dragPill.hoverTab === "history"}
                     />
-                    {/* Column 5 */}
                     <GridTab
                       id="profile" label="Profil"
                       activeTab={activeTab} onSwitch={switchTab}
                       tabRefs={tabRefs} col={5}
+                      highlight={dragPill.active && dragPill.hoverTab === "profile"}
                     />
                   </div>
 
                   {/* ── Active capsule pill ── */}
-                  {pill.ready && (
+                  {showPill.ready && (
                     <div
-                      className="absolute top-1/2 -translate-y-1/2 rounded-[16px] nav-pill pointer-events-none transition-all duration-[280ms] ease-[cubic-bezier(0.34,1.56,0.64,1)]"
+                      className={`absolute top-1/2 -translate-y-1/2 rounded-[16px] nav-pill pointer-events-none ${
+                        dragPill.active
+                          ? "transition-none"
+                          : "transition-all duration-[280ms] ease-[cubic-bezier(0.34,1.56,0.64,1)]"
+                      }`}
                       style={{
-                        left: pill.left,
-                        width: pill.width,
+                        left: showPill.left,
+                        width: showPill.width,
                         height: "34px",
-                        background: "rgba(255,255,255,0.09)",
+                        background: dragPill.active
+                          ? "rgba(255,255,255,0.12)"
+                          : "rgba(255,255,255,0.09)",
                         border: "1px solid rgba(255,255,255,0.08)",
-                        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.12), 0 4px 14px rgba(0,0,0,0.12)",
+                        boxShadow: dragPill.active
+                          ? "inset 0 1px 0 rgba(255,255,255,0.14), 0 4px 18px rgba(0,0,0,0.15)"
+                          : "inset 0 1px 0 rgba(255,255,255,0.12), 0 4px 14px rgba(0,0,0,0.12)",
                       }}
                     />
                   )}
@@ -191,15 +329,17 @@ AppShell.displayName = "AppShell";
 
 // ── Grid tab button ──
 const GridTab = memo(({
-  id, label, activeTab, onSwitch, tabRefs, col,
+  id, label, activeTab, onSwitch, tabRefs, col, highlight,
 }: {
   id: Tab; label: string; activeTab: Tab;
   onSwitch: (tab: Tab) => void;
   tabRefs: React.MutableRefObject<Map<Tab, HTMLDivElement>>;
   col: number;
+  highlight?: boolean;
 }) => {
   const isActive = activeTab === id;
   const Icon = TAB_ICONS[id];
+  const lit = isActive || highlight;
 
   return (
     <div
@@ -207,23 +347,21 @@ const GridTab = memo(({
       className="flex items-center justify-center"
       style={{ gridColumn: col }}
     >
-      <button
-        onClick={() => onSwitch(id)}
-        aria-label={label}
-        className={`flex flex-col items-center justify-center gap-0.5 min-w-[50px] px-1 py-1 rounded-2xl transition-all duration-[220ms] ease-out cursor-pointer select-none ${
-          isActive ? "text-white" : "text-white/50"
+      <div
+        className={`flex flex-col items-center justify-center gap-0.5 min-w-[50px] px-1 py-1 rounded-2xl transition-all duration-[180ms] ease-out select-none ${
+          lit ? "text-white" : "text-white/50"
         }`}
         style={{ WebkitTapHighlightColor: "transparent" }}
       >
         <Icon
           size={21}
-          strokeWidth={isActive ? 2 : 1.5}
-          className={`transition-all duration-[220ms] ${isActive ? "drop-shadow-[0_0_5px_rgba(128,80,240,0.45)]" : ""}`}
+          strokeWidth={lit ? 2 : 1.5}
+          className={`transition-all duration-[180ms] ${lit ? "drop-shadow-[0_0_5px_rgba(128,80,240,0.45)]" : ""}`}
         />
-        <span className={`text-[10px] font-medium tracking-wide leading-none transition-opacity duration-200 ${isActive ? "opacity-100" : "opacity-50"}`}>
+        <span className={`text-[10px] font-medium tracking-wide leading-none transition-opacity duration-[180ms] ${lit ? "opacity-100" : "opacity-50"}`}>
           {label}
         </span>
-      </button>
+      </div>
     </div>
   );
 });
