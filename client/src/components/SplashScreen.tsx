@@ -72,36 +72,36 @@ function SplashCanvas() {
     const R = Math.min(W, H) * 0.12;
     const LOGO_GAP = R * 0.76; // ~24% overlap
 
-    // ── LEFT SPHERE — Deep violet, high contrast ──
+    // ── LEFT SPHERE — Rich electric violet, vibrant ──
     const LEFT = {
-      c0: [158, 118, 255],   // center
-      c1: [138, 92, 255],    // inner
-      c2: [118, 70, 250],    // mid-inner
-      c3: [102, 55, 242],    // mid
-      c4: [88, 42, 230],     // mid-outer
-      c5: [76, 34, 218],     // outer
-      edge: [65, 28, 200],   // dark rim
-      glowInner: [128, 88, 255],
-      glowMid: [100, 62, 245],
-      glowOuter: [78, 38, 220],
-      highlight: [170, 142, 255],
-      subsurface: [155, 125, 255],
+      c0: [168, 130, 255],   // center: bright electric violet
+      c1: [148, 105, 255],   // inner
+      c2: [128, 82, 252],    // mid-inner
+      c3: [112, 65, 248],    // mid
+      c4: [96, 50, 238],     // mid-outer
+      c5: [82, 38, 225],     // outer
+      edge: [68, 28, 208],   // dark rim
+      glowInner: [140, 100, 255],
+      glowMid: [115, 75, 248],
+      glowOuter: [88, 48, 228],
+      highlight: [180, 155, 255],
+      subsurface: [160, 135, 255],
     };
 
-    // ── RIGHT SPHERE — Lavender glass, clearly violet, not white ──
+    // ── RIGHT SPHERE — Vibrant mauve-pink glass ──
     const RIGHT = {
-      c0: [228, 220, 255],   // center: warm lavender
-      c1: [220, 210, 255],   // inner
-      c2: [210, 198, 252],   // mid-inner
-      c3: [200, 188, 250],   // mid
-      c4: [190, 176, 248],   // mid-outer
-      c5: [180, 165, 245],   // outer
-      edge: [168, 152, 242], // dark edge
-      glowInner: [208, 200, 252],
-      glowMid: [195, 185, 250],
-      glowOuter: [175, 162, 245],
-      highlight: [232, 225, 255],
-      subsurface: [215, 206, 252],
+      c0: [218, 205, 255],   // center: bright mauve
+      c1: [208, 192, 252],   // inner
+      c2: [198, 180, 250],   // mid-inner
+      c3: [188, 168, 248],   // mid
+      c4: [178, 156, 245],   // mid-outer
+      c5: [168, 145, 242],   // outer
+      edge: [155, 130, 238], // dark edge
+      glowInner: [200, 190, 252],
+      glowMid: [188, 175, 250],
+      glowOuter: [168, 155, 245],
+      highlight: [225, 218, 255],
+      subsurface: [208, 198, 252],
     };
 
     // ── Background — very dark with subtle atmospheric center ──
@@ -255,52 +255,40 @@ function SplashCanvas() {
         ctx.arc(0, 0, R, 0, Math.PI * 2);
         ctx.fill();
 
-        // ── BROAD DIFFUSED HIGHLIGHT — upper-left, violet-tinted, NOT white ──
+        // ── BROAD DIFFUSED HIGHLIGHT — upper-left, warm violet ──
         ctx.globalCompositeOperation = "lighter";
-        ctx.globalAlpha = alpha * 0.26;
-        const hl = ctx.createRadialGradient(-R * 0.25, -R * 0.28, 0, -R * 0.12, -R * 0.14, R * 0.44);
-        hl.addColorStop(0.00, `rgba(${rgb(pal.highlight)},0.30)`);
-        hl.addColorStop(0.25, `rgba(${rgb(pal.highlight)},0.16)`);
-        hl.addColorStop(0.50, `rgba(${rgb(pal.glowInner)},0.06)`);
-        hl.addColorStop(0.80, `rgba(${rgb(pal.glowOuter)},0.02)`);
+        ctx.globalAlpha = alpha * 0.30;
+        const hl = ctx.createRadialGradient(-R * 0.22, -R * 0.25, 0, -R * 0.10, -R * 0.12, R * 0.42);
+        hl.addColorStop(0.00, `rgba(${rgb(pal.highlight)},0.35)`);
+        hl.addColorStop(0.25, `rgba(${rgb(pal.highlight)},0.18)`);
+        hl.addColorStop(0.55, `rgba(${rgb(pal.glowInner)},0.06)`);
+        hl.addColorStop(0.85, `rgba(${rgb(pal.glowOuter)},0.02)`);
         hl.addColorStop(1.00, `rgba(${rgb(pal.glowOuter)},0)`);
         ctx.fillStyle = hl;
         ctx.beginPath();
-        ctx.arc(-R * 0.16, -R * 0.18, R * 0.44, 0, Math.PI * 2);
+        ctx.arc(-R * 0.14, -R * 0.16, R * 0.42, 0, Math.PI * 2);
         ctx.fill();
 
-        // ── LOWER SUBSURFACE LIFT — soft warmth from below ──
-        ctx.globalCompositeOperation = "lighter";
-        ctx.globalAlpha = alpha * 0.12;
-        const sss = ctx.createRadialGradient(R * 0.08, R * 0.10, 0, R * 0.05, R * 0.07, R * 0.50);
-        sss.addColorStop(0, `rgba(${rgb(pal.subsurface)},0.30)`);
-        sss.addColorStop(0.45, `rgba(${rgb(pal.glowInner)},0.10)`);
-        sss.addColorStop(1, `rgba(${rgb(pal.glowOuter)},0)`);
-        ctx.fillStyle = sss;
-        ctx.beginPath();
-        ctx.arc(R * 0.05, R * 0.07, R * 0.50, 0, Math.PI * 2);
-        ctx.fill();
-
-        // ── TOP CONTOUR SHADOW — darker than base, arc at top ──
+        // ── TOP SHADOW — clean dark crescent at top ──
         ctx.globalCompositeOperation = "source-over";
-        ctx.globalAlpha = alpha * 0.55;
-        const topShadow = ctx.createRadialGradient(0, -R * 0.85, R * 0.15, 0, -R * 0.3, R * 0.9);
-        topShadow.addColorStop(0, `rgba(${rgb(pal.edge)},0.55)`);
-        topShadow.addColorStop(0.35, `rgba(${rgb(pal.glowOuter)},0.25)`);
-        topShadow.addColorStop(0.7, `rgba(${rgb(pal.glowOuter)},0.04)`);
+        ctx.globalAlpha = alpha * 0.60;
+        const topShadow = ctx.createRadialGradient(0, -R * 0.92, R * 0.08, 0, -R * 0.20, R * 0.85);
+        topShadow.addColorStop(0, `rgba(${rgb(pal.edge)},0.65)`);
+        topShadow.addColorStop(0.30, `rgba(${rgb(pal.glowOuter)},0.30)`);
+        topShadow.addColorStop(0.60, `rgba(${rgb(pal.glowOuter)},0.06)`);
         topShadow.addColorStop(1, `rgba(${rgb(pal.glowOuter)},0)`);
         ctx.fillStyle = topShadow;
         ctx.beginPath();
         ctx.arc(0, 0, R, 0, Math.PI * 2);
         ctx.fill();
 
-        // ── BOTTOM CONTOUR GLOW — subtle luminous edge ──
+        // ── BOTTOM LUMINOSITY — bright glow from below ──
         ctx.globalCompositeOperation = "lighter";
-        ctx.globalAlpha = alpha * 0.14;
-        const bottomGlow = ctx.createRadialGradient(0, R * 0.78, R * 0.08, 0, R * 0.45, R * 0.65);
-        bottomGlow.addColorStop(0, `rgba(${rgb(pal.highlight)},0.22)`);
-        bottomGlow.addColorStop(0.35, `rgba(${rgb(pal.subsurface)},0.10)`);
-        bottomGlow.addColorStop(0.7, `rgba(${rgb(pal.glowInner)},0.03)`);
+        ctx.globalAlpha = alpha * 0.22;
+        const bottomGlow = ctx.createRadialGradient(0, R * 0.82, R * 0.06, 0, R * 0.40, R * 0.60);
+        bottomGlow.addColorStop(0, `rgba(${rgb(pal.highlight)},0.38)`);
+        bottomGlow.addColorStop(0.25, `rgba(${rgb(pal.subsurface)},0.18)`);
+        bottomGlow.addColorStop(0.55, `rgba(${rgb(pal.glowInner)},0.06)`);
         bottomGlow.addColorStop(1, `rgba(${rgb(pal.glowOuter)},0)`);
         ctx.fillStyle = bottomGlow;
         ctx.beginPath();
