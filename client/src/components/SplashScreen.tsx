@@ -18,7 +18,7 @@ export const SplashScreen = memo(function SplashScreen({ onComplete }: { onCompl
   }, []);
 
   return (
-    <div className="apple-splash" style={{ background: "#0C0C0E" }}>
+    <div className="apple-splash" style={{ background: "#000000" }}>
       <SplashCanvas />
       <div className={`apple-splash-brand ${brandVisible ? "visible" : ""} ${brandFading ? "fading" : ""}`}>
         <div className="apple-splash-logo-text">AperoSplit</div>
@@ -49,7 +49,7 @@ function SplashCanvas() {
     ctx.scale(dpr, dpr);
 
     const cx = W / 2;
-    const cy = H / 2 - 20;
+    const cy = H / 2 - 10;
     const start = performance.now();
     let alive = true;
     let raf = 0;
@@ -66,51 +66,38 @@ function SplashCanvas() {
     }
 
     const rgb = (c: number[]) => `${c[0]},${c[1]},${c[2]}`;
+    const R = Math.min(W, H) * 0.13;
+    const LOGO_GAP = R * 0.72;
 
-    const R = Math.min(W, H) * 0.12;
-    const LOGO_GAP = R * 0.76;
-
-    // LEFT SPHERE — Deep dark purple
+    // ── LEFT — Saturated deep purple ──
     const LEFT = {
-      c0: [88, 40, 180],
-      c1: [95, 50, 195],
-      c2: [100, 55, 200],
-      c3: [108, 62, 210],
-      c4: [78, 35, 170],
-      c5: [65, 28, 145],
-      edge: [45, 18, 110],
-      glowInner: [80, 45, 175],
-      glowMid: [105, 70, 200],
-      glowOuter: [55, 25, 130],
-      highlight: [120, 85, 210],
-      subsurface: [90, 50, 185],
+      body: [120, 40, 220],
+      bodyMid: [130, 55, 230],
+      bodyLight: [145, 75, 240],
+      edge: [85, 25, 180],
+      edgeDark: [55, 15, 130],
+      glow: [140, 60, 250],
+      glowOuter: [90, 30, 200],
+      highlight: [175, 120, 255],
+      rim: [190, 145, 255],
     };
 
-    // RIGHT SPHERE — Deep dark mauve
+    // ── RIGHT — Soft pale lavender ──
     const RIGHT = {
-      c0: [130, 105, 180],
-      c1: [140, 115, 195],
-      c2: [145, 120, 198],
-      c3: [138, 112, 190],
-      c4: [125, 100, 175],
-      c5: [110, 88, 155],
-      edge: [85, 65, 125],
-      glowInner: [135, 110, 185],
-      glowMid: [155, 130, 205],
-      glowOuter: [100, 78, 145],
-      highlight: [150, 125, 195],
-      subsurface: [120, 95, 170],
+      body: [200, 190, 245],
+      bodyMid: [212, 204, 252],
+      bodyLight: [220, 214, 255],
+      edge: [170, 158, 220],
+      edgeDark: [140, 128, 190],
+      glow: [210, 200, 255],
+      glowOuter: [180, 168, 235],
+      highlight: [230, 225, 255],
+      rim: [240, 236, 255],
     };
 
-    function drawBackground(alpha: number) {
+    function drawBg(alpha: number) {
       ctx.globalAlpha = alpha;
-      ctx.globalCompositeOperation = "source-over";
-      const bg = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(W, H) * 0.72);
-      bg.addColorStop(0, "#0C0C0E");
-      bg.addColorStop(0.30, "#0B0B0D");
-      bg.addColorStop(0.60, "#080809");
-      bg.addColorStop(1, "#060607");
-      ctx.fillStyle = bg;
+      ctx.fillStyle = "#000000";
       ctx.fillRect(0, 0, W, H);
       ctx.globalAlpha = 1;
     }
@@ -118,225 +105,173 @@ function SplashCanvas() {
     function draw(now: number) {
       if (!alive) return;
       const t = (now - start) / 1000;
-      const globalFade = t > FADE_START ? clamp01(1 - (t - FADE_START) / (FADE_END - FADE_START)) : 1;
+      const gFade = t > FADE_START ? clamp01(1 - (t - FADE_START) / (FADE_END - FADE_START)) : 1;
 
-      drawBackground(globalFade);
+      drawBg(gFade);
 
+      // ── Choreography ──
       let o1x = cx, o1y = cy, o2x = cx, o2y = cy;
       let o1a = 0, o2a = 0, o1s = 0, o2s = 0;
-      let stretchXS = 1, stretchYS = 1;
+      let sx = 1, sy = 1;
 
       if (t < 0.70) {
         const p = easeOutCubic(clamp01(t / 0.65));
         o1a = p; o1s = p; o2a = 0; o2s = 0;
       } else if (t < 1.20) {
         const bp = (t - 0.70) / 0.50;
-        const breath = Math.sin(bp * Math.PI * 2.5) * 0.04;
+        const breath = Math.sin(bp * Math.PI * 2.5) * 0.03;
         o1a = 1; o1s = 1 + breath; o2a = 0; o2s = 0;
       } else if (t < 1.65) {
         const sp = easeInOutCubic(clamp01((t - 1.20) / 0.45));
         o1a = 1; o1s = 1; o2a = 0; o2s = 0;
-        stretchXS = 1 + sp * 0.45;
-        stretchYS = 1 - sp * 0.12;
+        sx = 1 + sp * 0.4; sy = 1 - sp * 0.10;
       } else if (t < 2.10) {
         const mp = clamp01((t - 1.65) / 0.40);
         const dist = easeOutCubic(mp) * R * 2.1;
         o1a = 1; o1s = 1;
         o2a = easeOutCubic(clamp01((t - 1.65) / 0.30));
         o2s = o2a;
-        o1x = cx - dist; o1y = cy;
-        o2x = cx + dist; o2y = cy;
+        o1x = cx - dist; o2x = cx + dist;
       } else if (t < 2.60) {
         const dp = clamp01((t - 2.10) / 0.50);
         const drift = lerp(R * 2.1, R * 2.2, easeOutCubic(dp));
-        o1a = 1; o1s = 1; o2a = 1; o2s = 1;
-        o1x = cx - drift; o1y = cy;
-        o2x = cx + drift; o2y = cy;
+        o1a = 1; o2a = 1;
+        o1x = cx - drift; o2x = cx + drift;
       } else if (t < 3.30) {
         const rp = clamp01((t - 2.60) / 0.65);
         const rEase = springClamp(rp, 0.6, 2);
         const gap = lerp(R * 2.2, LOGO_GAP, rEase);
-        o1a = 1; o1s = 1; o2a = 1; o2s = 1;
-        o1x = cx - gap; o1y = cy;
-        o2x = cx + gap; o2y = cy;
+        o1a = 1; o2a = 1;
+        o1x = cx - gap; o2x = cx + gap;
       } else if (t < 3.80) {
         const hold = t - 3.30;
-        const sp = 1 + Math.sin(hold * 2.2) * 0.012;
+        const sp = 1 + Math.sin(hold * 2.2) * 0.01;
         o1a = 1; o1s = sp; o2a = 1; o2s = sp;
-        o1x = cx - LOGO_GAP; o1y = cy;
-        o2x = cx + LOGO_GAP; o2y = cy;
+        o1x = cx - LOGO_GAP; o2x = cx + LOGO_GAP;
       } else if (t < FADE_START) {
-        o1a = 1; o1s = 1; o2a = 1; o2s = 1;
-        o1x = cx - LOGO_GAP; o1y = cy;
-        o2x = cx + LOGO_GAP; o2y = cy;
+        o1a = 1; o2a = 1;
+        o1x = cx - LOGO_GAP; o2x = cx + LOGO_GAP;
       } else {
-        o1a = globalFade; o1s = 1; o2a = globalFade; o2s = 1;
-        o1x = cx - LOGO_GAP; o1y = cy;
-        o2x = cx + LOGO_GAP; o2y = cy;
+        o1a = gFade; o2a = gFade;
+        o1x = cx - LOGO_GAP; o2x = cx + LOGO_GAP;
       }
 
+      // ══════════════════════════════════════════
+      //  SPHERE — Frosted translucent glass
+      // ══════════════════════════════════════════
       const drawSphere = (
-        ox: number, oy: number, scale: number, alpha: number,
-        sx: number, sy: number,
+        ox: number, oy: number, sc: number, alpha: number,
+        stretchX: number, stretchY: number,
         pal: typeof LEFT
       ) => {
-        if (alpha <= 0.01 || scale <= 0.01) return;
+        if (alpha <= 0.01 || sc <= 0.01) return;
         ctx.save();
         ctx.translate(ox, oy);
-        ctx.scale(sx * scale, sy * scale);
+        ctx.scale(stretchX * sc, stretchY * sc);
 
-        // Ambient glow
+        // ── Soft ambient bloom ──
         ctx.globalCompositeOperation = "lighter";
-        ctx.globalAlpha = alpha * 0.04;
-        const ambGlow = ctx.createRadialGradient(0, 0, R * 0.6, 0, 0, R * 2.8);
-        ambGlow.addColorStop(0, `rgba(${rgb(pal.glowInner)},0.08)`);
-        ambGlow.addColorStop(0.5, `rgba(${rgb(pal.glowOuter)},0.02)`);
-        ambGlow.addColorStop(1, `rgba(${rgb(pal.glowOuter)},0)`);
-        ctx.fillStyle = ambGlow;
+        ctx.globalAlpha = alpha * 0.12;
+        const bloom = ctx.createRadialGradient(0, 0, R * 0.2, 0, 0, R * 1.8);
+        bloom.addColorStop(0, `rgba(${rgb(pal.glow)},0.18)`);
+        bloom.addColorStop(0.4, `rgba(${rgb(pal.glowOuter)},0.06)`);
+        bloom.addColorStop(1, `rgba(${rgb(pal.glowOuter)},0)`);
+        ctx.fillStyle = bloom;
         ctx.beginPath();
-        ctx.arc(0, 0, R * 2.8, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Medium glow
-        ctx.globalAlpha = alpha * 0.10;
-        const midGlow = ctx.createRadialGradient(0, 0, R * 0.4, 0, 0, R * 1.5);
-        midGlow.addColorStop(0, `rgba(${rgb(pal.glowMid)},0.15)`);
-        midGlow.addColorStop(0.5, `rgba(${rgb(pal.glowOuter)},0.05)`);
-        midGlow.addColorStop(1, `rgba(${rgb(pal.glowOuter)},0)`);
-        ctx.fillStyle = midGlow;
-        ctx.beginPath();
-        ctx.arc(0, 0, R * 1.5, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Close glow
-        ctx.globalAlpha = alpha * 0.16;
-        const closeGlow = ctx.createRadialGradient(0, 0, R * 0.35, 0, 0, R * 1.10);
-        closeGlow.addColorStop(0, `rgba(${rgb(pal.glowInner)},0.22)`);
-        closeGlow.addColorStop(0.5, `rgba(${rgb(pal.glowMid)},0.08)`);
-        closeGlow.addColorStop(1, `rgba(${rgb(pal.glowOuter)},0)`);
-        ctx.fillStyle = closeGlow;
-        ctx.beginPath();
-        ctx.arc(0, 0, R * 1.10, 0, Math.PI * 2);
+        ctx.arc(0, 0, R * 1.8, 0, Math.PI * 2);
         ctx.fill();
 
         ctx.globalCompositeOperation = "source-over";
 
-        // Glass body
-        ctx.globalAlpha = alpha;
-        const body = ctx.createRadialGradient(-R * 0.05, -R * 0.05, 0, 0, 0, R);
-        body.addColorStop(0.00, `rgba(${rgb(pal.c0)},0.95)`);
-        body.addColorStop(0.15, `rgba(${rgb(pal.c1)},0.93)`);
-        body.addColorStop(0.30, `rgba(${rgb(pal.c2)},0.90)`);
-        body.addColorStop(0.48, `rgba(${rgb(pal.c3)},0.85)`);
-        body.addColorStop(0.65, `rgba(${rgb(pal.c4)},0.75)`);
-        body.addColorStop(0.80, `rgba(${rgb(pal.c5)},0.55)`);
-        body.addColorStop(0.92, `rgba(${rgb(pal.edge)},0.28)`);
-        body.addColorStop(1.00, `rgba(${rgb(pal.edge)},0.04)`);
+        // ── Glass body — translucent, frosted ──
+        ctx.globalAlpha = alpha * 0.78;
+        const body = ctx.createRadialGradient(-R * 0.08, -R * 0.10, 0, 0, 0, R);
+        body.addColorStop(0.00, `rgba(${rgb(pal.bodyLight)},0.85)`);
+        body.addColorStop(0.18, `rgba(${rgb(pal.bodyMid)},0.78)`);
+        body.addColorStop(0.40, `rgba(${rgb(pal.body)},0.65)`);
+        body.addColorStop(0.65, `rgba(${rgb(pal.edge)},0.40)`);
+        body.addColorStop(0.85, `rgba(${rgb(pal.edgeDark)},0.18)`);
+        body.addColorStop(1.00, `rgba(${rgb(pal.edgeDark)},0.02)`);
         ctx.fillStyle = body;
         ctx.beginPath();
         ctx.arc(0, 0, R, 0, Math.PI * 2);
         ctx.fill();
 
-        // Diffused highlight
+        // ── Internal glow — subtle core ──
         ctx.globalCompositeOperation = "lighter";
-        ctx.globalAlpha = alpha * 0.22;
-        const hl = ctx.createRadialGradient(-R * 0.22, -R * 0.25, 0, -R * 0.10, -R * 0.12, R * 0.42);
-        hl.addColorStop(0.00, `rgba(${rgb(pal.highlight)},0.28)`);
-        hl.addColorStop(0.25, `rgba(${rgb(pal.highlight)},0.14)`);
-        hl.addColorStop(0.55, `rgba(${rgb(pal.glowInner)},0.04)`);
-        hl.addColorStop(0.85, `rgba(${rgb(pal.glowOuter)},0.01)`);
-        hl.addColorStop(1.00, `rgba(${rgb(pal.glowOuter)},0)`);
-        ctx.fillStyle = hl;
+        ctx.globalAlpha = alpha * 0.20;
+        const core = ctx.createRadialGradient(-R * 0.06, -R * 0.08, 0, 0, 0, R * 0.65);
+        core.addColorStop(0, `rgba(${rgb(pal.highlight)},0.30)`);
+        core.addColorStop(0.4, `rgba(${rgb(pal.glow)},0.10)`);
+        core.addColorStop(1, `rgba(${rgb(pal.glowOuter)},0)`);
+        ctx.fillStyle = core;
         ctx.beginPath();
-        ctx.arc(-R * 0.14, -R * 0.16, R * 0.42, 0, Math.PI * 2);
+        ctx.arc(0, 0, R * 0.65, 0, Math.PI * 2);
         ctx.fill();
 
-        // Top shadow
+        // ── Top specular highlight ──
+        ctx.globalAlpha = alpha * 0.35;
+        const spec = ctx.createRadialGradient(-R * 0.18, -R * 0.28, 0, -R * 0.12, -R * 0.20, R * 0.30);
+        spec.addColorStop(0, `rgba(${rgb(pal.rim)},0.40)`);
+        spec.addColorStop(0.4, `rgba(${rgb(pal.highlight)},0.12)`);
+        spec.addColorStop(1, `rgba(${rgb(pal.glow)},0)`);
+        ctx.fillStyle = spec;
+        ctx.beginPath();
+        ctx.arc(-R * 0.15, -R * 0.22, R * 0.30, 0, Math.PI * 2);
+        ctx.fill();
+
         ctx.globalCompositeOperation = "source-over";
-        ctx.globalAlpha = alpha * 0.55;
-        const topShadow = ctx.createRadialGradient(0, -R * 0.92, R * 0.08, 0, -R * 0.20, R * 0.85);
-        topShadow.addColorStop(0, `rgba(${rgb(pal.edge)},0.60)`);
-        topShadow.addColorStop(0.30, `rgba(${rgb(pal.glowOuter)},0.25)`);
-        topShadow.addColorStop(0.60, `rgba(${rgb(pal.glowOuter)},0.04)`);
-        topShadow.addColorStop(1, `rgba(${rgb(pal.glowOuter)},0)`);
-        ctx.fillStyle = topShadow;
-        ctx.beginPath();
-        ctx.arc(0, 0, R, 0, Math.PI * 2);
-        ctx.fill();
 
-        // Bottom luminosity
-        ctx.globalCompositeOperation = "lighter";
-        ctx.globalAlpha = alpha * 0.16;
-        const bottomGlow = ctx.createRadialGradient(0, R * 0.82, R * 0.06, 0, R * 0.40, R * 0.60);
-        bottomGlow.addColorStop(0, `rgba(${rgb(pal.highlight)},0.28)`);
-        bottomGlow.addColorStop(0.25, `rgba(${rgb(pal.subsurface)},0.12)`);
-        bottomGlow.addColorStop(0.55, `rgba(${rgb(pal.glowInner)},0.04)`);
-        bottomGlow.addColorStop(1, `rgba(${rgb(pal.glowOuter)},0)`);
-        ctx.fillStyle = bottomGlow;
+        // ── Luminous edge ring — crisp, thin ──
+        ctx.globalAlpha = alpha * 0.30;
+        ctx.strokeStyle = `rgba(${rgb(pal.rim)},0.50)`;
+        ctx.lineWidth = 0.8;
         ctx.beginPath();
-        ctx.arc(0, 0, R, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.arc(0, 0, R * 0.98, 0, Math.PI * 2);
+        ctx.stroke();
 
-        // Rim
-        ctx.globalCompositeOperation = "source-over";
-        ctx.globalAlpha = alpha * 0.04;
-        ctx.strokeStyle = `rgba(${rgb(pal.highlight)},0.14)`;
-        ctx.lineWidth = 0.6;
+        // Outer edge — very subtle
+        ctx.globalAlpha = alpha * 0.10;
+        ctx.strokeStyle = `rgba(${rgb(pal.rim)},0.20)`;
+        ctx.lineWidth = 0.4;
         ctx.beginPath();
-        ctx.arc(0, 0, R * 0.97, 0, Math.PI * 2);
+        ctx.arc(0, 0, R * 1.0, 0, Math.PI * 2);
         ctx.stroke();
 
         ctx.restore();
       };
 
-      drawSphere(o1x, o1y, o1s, o1a, stretchXS, stretchYS, LEFT);
+      drawSphere(o1x, o1y, o1s, o1a, sx, sy, LEFT);
       drawSphere(o2x, o2y, o2s, o2a, 1, 1, RIGHT);
 
-      // Ambient atmosphere
+      // ══════════════════════════════════════════
+      //  INTERSECTION — translucent blend
+      // ══════════════════════════════════════════
       if (o1a > 0.3 && o2a > 0.3) {
-        ctx.save();
-        ctx.globalCompositeOperation = "lighter";
-        ctx.globalAlpha = Math.min(o1a, o2a) * 0.06 * globalFade;
-        const atmo = ctx.createRadialGradient(cx, cy, R * 0.4, cx, cy, R * 4.0);
-        atmo.addColorStop(0, "rgba(80,40,160,0.08)");
-        atmo.addColorStop(0.35, "rgba(65,30,140,0.03)");
-        atmo.addColorStop(0.7, "rgba(50,22,110,0.01)");
-        atmo.addColorStop(1, "rgba(40,18,90,0)");
-        ctx.fillStyle = atmo;
-        ctx.beginPath();
-        ctx.arc(cx, cy, R * 4.0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-      }
-
-      // Intersection
-      if (o1a > 0.4 && o2a > 0.4) {
         const halfDist = Math.abs(o2x - o1x) / 2;
         if (halfDist < R) {
           const overlapHalf = R - halfDist;
-          const overlapRatio = overlapHalf / R;
-          if (overlapRatio > 0.05) {
+          const overlapR = overlapHalf / R;
+          if (overlapR > 0.04) {
             const intX = (o1x + o2x) / 2;
             const intY = cy;
-            const blendA = Math.min(o1a, o2a) * globalFade;
+            const blendA = Math.min(o1a, o2a) * gFade;
 
-            // Merged glow
+            // Merged glow at intersection
             ctx.save();
             ctx.globalCompositeOperation = "lighter";
-            ctx.globalAlpha = blendA * overlapRatio * 0.12;
-            const mg = ctx.createRadialGradient(intX, intY, 0, intX, intY, R * 3.2);
-            mg.addColorStop(0, "rgba(110,70,180,0.20)");
-            mg.addColorStop(0.20, "rgba(95,55,165,0.10)");
-            mg.addColorStop(0.45, "rgba(75,40,140,0.04)");
-            mg.addColorStop(0.70, "rgba(55,28,120,0.01)");
-            mg.addColorStop(1, "rgba(40,18,100,0)");
+            ctx.globalAlpha = blendA * overlapR * 0.15;
+            const mg = ctx.createRadialGradient(intX, intY, 0, intX, intY, R * 2.5);
+            mg.addColorStop(0, "rgba(180,160,240,0.22)");
+            mg.addColorStop(0.3, "rgba(150,130,220,0.08)");
+            mg.addColorStop(1, "rgba(120,100,200,0)");
             ctx.fillStyle = mg;
             ctx.beginPath();
-            ctx.arc(intX, intY, R * 3.2, 0, Math.PI * 2);
+            ctx.arc(intX, intY, R * 2.5, 0, Math.PI * 2);
             ctx.fill();
             ctx.restore();
 
-            // Intersection body
+            // Clip and fill intersection zone
             ctx.save();
             const acosVal = Math.acos(clamp01(halfDist / R));
             ctx.beginPath();
@@ -347,29 +282,28 @@ function SplashCanvas() {
 
             const gw = overlapHalf * 2;
             const ig = ctx.createLinearGradient(intX - gw / 2, intY, intX + gw / 2, intY);
-            ig.addColorStop(0.00, "rgba(90,55,160,0.70)");
-            ig.addColorStop(0.15, "rgba(100,65,175,0.74)");
-            ig.addColorStop(0.35, "rgba(115,80,190,0.78)");
-            ig.addColorStop(0.50, "rgba(130,100,200,0.76)");
-            ig.addColorStop(0.65, "rgba(120,90,190,0.74)");
-            ig.addColorStop(0.85, "rgba(115,85,185,0.70)");
-            ig.addColorStop(1.00, "rgba(110,80,180,0.66)");
+            ig.addColorStop(0.00, "rgba(130,90,210,0.55)");
+            ig.addColorStop(0.20, "rgba(155,120,225,0.60)");
+            ig.addColorStop(0.40, "rgba(185,165,240,0.62)");
+            ig.addColorStop(0.50, "rgba(200,190,248,0.60)");
+            ig.addColorStop(0.60, "rgba(195,185,245,0.58)");
+            ig.addColorStop(0.80, "rgba(185,175,240,0.52)");
+            ig.addColorStop(1.00, "rgba(175,165,232,0.46)");
 
-            ctx.globalAlpha = blendA * 0.80;
+            ctx.globalAlpha = blendA * 0.72;
             ctx.fillStyle = ig;
             ctx.fillRect(intX - gw / 2 - 5, intY - R, gw + 10, R * 2);
 
-            // Inner luminosity
+            // Inner soft glow
             ctx.globalCompositeOperation = "lighter";
-            ctx.globalAlpha = blendA * overlapRatio * 0.22;
-            const il = ctx.createRadialGradient(intX, intY, 0, intX, intY, overlapHalf * 1.3);
-            il.addColorStop(0.00, "rgba(130,100,200,0.28)");
-            il.addColorStop(0.30, "rgba(110,75,180,0.12)");
-            il.addColorStop(0.65, `rgba(${rgb(LEFT.glowMid)},0.03)`);
-            il.addColorStop(1.00, `rgba(${rgb(LEFT.glowOuter)},0)`);
+            ctx.globalAlpha = blendA * overlapR * 0.18;
+            const il = ctx.createRadialGradient(intX, intY, 0, intX, intY, overlapHalf * 1.2);
+            il.addColorStop(0, "rgba(200,190,250,0.25)");
+            il.addColorStop(0.4, "rgba(170,150,235,0.08)");
+            il.addColorStop(1, "rgba(140,120,215,0)");
             ctx.fillStyle = il;
             ctx.beginPath();
-            ctx.arc(intX, intY, overlapHalf * 1.3, 0, Math.PI * 2);
+            ctx.arc(intX, intY, overlapHalf * 1.2, 0, Math.PI * 2);
             ctx.fill();
 
             ctx.restore();
@@ -377,72 +311,51 @@ function SplashCanvas() {
         }
       }
 
-      // Split flash
+      // ── Split flash ──
       if (t > 1.55 && t < 2.05) {
         const ft = clamp01((t - 1.55) / 0.50);
         const fa = ft < 0.1 ? ft / 0.1 : Math.pow(1 - (ft - 0.1) / 0.9, 3);
-        const intensity = 0.35 * fa * globalFade;
+        const intensity = 0.30 * fa * gFade;
 
         ctx.save();
         ctx.globalCompositeOperation = "lighter";
-
         ctx.globalAlpha = intensity;
-        const fc1 = ctx.createRadialGradient(cx, cy, 0, cx, cy, R * 1.2);
-        fc1.addColorStop(0, "rgba(120,80,190,0.35)");
-        fc1.addColorStop(0.25, "rgba(100,60,170,0.18)");
-        fc1.addColorStop(0.60, `rgba(${rgb(LEFT.glowMid)},0.06)`);
-        fc1.addColorStop(1, `rgba(${rgb(LEFT.glowOuter)},0)`);
-        ctx.fillStyle = fc1;
-        ctx.beginPath(); ctx.arc(cx, cy, R * 1.2, 0, Math.PI * 2); ctx.fill();
-
-        ctx.globalAlpha = intensity * 0.18;
-        const fc2 = ctx.createRadialGradient(cx, cy, 0, cx, cy, R * 4.0);
-        fc2.addColorStop(0, "rgba(100,60,170,0.10)");
-        fc2.addColorStop(0.35, `rgba(${rgb(LEFT.glowMid)},0.03)`);
-        fc2.addColorStop(1, `rgba(${rgb(LEFT.glowOuter)},0)`);
-        ctx.fillStyle = fc2;
-        ctx.beginPath(); ctx.arc(cx, cy, R * 4.0, 0, Math.PI * 2); ctx.fill();
-
+        const fc = ctx.createRadialGradient(cx, cy, 0, cx, cy, R * 1.0);
+        fc.addColorStop(0, "rgba(190,170,245,0.35)");
+        fc.addColorStop(0.3, "rgba(160,140,225,0.15)");
+        fc.addColorStop(1, "rgba(130,110,205,0)");
+        ctx.fillStyle = fc;
+        ctx.beginPath(); ctx.arc(cx, cy, R * 1.0, 0, Math.PI * 2); ctx.fill();
         ctx.restore();
       }
 
-      // Divider line
+      // ══════════════════════════════════════════
+      //  DIVIDER — Razor-sharp thin white line
+      // ══════════════════════════════════════════
       if (t > 3.0 && t < FADE_START + 0.1) {
         const lineIn = smoothstep(3.0, 3.5, t);
         const lineOut = t > FADE_START ? smoothstep(FADE_END, FADE_START, t) : 1;
-        const lineH = R * 2.5 * easeOutExpo(lineIn) * lineOut;
-        const lineAlpha = lineIn * lineOut * globalFade;
+        const lineH = R * 2.6 * easeOutExpo(lineIn) * lineOut;
+        const lineAlpha = lineIn * lineOut * gFade;
 
         ctx.save();
 
-        ctx.globalAlpha = lineAlpha * 0.08;
-        ctx.shadowColor = "rgba(110,70,170,0.20)";
-        ctx.shadowBlur = 6;
-        ctx.lineWidth = 2;
-        const gl = ctx.createLinearGradient(cx, cy - lineH / 2, cx, cy + lineH / 2);
-        gl.addColorStop(0, "rgba(180,170,200,0)");
-        gl.addColorStop(0.12, "rgba(150,140,170,0.18)");
-        gl.addColorStop(0.5, "rgba(130,120,155,0.25)");
-        gl.addColorStop(0.88, "rgba(150,140,170,0.18)");
-        gl.addColorStop(1, "rgba(180,170,200,0)");
-        ctx.strokeStyle = gl;
+        // Very subtle outer glow
+        ctx.globalAlpha = lineAlpha * 0.06;
+        ctx.shadowColor = "rgba(255,255,255,0.15)";
+        ctx.shadowBlur = 4;
+        ctx.strokeStyle = "rgba(255,255,255,0.12)";
+        ctx.lineWidth = 3;
         ctx.beginPath();
         ctx.moveTo(cx, cy - lineH / 2);
         ctx.lineTo(cx, cy + lineH / 2);
         ctx.stroke();
 
+        // Core — razor-sharp white
         ctx.shadowBlur = 0;
-        ctx.globalAlpha = lineAlpha * 0.50;
-        ctx.lineWidth = 1;
-        const cl = ctx.createLinearGradient(cx, cy - lineH / 2, cx, cy + lineH / 2);
-        cl.addColorStop(0, "rgba(180,170,200,0)");
-        cl.addColorStop(0.08, "rgba(150,140,170,0.35)");
-        cl.addColorStop(0.20, "rgba(170,160,195,0.55)");
-        cl.addColorStop(0.50, "rgba(170,160,195,0.55)");
-        cl.addColorStop(0.80, "rgba(170,160,195,0.55)");
-        cl.addColorStop(0.92, "rgba(150,140,170,0.35)");
-        cl.addColorStop(1, "rgba(180,170,200,0)");
-        ctx.strokeStyle = cl;
+        ctx.globalAlpha = lineAlpha * 0.85;
+        ctx.strokeStyle = "rgba(255,255,255,0.90)";
+        ctx.lineWidth = 0.6;
         ctx.beginPath();
         ctx.moveTo(cx, cy - lineH / 2);
         ctx.lineTo(cx, cy + lineH / 2);
@@ -451,29 +364,17 @@ function SplashCanvas() {
         ctx.restore();
       }
 
-      // Vignette
-      if (t > 0.15) {
-        const va = Math.min(0.30, (t - 0.15) * 0.18) * (t < FADE_START ? 1 : globalFade);
-        ctx.globalAlpha = va;
-        const vg = ctx.createRadialGradient(cx, cy, Math.min(W, H) * 0.14, cx, cy, Math.max(W, H) * 0.68);
-        vg.addColorStop(0, "rgba(12,12,14,0)");
-        vg.addColorStop(0.5, "rgba(12,12,14,0.08)");
-        vg.addColorStop(1, "rgba(12,12,14,0.45)");
-        ctx.fillStyle = vg;
-        ctx.fillRect(0, 0, W, H);
-      }
-
-      // Final fade
+      // ── Final fade ──
       if (t > FADE_START) {
         ctx.globalAlpha = clamp01((t - FADE_START) / (FADE_END - FADE_START));
-        ctx.fillStyle = "#0C0C0E";
+        ctx.fillStyle = "#000000";
         ctx.fillRect(0, 0, W, H);
       }
 
       ctx.globalAlpha = 1;
 
       if (t >= FADE_END + 0.05) {
-        ctx.fillStyle = "#0C0C0E";
+        ctx.fillStyle = "#000000";
         ctx.fillRect(0, 0, W, H);
         return;
       }

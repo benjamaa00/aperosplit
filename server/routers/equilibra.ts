@@ -57,6 +57,13 @@ import {
   removePushSubscription,
   sendPushToMember,
   sendPushToGroup,
+  getOrCreateGroupConversation,
+  findOrCreateDirectConversation,
+  getConversationsForMember,
+  getConversationMessages,
+  sendConversationMessage,
+  markConversationRead,
+  getConversationParticipants,
 } from "../db";
 
 const GROUP_ID = "equilibra-fixed-group";
@@ -849,5 +856,97 @@ export const equilibraRouter = router({
       await removePushSubscription(input.memberId, input.endpoint);
       await updateNotificationSettings(input.memberId, GROUP_ID, { pushEnabled: false });
       return { success: true };
+    }),
+
+  // ─── Messaging ─────────────────────────────────────────────
+
+  getConversations: groupProcedure
+    .input(z.object({ memberId: z.string().min(1).max(128) }))
+    .query(async ({ input }) => {
+      // Auto-create group conversation and ensure member is in it
+      const groupConvId = await getOrCreateGroupConversation(GROUP_ID);
+      if (groupConvId) {
+        const { addParticipantToConversation } = await import("../db");
+        await addParticipantToConversation(groupConvId, input.memberId);
+      }
+      const conversations = await getConversationsForMember(GROUP_ID, input.memberId);
+      return conversations;
+    }),
+
+  getMessages: groupProcedure
+    .input(z.object({
+      conversationId: z.string().min(1).max(128),
+      limit: z.number().int().min(1).max(200).optional(),
+      before: z.string().optional(),
+    }))
+    .query(async ({ input }) => {
+      const messages = await getConversationMessages(input.conversationId, input.limit, input.before);
+      return messages;
+    }),
+
+  sendMessage: groupProcedure
+    .input(z.object({
+      conversationId: z.string().min(1).max(128),
+      memberId: z.string().min(1).max(128),
+      content: z.string().trim().min(1).max(2000),
+    }))
+    .mutation(async ({ input }) => {
+      const message = await sendConversationMessage(input.conversationId, input.memberId, input.content);
+      if (!message) return { success: false };
+
+      // Send push notifications to other participants
+      const participants = await getConversationParticipants(input.conversationId);
+      const sender = participants.find(p => p.memberId === input.memberId);
+      const senderName = sender?.name || "Un membre";
+
+      for (const p of participants) {
+        if (p.memberId === input.memberId) continue;
+        await sendPushToMember(
+          p.memberId,
+          `Nouveau message de ${senderName}`,
+          input.content.length > 100 ? input.content.slice(0, 100) + "..." : input.content,
+          "/"
+        );
+      }
+
+      // Also create in-app notifications
+      for (const p of participants) {
+        if (p.memberId === input.memberId) continue;
+        await addNotification(
+          p.memberId, GROUP_ID, "new_message",
+          `Message de ${senderName}`,
+          input.content.length > 200 ? input.content.slice(0, 200) + "..." : input.content,
+          { conversationId: input.conversationId, senderId: input.memberId }
+        );
+      }
+
+      return { success: true, message };
+    }),
+
+  createDirectConversation: groupProcedure
+    .input(z.object({
+      memberId: z.string().min(1).max(128),
+      targetMemberId: z.string().min(1).max(128),
+    }))
+    .mutation(async ({ input }) => {
+      const conversationId = await findOrCreateDirectConversation(GROUP_ID, input.memberId, input.targetMemberId);
+      return { success: true, conversationId };
+    }),
+
+  markConversationRead: groupProcedure
+    .input(z.object({
+      conversationId: z.string().min(1).max(128),
+      memberId: z.string().min(1).max(128),
+    }))
+    .mutation(async ({ input }) => {
+      const success = await markConversationRead(input.conversationId, input.memberId);
+      return { success };
+    }),
+
+  getConversationParticipants: groupProcedure
+    .input(z.object({ conversationId: z.string().min(1).max(128) }))
+    .query(async ({ input }) => {
+      const participants = await getConversationParticipants(input.conversationId);
+      return participants;
     }),
 });

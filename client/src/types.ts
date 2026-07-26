@@ -85,4 +85,32 @@ export interface GroupCategory {
 }
 
 export type Screen = "identity" | "lock" | "main" | "register" | "invite" | "access" | "groups" | "groupSettings" | "members" | "notifications" | "notificationSettings" | "reports" | "settings" | "appearance" | "editProfile" | "categoryManagement";
-export type Tab = "home" | "expenses" | "balances" | "stats" | "history" | "profile";
+export type Tab = "home" | "expenses" | "balances" | "stats" | "history" | "profile" | "messages";
+
+export interface Conversation {
+  id: string;
+  type: "group" | "direct";
+  name?: string;
+  lastMessageAt?: string;
+  createdAt: string;
+  unreadCount: number;
+  lastMessage?: string;
+  lastMessageAuthor?: string;
+  otherMemberId?: string;
+}
+
+export interface ConversationMessage {
+  id: string;
+  conversationId: string;
+  memberId: string;
+  content: string;
+  type: string;
+  edited: boolean;
+  createdAt: string;
+}
+
+export interface ConversationParticipant {
+  memberId: string;
+  name: string;
+  avatar: string;
+}

@@ -311,6 +311,50 @@ export function initializeDatabase(): Promise<void> {
           CREATE INDEX IF NOT EXISTS idx_push_subscriptions_group ON push_subscriptions(group_id);
         `);
       } catch {}
+      try {
+        await dbPool.query(`
+          CREATE TABLE IF NOT EXISTS conversations (
+            id VARCHAR(128) PRIMARY KEY,
+            group_id VARCHAR(128) NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+            type VARCHAR(20) NOT NULL DEFAULT 'group',
+            name VARCHAR(255),
+            created_by VARCHAR(128),
+            last_message_at TIMESTAMPTZ,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+          );
+          CREATE INDEX IF NOT EXISTS idx_conversations_group ON conversations(group_id);
+          CREATE INDEX IF NOT EXISTS idx_conversations_last_message ON conversations(group_id, last_message_at DESC);
+        `);
+      } catch {}
+      try {
+        await dbPool.query(`
+          CREATE TABLE IF NOT EXISTS conversation_participants (
+            id VARCHAR(128) PRIMARY KEY,
+            conversation_id VARCHAR(128) NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+            member_id VARCHAR(128) NOT NULL,
+            last_read_at TIMESTAMPTZ,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            UNIQUE(conversation_id, member_id)
+          );
+          CREATE INDEX IF NOT EXISTS idx_conv_participants_conv ON conversation_participants(conversation_id);
+          CREATE INDEX IF NOT EXISTS idx_conv_participants_member ON conversation_participants(member_id);
+        `);
+      } catch {}
+      try {
+        await dbPool.query(`
+          CREATE TABLE IF NOT EXISTS conversation_messages (
+            id VARCHAR(128) PRIMARY KEY,
+            conversation_id VARCHAR(128) NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+            member_id VARCHAR(128) NOT NULL,
+            content TEXT NOT NULL,
+            type VARCHAR(20) NOT NULL DEFAULT 'text',
+            edited BOOLEAN NOT NULL DEFAULT FALSE,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+          );
+          CREATE INDEX IF NOT EXISTS idx_conv_messages_conv ON conversation_messages(conversation_id, created_at ASC);
+          CREATE INDEX IF NOT EXISTS idx_conv_messages_member ON conversation_messages(member_id);
+        `);
+      } catch {}
     } catch (error) {
       console.error("[DB] Database initialization failed:", error);
       pool = undefined;
@@ -1197,6 +1241,9 @@ export async function resetAllGroupData(groupId: string) {
   await db.query(`DELETE FROM notification_settings WHERE group_id = $1`, [groupId]);
   await db.query(`DELETE FROM expense_categories WHERE group_id = $1 AND is_default = FALSE`, [groupId]);
   await db.query(`DELETE FROM group_invites WHERE group_id = $1`, [groupId]);
+  await db.query(`DELETE FROM conversation_messages WHERE conversation_id IN (SELECT id FROM conversations WHERE group_id = $1)`, [groupId]);
+  await db.query(`DELETE FROM conversation_participants WHERE conversation_id IN (SELECT id FROM conversations WHERE group_id = $1)`, [groupId]);
+  await db.query(`DELETE FROM conversations WHERE group_id = $1`, [groupId]);
   await db.query(`UPDATE groups SET share_url = NULL WHERE id = $1`, [groupId]);
   return true;
 }
@@ -1291,6 +1338,147 @@ export async function sendPushToMember(memberId: string, title: string, body: st
     }
   }
   return sent;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Messaging
+// ═══════════════════════════════════════════════════════════════
+
+export async function getOrCreateGroupConversation(groupId: string) {
+  const db = await ready();
+  if (!db) return null;
+  await db.query(`INSERT INTO groups (id) VALUES ($1) ON CONFLICT (id) DO NOTHING`, [groupId]);
+  const existing = await db.query(
+    `SELECT id FROM conversations WHERE group_id = $1 AND type = 'group' LIMIT 1`, [groupId]
+  );
+  if (existing.rows[0]) return existing.rows[0].id;
+  const id = `conv_group_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  await db.query(
+    `INSERT INTO conversations (id, group_id, type, name) VALUES ($1, $2, 'group', 'Groupe')`,
+    [id, groupId]
+  );
+  const members = await db.query(`SELECT id FROM group_members WHERE group_id = $1`, [groupId]);
+  for (const m of members.rows) {
+    await db.query(
+      `INSERT INTO conversation_participants (id, conversation_id, member_id) VALUES ($1, $2, $3)
+       ON CONFLICT (conversation_id, member_id) DO NOTHING`,
+      [`cp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, id, m.id]
+    );
+  }
+  return id;
+}
+
+export async function findOrCreateDirectConversation(groupId: string, memberA: string, memberB: string) {
+  const db = await ready();
+  if (!db) return null;
+  // Check if a direct conversation already exists between these two members
+  const existing = await db.query(
+    `SELECT c.id FROM conversations c
+     JOIN conversation_participants cp1 ON cp1.conversation_id = c.id AND cp1.member_id = $3
+     JOIN conversation_participants cp2 ON cp2.conversation_id = c.id AND cp2.member_id = $4
+     WHERE c.group_id = $1 AND c.type = 'direct'
+     AND (SELECT COUNT(*) FROM conversation_participants WHERE conversation_id = c.id) = 2
+     LIMIT 1`,
+    [groupId, null, memberA, memberB]
+  );
+  if (existing.rows[0]) return existing.rows[0].id;
+  const id = `conv_dm_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  await db.query(
+    `INSERT INTO conversations (id, group_id, type, created_by) VALUES ($1, $2, 'direct', $3)`,
+    [id, groupId, memberA]
+  );
+  const ts = Date.now();
+  await db.query(
+    `INSERT INTO conversation_participants (id, conversation_id, member_id) VALUES ($1, $2, $3),
+     ($4, $2, $5) ON CONFLICT DO NOTHING`,
+    [`cp_${ts}_${Math.random().toString(36).slice(2, 8)}`, id, memberA,
+     `cp_${ts}_${Math.random().toString(36).slice(2, 8)}`, memberB]
+  );
+  return id;
+}
+
+export async function getConversationsForMember(groupId: string, memberId: string) {
+  const db = await ready();
+  if (!db) return [];
+  const result = await db.query(
+    `SELECT c.id, c.type, c.name, c.last_message_at AS "lastMessageAt", c.created_at AS "createdAt",
+     (SELECT COUNT(*) FROM conversation_messages cm WHERE cm.conversation_id = c.id AND cm.created_at > COALESCE(cp.last_read_at, '1970-01-01'))::int AS "unreadCount",
+     (SELECT cm.content FROM conversation_messages cm WHERE cm.conversation_id = c.id ORDER BY cm.created_at DESC LIMIT 1) AS "lastMessage",
+     (SELECT cm.member_id FROM conversation_messages cm WHERE cm.conversation_id = c.id ORDER BY cm.created_at DESC LIMIT 1) AS "lastMessageAuthor",
+     (SELECT other.member_id FROM conversation_participants other WHERE other.conversation_id = c.id AND other.member_id != $2 LIMIT 1) AS "otherMemberId"
+     FROM conversations c
+     JOIN conversation_participants cp ON cp.conversation_id = c.id AND cp.member_id = $2
+     WHERE c.group_id = $1
+     ORDER BY COALESCE(c.last_message_at, c.created_at) DESC`,
+    [groupId, memberId]
+  );
+  return result.rows;
+}
+
+export async function getConversationMessages(conversationId: string, limit = 100, before?: string) {
+  const db = await ready();
+  if (!db) return [];
+  let query = `SELECT id, conversation_id AS "conversationId", member_id AS "memberId", content, type, edited, created_at AS "createdAt"
+    FROM conversation_messages WHERE conversation_id = $1`;
+  const params: any[] = [conversationId];
+  if (before) {
+    query += ` AND created_at < $2`;
+    params.push(before);
+  }
+  query += ` ORDER BY created_at DESC LIMIT ${Math.min(limit, 200)}`;
+  const result = await db.query(query, params);
+  return result.rows.reverse();
+}
+
+export async function sendConversationMessage(conversationId: string, memberId: string, content: string, type = "text") {
+  const db = await ready();
+  if (!db) return null;
+  const id = `msg_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  await db.query(
+    `INSERT INTO conversation_messages (id, conversation_id, member_id, content, type) VALUES ($1, $2, $3, $4, $5)`,
+    [id, conversationId, memberId, content, type]
+  );
+  await db.query(
+    `UPDATE conversations SET last_message_at = NOW() WHERE id = $1`,
+    [conversationId]
+  );
+  return { id, conversationId, memberId, content, type, edited: false, createdAt: new Date().toISOString() };
+}
+
+export async function markConversationRead(conversationId: string, memberId: string) {
+  const db = await ready();
+  if (!db) return false;
+  await db.query(
+    `INSERT INTO conversation_participants (id, conversation_id, member_id, last_read_at)
+     VALUES ($1, $2, $3, NOW())
+     ON CONFLICT (conversation_id, member_id) DO UPDATE SET last_read_at = NOW()`,
+    [`cpr_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, conversationId, memberId]
+  );
+  return true;
+}
+
+export async function addParticipantToConversation(conversationId: string, memberId: string) {
+  const db = await ready();
+  if (!db) return false;
+  await db.query(
+    `INSERT INTO conversation_participants (id, conversation_id, member_id) VALUES ($1, $2, $3)
+     ON CONFLICT (conversation_id, member_id) DO NOTHING`,
+    [`cp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, conversationId, memberId]
+  );
+  return true;
+}
+
+export async function getConversationParticipants(conversationId: string) {
+  const db = await ready();
+  if (!db) return [];
+  const result = await db.query(
+    `SELECT cp.member_id AS "memberId", gm.name, gm.avatar
+     FROM conversation_participants cp
+     JOIN group_members gm ON gm.id = cp.member_id
+     WHERE cp.conversation_id = $1`,
+    [conversationId]
+  );
+  return result.rows;
 }
 
 export async function sendPushToGroup(groupId: string, excludeMemberId: string, title: string, body: string, url?: string) {

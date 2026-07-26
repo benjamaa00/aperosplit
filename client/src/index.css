@@ -991,7 +991,6 @@
     opacity: 1 !important;
   }
   .nav-pill { transition-duration: 0.01ms !important; }
-  .nav-fab-glow { animation: none !important; }
 }
 
 /* iOS safe area */
@@ -1117,30 +1116,6 @@
 
   touch-action: none;
   user-select: none;
-}
-
-/* Notch mask — page-colored overlay that cuts the concave shape */
-.bottom-nav-notch {
-  position: absolute;
-  top: -2px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 84px;
-  height: 40px;
-  background: var(--background, #08080D);
-  border-radius: 0 0 42px 42px;
-  z-index: 5;
-  pointer-events: none;
-}
-
-/* FAB button — sits in the notch */
-.nav-fab {
-  position: absolute;
-  left: 50%;
-  top: -30px;
-  transform: translateX(-50%);
-  z-index: 10;
-  -webkit-tap-highlight-color: transparent;
 }
 
 /* Top reflection — uniform along full width */
