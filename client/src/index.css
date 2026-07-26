@@ -1103,6 +1103,11 @@
   will-change: left, width;
 }
 
+/* ═══ Nav smooth transitions ═══ */
+.nav-smooth {
+  transition: transform 220ms ease, opacity 220ms ease, background 220ms ease;
+}
+
 @keyframes fabGlow {
   0%, 100% { opacity: 0.45; transform: scale(1); }
   50% { opacity: 0.75; transform: scale(1.08); }

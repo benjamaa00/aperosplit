@@ -18,7 +18,7 @@ export const SplashScreen = memo(function SplashScreen({ onComplete }: { onCompl
   }, []);
 
   return (
-    <div className="apple-splash" style={{ background: "#050507" }}>
+    <div className="apple-splash" style={{ background: "#0C0C0E" }}>
       <SplashCanvas />
       <div className={`apple-splash-brand ${brandVisible ? "visible" : ""} ${brandFading ? "fading" : ""}`}>
         <div className="apple-splash-logo-text">AperoSplit</div>
@@ -72,50 +72,47 @@ function SplashCanvas() {
     const R = Math.min(W, H) * 0.12;
     const LOGO_GAP = R * 0.76; // ~24% overlap
 
-    // ── LEFT SPHERE — Rich electric violet, vibrant ──
+    // ── LEFT SPHERE — Vivid electric violet ──
     const LEFT = {
-      c0: [168, 130, 255],   // center: bright electric violet
-      c1: [148, 105, 255],   // inner
-      c2: [128, 82, 252],    // mid-inner
-      c3: [112, 65, 248],    // mid
-      c4: [96, 50, 238],     // mid-outer
-      c5: [82, 38, 225],     // outer
-      edge: [68, 28, 208],   // dark rim
-      glowInner: [140, 100, 255],
-      glowMid: [115, 75, 248],
-      glowOuter: [88, 48, 228],
-      highlight: [180, 155, 255],
-      subsurface: [160, 135, 255],
+      c0: [114, 64, 252],    // center: #7240FC
+      c1: [122, 82, 255],    // main mid: #7A52FF
+      c2: [134, 90, 254],    // between mid
+      c3: [145, 101, 251],   // upper light: #9165FB
+      c4: [109, 58, 252],    // lower dense: #6D3AFC
+      c5: [106, 68, 214],    // outer edge: #6A44D6
+      edge: [96, 52, 200],   // dark rim
+      glowInner: [110, 71, 247],  // #6E47F7
+      glowMid: [139, 108, 251],   // #8B6CFB
+      glowOuter: [96, 52, 230],
+      highlight: [166, 139, 250],  // near intersection: #A68BFA
+      subsurface: [140, 105, 252],
     };
 
-    // ── RIGHT SPHERE — Vibrant mauve-pink glass ──
+    // ── RIGHT SPHERE — Pale frosted lavender-white glass ──
     const RIGHT = {
-      c0: [218, 205, 255],   // center: bright mauve
-      c1: [208, 192, 252],   // inner
-      c2: [198, 180, 250],   // mid-inner
-      c3: [188, 168, 248],   // mid
-      c4: [178, 156, 245],   // mid-outer
-      c5: [168, 145, 242],   // outer
-      edge: [155, 130, 238], // dark edge
-      glowInner: [200, 190, 252],
-      glowMid: [188, 175, 250],
-      glowOuter: [168, 155, 245],
-      highlight: [225, 218, 255],
-      subsurface: [208, 198, 252],
+      c0: [195, 179, 250],   // center: #C3B3FA
+      c1: [209, 198, 255],   // main mid: #D1C6FF
+      c2: [213, 198, 252],   // upper light: #D5C6FC
+      c3: [205, 192, 252],   // between
+      c4: [194, 177, 252],   // lower soft: #C2B1FC
+      c5: [180, 167, 226],   // outer edge: #B4A7E2
+      edge: [168, 155, 215], // darker rim
+      glowInner: [207, 194, 250],  // #CFC2FA
+      glowMid: [226, 218, 255],    // #E2DAFF
+      glowOuter: [195, 180, 240],
+      highlight: [220, 212, 252],
+      subsurface: [200, 188, 250],
     };
 
-    // ── Background — very dark with subtle atmospheric center ──
+    // ── Background — #0C0C0E, dark minimal with violet depth ──
     function drawBackground(alpha: number) {
       ctx.globalAlpha = alpha;
       ctx.globalCompositeOperation = "source-over";
-
-      // Base fill
       const bg = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(W, H) * 0.72);
-      bg.addColorStop(0, "#0C0C14");
-      bg.addColorStop(0.25, "#0A0A11");
-      bg.addColorStop(0.50, "#08080D");
-      bg.addColorStop(0.75, "#060609");
-      bg.addColorStop(1, "#050507");
+      bg.addColorStop(0, "#0C0C0E");
+      bg.addColorStop(0.30, "#0B0B0D");
+      bg.addColorStop(0.60, "#080809");
+      bg.addColorStop(1, "#060607");
       ctx.fillStyle = bg;
       ctx.fillRect(0, 0, W, H);
       ctx.globalAlpha = 1;
@@ -319,10 +316,10 @@ function SplashCanvas() {
         ctx.globalCompositeOperation = "lighter";
         ctx.globalAlpha = Math.min(o1a, o2a) * 0.10 * globalFade;
         const atmo = ctx.createRadialGradient(cx, cy, R * 0.4, cx, cy, R * 4.0);
-        atmo.addColorStop(0, "rgba(120,90,230,0.15)");
-        atmo.addColorStop(0.35, "rgba(100,70,220,0.06)");
-        atmo.addColorStop(0.7, "rgba(80,50,200,0.02)");
-        atmo.addColorStop(1, "rgba(60,40,180,0)");
+        atmo.addColorStop(0, "rgba(114,64,252,0.12)");  // #7240FC
+        atmo.addColorStop(0.35, "rgba(110,71,247,0.05)"); // #6E47F7
+        atmo.addColorStop(0.7, "rgba(96,52,230,0.02)");
+        atmo.addColorStop(1, "rgba(80,40,200,0)");
         ctx.fillStyle = atmo;
         ctx.beginPath();
         ctx.arc(cx, cy, R * 4.0, 0, Math.PI * 2);
@@ -343,14 +340,14 @@ function SplashCanvas() {
             const intY = cy;
             const blendA = Math.min(o1a, o2a) * globalFade;
 
-            // ── Merged glow — deep mauve atmosphere ──
+            // ── Merged glow — #C6B8FF atmosphere ──
             ctx.save();
             ctx.globalCompositeOperation = "lighter";
-            ctx.globalAlpha = blendA * overlapRatio * 0.15;
+            ctx.globalAlpha = blendA * overlapRatio * 0.18;
             const mg = ctx.createRadialGradient(intX, intY, 0, intX, intY, R * 3.2);
-            mg.addColorStop(0, "rgba(155,128,250,0.30)");
-            mg.addColorStop(0.20, "rgba(135,108,245,0.15)");
-            mg.addColorStop(0.45, "rgba(110,85,238,0.06)");
+            mg.addColorStop(0, "rgba(198,184,255,0.28)");  // #C6B8FF
+            mg.addColorStop(0.20, "rgba(180,165,252,0.14)");
+            mg.addColorStop(0.45, "rgba(140,115,245,0.06)");
             mg.addColorStop(0.70, `rgba(${rgb(LEFT.glowOuter)},0.02)`);
             mg.addColorStop(1, `rgba(${rgb(LEFT.glowOuter)},0)`);
             ctx.fillStyle = mg;
@@ -368,27 +365,27 @@ function SplashCanvas() {
             ctx.closePath();
             ctx.clip();
 
-            // Horizontal gradient: deep mauve-dominant, NO white
+            // Optical glass fusion — mauve dominant, NOT white
             const gw = overlapHalf * 2;
             const ig = ctx.createLinearGradient(intX - gw / 2, intY, intX + gw / 2, intY);
-            ig.addColorStop(0.00, "rgba(128,98,245,0.78)");
-            ig.addColorStop(0.18, "rgba(140,112,248,0.82)");
-            ig.addColorStop(0.38, "rgba(155,128,252,0.85)");
-            ig.addColorStop(0.55, "rgba(165,138,255,0.82)");
-            ig.addColorStop(0.72, "rgba(172,148,252,0.78)");
-            ig.addColorStop(0.88, "rgba(168,142,250,0.74)");
-            ig.addColorStop(1.00, "rgba(162,135,248,0.70)");
+            ig.addColorStop(0.00, "rgba(160,136,249,0.80)");  // #A088F9 left
+            ig.addColorStop(0.15, "rgba(166,139,250,0.84)");  // #A68BFA
+            ig.addColorStop(0.35, "rgba(190,175,254,0.88)");
+            ig.addColorStop(0.50, "rgba(230,222,254,0.86)");  // #E6DEFE center
+            ig.addColorStop(0.65, "rgba(210,198,254,0.84)");
+            ig.addColorStop(0.85, "rgba(195,178,250,0.80)");  // #C3B2FA right
+            ig.addColorStop(1.00, "rgba(195,178,250,0.76)");  // #C3B2FA
 
-            ctx.globalAlpha = blendA * 0.90;
+            ctx.globalAlpha = blendA * 0.88;
             ctx.fillStyle = ig;
             ctx.fillRect(intX - gw / 2 - 5, intY - R, gw + 10, R * 2);
 
-            // ── Inner luminosity — mauve core, not white ──
+            // ── Inner luminosity — soft mauve core ──
             ctx.globalCompositeOperation = "lighter";
-            ctx.globalAlpha = blendA * overlapRatio * 0.30;
+            ctx.globalAlpha = blendA * overlapRatio * 0.32;
             const il = ctx.createRadialGradient(intX, intY, 0, intX, intY, overlapHalf * 1.3);
-            il.addColorStop(0.00, "rgba(175,158,255,0.42)");
-            il.addColorStop(0.30, "rgba(158,138,252,0.20)");
+            il.addColorStop(0.00, "rgba(230,222,254,0.38)");  // #E6DEFE
+            il.addColorStop(0.30, "rgba(198,184,255,0.18)");  // #C6B8FF
             il.addColorStop(0.65, `rgba(${rgb(LEFT.glowMid)},0.05)`);
             il.addColorStop(1.00, `rgba(${rgb(LEFT.glowOuter)},0)`);
             ctx.fillStyle = il;
@@ -412,17 +409,17 @@ function SplashCanvas() {
 
         ctx.globalAlpha = intensity;
         const fc1 = ctx.createRadialGradient(cx, cy, 0, cx, cy, R * 1.2);
-        fc1.addColorStop(0, "rgba(195,175,255,0.55)");
-        fc1.addColorStop(0.25, "rgba(168,145,252,0.30)");
+        fc1.addColorStop(0, "rgba(230,222,254,0.50)");   // #E6DEFE
+        fc1.addColorStop(0.25, "rgba(198,184,255,0.28)"); // #C6B8FF
         fc1.addColorStop(0.60, `rgba(${rgb(LEFT.glowMid)},0.10)`);
         fc1.addColorStop(1, `rgba(${rgb(LEFT.glowOuter)},0)`);
         ctx.fillStyle = fc1;
         ctx.beginPath(); ctx.arc(cx, cy, R * 1.2, 0, Math.PI * 2); ctx.fill();
 
-        ctx.globalAlpha = intensity * 0.25;
+        ctx.globalAlpha = intensity * 0.22;
         const fc2 = ctx.createRadialGradient(cx, cy, 0, cx, cy, R * 4.0);
-        fc2.addColorStop(0, "rgba(170,150,252,0.18)");
-        fc2.addColorStop(0.35, `rgba(${rgb(LEFT.glowMid)},0.05)`);
+        fc2.addColorStop(0, "rgba(198,184,255,0.15)");
+        fc2.addColorStop(0.35, `rgba(${rgb(LEFT.glowMid)},0.04)`);
         fc2.addColorStop(1, `rgba(${rgb(LEFT.glowOuter)},0)`);
         ctx.fillStyle = fc2;
         ctx.beginPath(); ctx.arc(cx, cy, R * 4.0, 0, Math.PI * 2); ctx.fill();
@@ -442,34 +439,34 @@ function SplashCanvas() {
         ctx.save();
 
         // Outer glow — 2px, soft
-        ctx.globalAlpha = lineAlpha * 0.14;
-        ctx.shadowColor = "rgba(195,185,255,0.35)";
-        ctx.shadowBlur = 10;
+        ctx.globalAlpha = lineAlpha * 0.12;
+        ctx.shadowColor = "rgba(198,184,255,0.30)";
+        ctx.shadowBlur = 8;
         ctx.lineWidth = 2;
         const gl = ctx.createLinearGradient(cx, cy - lineH / 2, cx, cy + lineH / 2);
-        gl.addColorStop(0, "rgba(255,255,255,0)");
-        gl.addColorStop(0.12, "rgba(210,200,255,0.30)");
-        gl.addColorStop(0.5, "rgba(235,230,255,0.45)");
-        gl.addColorStop(0.88, "rgba(210,200,255,0.30)");
-        gl.addColorStop(1, "rgba(255,255,255,0)");
+        gl.addColorStop(0, "rgba(251,249,254,0)");
+        gl.addColorStop(0.12, "rgba(228,224,241,0.25)");
+        gl.addColorStop(0.5, "rgba(197,193,213,0.35)");
+        gl.addColorStop(0.88, "rgba(228,224,241,0.25)");
+        gl.addColorStop(1, "rgba(251,249,254,0)");
         ctx.strokeStyle = gl;
         ctx.beginPath();
         ctx.moveTo(cx, cy - lineH / 2);
         ctx.lineTo(cx, cy + lineH / 2);
         ctx.stroke();
 
-        // Core — 1px
+        // Core — 1px, #FBF9FE
         ctx.shadowBlur = 0;
-        ctx.globalAlpha = lineAlpha * 0.72;
+        ctx.globalAlpha = lineAlpha * 0.65;
         ctx.lineWidth = 1;
         const cl = ctx.createLinearGradient(cx, cy - lineH / 2, cx, cy + lineH / 2);
-        cl.addColorStop(0, "rgba(255,255,255,0)");
-        cl.addColorStop(0.08, "rgba(230,225,255,0.60)");
-        cl.addColorStop(0.20, "rgba(245,240,255,0.80)");
-        cl.addColorStop(0.50, "rgba(245,240,255,0.80)");
-        cl.addColorStop(0.80, "rgba(245,240,255,0.80)");
-        cl.addColorStop(0.92, "rgba(230,225,255,0.60)");
-        cl.addColorStop(1, "rgba(255,255,255,0)");
+        cl.addColorStop(0, "rgba(251,249,254,0)");
+        cl.addColorStop(0.08, "rgba(228,224,241,0.50)");
+        cl.addColorStop(0.20, "rgba(251,249,254,0.72)");
+        cl.addColorStop(0.50, "rgba(251,249,254,0.72)");
+        cl.addColorStop(0.80, "rgba(251,249,254,0.72)");
+        cl.addColorStop(0.92, "rgba(228,224,241,0.50)");
+        cl.addColorStop(1, "rgba(251,249,254,0)");
         ctx.strokeStyle = cl;
         ctx.beginPath();
         ctx.moveTo(cx, cy - lineH / 2);
@@ -484,9 +481,9 @@ function SplashCanvas() {
         const va = Math.min(0.30, (t - 0.15) * 0.18) * (t < FADE_START ? 1 : globalFade);
         ctx.globalAlpha = va;
         const vg = ctx.createRadialGradient(cx, cy, Math.min(W, H) * 0.14, cx, cy, Math.max(W, H) * 0.68);
-        vg.addColorStop(0, "rgba(5,5,7,0)");
-        vg.addColorStop(0.5, "rgba(5,5,7,0.08)");
-        vg.addColorStop(1, "rgba(5,5,7,0.45)");
+        vg.addColorStop(0, "rgba(12,12,14,0)");
+        vg.addColorStop(0.5, "rgba(12,12,14,0.08)");
+        vg.addColorStop(1, "rgba(12,12,14,0.45)");
         ctx.fillStyle = vg;
         ctx.fillRect(0, 0, W, H);
       }
@@ -494,14 +491,14 @@ function SplashCanvas() {
       // ── Final fade ──
       if (t > FADE_START) {
         ctx.globalAlpha = clamp01((t - FADE_START) / (FADE_END - FADE_START));
-        ctx.fillStyle = "#050507";
+        ctx.fillStyle = "#0C0C0E";
         ctx.fillRect(0, 0, W, H);
       }
 
       ctx.globalAlpha = 1;
 
       if (t >= FADE_END + 0.05) {
-        ctx.fillStyle = "#050507";
+        ctx.fillStyle = "#0C0C0E";
         ctx.fillRect(0, 0, W, H);
         return;
       }

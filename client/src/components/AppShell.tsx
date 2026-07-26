@@ -14,13 +14,6 @@ const TAB_ICONS: Record<Tab, LucideIcon> = {
   profile: User,
 };
 
-const NAV_TABS: { id: Tab; label: string }[] = [
-  { id: "home", label: "Accueil" },
-  { id: "balances", label: "Soldes" },
-  { id: "history", label: "Historique" },
-  { id: "profile", label: "Profil" },
-];
-
 interface AppShellProps {
   children: ReactNode;
   activeTab?: Tab;
@@ -32,73 +25,62 @@ function lerp(a: number, b: number, t: number) { return a + (b - a) * t; }
 
 const AppShell = memo(({ children, activeTab, onTabChange, onAddExpense }: AppShellProps) => {
   const tabRefs = useRef<Map<Tab, HTMLDivElement>>(new Map());
-  const navRef = useRef<HTMLDivElement>(null);
-  const pillRef = useRef<HTMLDivElement>(null);
+  const barRef = useRef<HTMLDivElement>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const rafRef = useRef<number>(0);
 
-  const [pill, setPill] = useState({ left: 0, width: 0, ready: false });
+  const [pillStyle, setPillStyle] = useState({ left: 0, width: 0, ready: false });
 
-  // ── Drag state (ref for rAF, no state lag) ──
+  // ── Drag state ──
   const drag = useRef({
     active: false,
     startX: 0,
     hasMoved: false,
-    positions: [] as { tab: Tab; cx: number; left: number; width: number }[],
-    // Smooth pill tracking
-    currentX: 0,
-    targetX: 0,
-    currentW: 0,
-    targetW: 0,
+    columns: [] as { tab: Tab; cx: number; left: number; width: number }[],
+    currentX: 0, targetX: 0,
+    currentW: 0, targetW: 0,
     hoveredTab: null as Tab | null,
-    // Refraction highlight position (0-1 normalized)
-    highlightX: 0.5,
-    targetHighlightX: 0.5,
-    pressed: false,
+    highlightX: 0.5, targetHighlightX: 0.5,
   });
 
   const [dragUI, setDragUI] = useState({
-    active: false, left: 0, width: 0, highlightX: 0.5, hoverTab: null as Tab | null, pressed: false,
+    active: false, left: 0, width: 0, highlightX: 0.5, hoverTab: null as Tab | null,
   });
 
-  // Measure active tab pill position
+  // ── Measure pill position from grid column ──
+  const measurePill = useCallback((tab: Tab) => {
+    const el = tabRefs.current.get(tab);
+    const bar = barRef.current;
+    if (!el || !bar) return null;
+    const er = el.getBoundingClientRect();
+    const br = bar.getBoundingClientRect();
+    return { left: er.left - br.left, width: er.width };
+  }, []);
+
   useEffect(() => {
     if (dragUI.active) return;
-    if (!activeTab || !tabRefs.current.has(activeTab)) return;
-    const el = tabRefs.current.get(activeTab)!;
-    const nav = navRef.current;
-    if (!el || !nav) return;
-    const e = el.getBoundingClientRect();
-    const n = nav.getBoundingClientRect();
-    setPill({ left: e.left - n.left, width: e.width, ready: true });
-  }, [activeTab, dragUI.active]);
+    if (!activeTab) return;
+    const m = measurePill(activeTab);
+    if (m) setPillStyle({ left: m.left, width: m.width, ready: true });
+  }, [activeTab, dragUI.active, measurePill]);
 
-  // ── rAF loop for smooth pill interpolation during drag ──
+  // ── rAF loop for smooth drag tracking ──
   useEffect(() => {
     if (!drag.current.active) return;
     let alive = true;
-
     const tick = () => {
       if (!alive) return;
       const d = drag.current;
-
-      // Lerp pill position (0.22 = smooth but responsive)
-      d.currentX = lerp(d.currentX, d.targetX, 0.22);
-      d.currentW = lerp(d.currentW, d.targetW, 0.22);
-      d.highlightX = lerp(d.highlightX, d.targetHighlightX, 0.15);
-
+      d.currentX = lerp(d.currentX, d.targetX, 0.24);
+      d.currentW = lerp(d.currentW, d.targetW, 0.24);
+      d.highlightX = lerp(d.highlightX, d.targetHighlightX, 0.16);
       setDragUI({
-        active: true,
-        left: d.currentX,
-        width: d.currentW,
-        highlightX: d.highlightX,
-        hoverTab: d.hoveredTab,
-        pressed: d.pressed,
+        active: true, left: d.currentX, width: d.currentW,
+        highlightX: d.highlightX, hoverTab: d.hoveredTab,
       });
-
       rafRef.current = requestAnimationFrame(tick);
     };
-
     rafRef.current = requestAnimationFrame(tick);
     return () => { alive = false; cancelAnimationFrame(rafRef.current); };
   }, [dragUI.active]);
@@ -115,31 +97,27 @@ const AppShell = memo(({ children, activeTab, onTabChange, onAddExpense }: AppSh
     onAddExpense?.();
   }, [onAddExpense]);
 
-  // ── Get tab positions from DOM ──
-  const getTabPositions = useCallback(() => {
-    const nav = navRef.current;
-    if (!nav) return [];
-    const nRect = nav.getBoundingClientRect();
-    return NAV_TABS.map(({ id }) => {
-      const el = tabRefs.current.get(id);
+  // ── Get column positions ──
+  const getColumns = useCallback(() => {
+    const bar = barRef.current;
+    if (!bar) return [];
+    const br = bar.getBoundingClientRect();
+    const tabs: Tab[] = ["home", "balances", "history", "profile"];
+    return tabs.map((tab) => {
+      const el = tabRefs.current.get(tab);
       if (!el) return null;
       const r = el.getBoundingClientRect();
-      return {
-        tab: id,
-        cx: r.left + r.width / 2 - nRect.left,
-        left: r.left - nRect.left,
-        width: r.width,
-      };
+      return { tab, cx: r.left + r.width / 2 - br.left, left: r.left - br.left, width: r.width };
     }).filter(Boolean) as { tab: Tab; cx: number; left: number; width: number }[];
   }, []);
 
   const findNearest = useCallback((x: number) => {
-    const ps = drag.current.positions;
-    let best = ps[0];
+    const cols = drag.current.columns;
+    let best = cols[0];
     let bestD = Infinity;
-    for (const p of ps) {
-      const d = Math.abs(x - p.cx);
-      if (d < bestD) { bestD = d; best = p; }
+    for (const c of cols) {
+      const d = Math.abs(x - c.cx);
+      if (d < bestD) { bestD = d; best = c; }
     }
     return best;
   }, []);
@@ -148,53 +126,47 @@ const AppShell = memo(({ children, activeTab, onTabChange, onAddExpense }: AppSh
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
     if (e.button !== 0) return;
     const t = e.target as HTMLElement;
-    if (t.closest(".nav-fab") || t.closest("button[aria-label='Ajouter une dépense']")) return;
-
-    const nav = navRef.current;
-    if (!nav) return;
-    const nRect = nav.getBoundingClientRect();
-    const x = e.clientX - nRect.left;
+    if (t.closest(".nav-fab")) return;
+    const bar = barRef.current;
+    if (!bar) return;
+    const br = bar.getBoundingClientRect();
+    const x = e.clientX - br.left;
 
     const d = drag.current;
     d.active = true;
     d.startX = e.clientX;
     d.hasMoved = false;
-    d.positions = getTabPositions();
-    d.currentX = pill.left;
-    d.targetX = pill.left;
-    d.currentW = pill.width;
-    d.targetW = pill.width;
-    d.highlightX = x / nRect.width;
-    d.targetHighlightX = x / nRect.width;
-    d.pressed = true;
+    d.columns = getColumns();
+    const m = measurePill(activeTab || "home");
+    d.currentX = m ? m.left : 0;
+    d.targetX = d.currentX;
+    d.currentW = m ? m.width : 52;
+    d.targetW = d.currentW;
+    d.highlightX = x / br.width;
+    d.targetHighlightX = x / br.width;
     d.hoveredTab = null;
 
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
-  }, [getTabPositions, pill.left, pill.width]);
+  }, [getColumns, measurePill, activeTab]);
 
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
     const d = drag.current;
     if (!d.active) return;
-
     const dx = Math.abs(e.clientX - d.startX);
     if (dx < 6 && !d.hasMoved) return;
     d.hasMoved = true;
 
-    const nav = navRef.current;
-    if (!nav) return;
-    const nRect = nav.getBoundingClientRect();
-    const x = e.clientX - nRect.left;
+    const bar = barRef.current;
+    if (!bar) return;
+    const br = bar.getBoundingClientRect();
+    const x = e.clientX - br.left;
 
     const nearest = findNearest(x);
     if (!nearest) return;
 
-    // Target position for lerp (no snap, smooth follow)
-    const pillLeft = x - nearest.width / 2;
-    const clamped = Math.max(0, Math.min(nRect.width - nearest.width, pillLeft));
-
-    d.targetX = clamped;
+    d.targetX = x - nearest.width / 2;
     d.targetW = nearest.width;
-    d.targetHighlightX = x / nRect.width;
+    d.targetHighlightX = x / br.width;
 
     if (nearest.tab !== d.hoveredTab) {
       d.hoveredTab = nearest.tab;
@@ -206,212 +178,192 @@ const AppShell = memo(({ children, activeTab, onTabChange, onAddExpense }: AppSh
     const d = drag.current;
     if (!d.active) return;
     d.active = false;
-    d.pressed = false;
 
-    const nav = navRef.current;
-    if (!nav) return;
-    const nRect = nav.getBoundingClientRect();
-    const x = e.clientX - nRect.left;
+    const bar = barRef.current;
+    if (!bar) return;
+    const br = bar.getBoundingClientRect();
+    const x = e.clientX - br.left;
 
-    const target = d.hasMoved ? findNearest(x) : d.positions.find(p => p.tab === activeTab);
-
-    setDragUI({ active: false, left: 0, width: 0, highlightX: 0.5, hoverTab: null, pressed: false });
-
-    if (target && d.hasMoved) {
-      switchTab(target.tab);
-    }
+    const target = d.hasMoved ? findNearest(x) : d.columns.find(c => c.tab === activeTab);
+    setDragUI({ active: false, left: 0, width: 0, highlightX: 0.5, hoverTab: null });
+    if (target && d.hasMoved) switchTab(target.tab);
   }, [findNearest, switchTab, activeTab]);
 
   const handlePointerCancel = useCallback(() => {
     drag.current.active = false;
-    drag.current.pressed = false;
-    setDragUI({ active: false, left: 0, width: 0, highlightX: 0.5, hoverTab: null, pressed: false });
+    setDragUI({ active: false, left: 0, width: 0, highlightX: 0.5, hoverTab: null });
   }, []);
 
   const showPill = dragUI.active
     ? { left: dragUI.left, width: dragUI.width, ready: true }
-    : pill;
+    : pillStyle;
+
+  const TAB_ORDER: { tab: Tab; label: string; col: number }[] = [
+    { tab: "home", label: "Accueil", col: 1 },
+    { tab: "balances", label: "Soldes", col: 2 },
+    { tab: "history", label: "Historique", col: 4 },
+    { tab: "profile", label: "Profil", col: 5 },
+  ];
 
   return (
     <ErrorBoundary>
       <TooltipProvider>
         <div className="h-screen flex flex-col overflow-hidden">
+          {/* ── Scrollable content — padded at bottom for nav ── */}
           <div
             ref={scrollRef}
             className="flex-1 min-h-0 overflow-y-auto scrollbar-hidden"
+            style={{ paddingBottom: "calc(110px + env(safe-area-inset-bottom, 10px))" }}
           >
             <div className="min-h-full">
               {children}
             </div>
+          </div>
 
-            {/* ── Liquid Glass Nav ── */}
-            {activeTab && onTabChange && (
-              <div
-                className="sticky bottom-0 z-50 px-3 pointer-events-none"
-                style={{ paddingBottom: "max(10px, env(safe-area-inset-bottom, 10px))" }}
+          {/* ── Fixed Liquid Glass Nav ── */}
+          {activeTab && onTabChange && (
+            <div
+              className="fixed left-4 right-4 z-[1000] pointer-events-none"
+              style={{ bottom: "calc(10px + env(safe-area-inset-bottom, 10px))" }}
+            >
+              <nav
+                ref={barRef}
+                data-tutorial="tab-bar"
+                className="pointer-events-auto mx-auto max-w-md relative rounded-[30px] overflow-visible touch-none select-none"
+                style={{ height: "74px" }}
+                onPointerDown={handlePointerDown}
+                onPointerMove={handlePointerMove}
+                onPointerUp={handlePointerUp}
+                onPointerCancel={handlePointerCancel}
               >
-                <nav
-                  data-tutorial="tab-bar"
-                  className="pointer-events-auto mx-auto max-w-md relative rounded-[28px] overflow-visible touch-none select-none"
-                  style={{ height: "72px" }}
-                  onPointerDown={handlePointerDown}
-                  onPointerMove={handlePointerMove}
-                  onPointerUp={handlePointerUp}
-                  onPointerCancel={handlePointerCancel}
-                >
-                  {/* ═══ Layer 1: Glass body ═══ */}
-                  <div
-                    ref={navRef}
-                    className="absolute inset-0 rounded-[28px]"
-                    style={{
-                      background: "linear-gradient(180deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.06) 30%, rgba(255,255,255,0.04) 60%, rgba(255,255,255,0.03) 100%)",
-                      backdropFilter: "blur(28px) saturate(160%) brightness(104%)",
-                      WebkitBackdropFilter: "blur(28px) saturate(160%) brightness(104%)",
-                      border: "1px solid rgba(255,255,255,0.14)",
-                      boxShadow: [
-                        "0 14px 44px rgba(0,0,0,0.30)",
-                        "0 2px 8px rgba(0,0,0,0.14)",
-                        "inset 0 1px 0 rgba(255,255,255,0.18)",
-                        "inset 0 -1px 0 rgba(255,255,255,0.06)",
-                        "inset 0 0 24px rgba(255,255,255,0.03)",
-                      ].join(", "),
-                      transition: dragUI.pressed
-                        ? "box-shadow 120ms ease, border-color 120ms ease"
-                        : "box-shadow 280ms ease, border-color 280ms ease",
-                      borderColor: dragUI.pressed ? "rgba(255,255,255,0.18)" : "rgba(255,255,255,0.14)",
-                    }}
-                  />
+                {/* ═══ Glass surface ═══ */}
+                <div
+                  className="absolute inset-0 rounded-[30px]"
+                  style={{
+                    background: "linear-gradient(180deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.035) 100%)",
+                    backdropFilter: "blur(24px) saturate(150%)",
+                    WebkitBackdropFilter: "blur(24px) saturate(150%)",
+                    border: "1px solid rgba(255,255,255,0.12)",
+                    boxShadow: [
+                      "0 14px 38px rgba(0,0,0,0.28)",
+                      "inset 0 1px 0 rgba(255,255,255,0.14)",
+                    ].join(", "),
+                  }}
+                />
 
-                  {/* ═══ Layer 2: Refraction highlight — follows finger ═══ */}
-                  {dragUI.active && (
+                {/* ═══ Top highlight band ═══ */}
+                <div
+                  className="absolute top-0 left-[10%] right-[10%] h-[1px] rounded-full pointer-events-none"
+                  style={{
+                    background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.18) 30%, rgba(255,255,255,0.24) 50%, rgba(255,255,255,0.18) 70%, transparent)",
+                  }}
+                />
+
+                {/* ═══ Refraction highlight during drag ═══ */}
+                {dragUI.active && (
+                  <div className="absolute inset-0 rounded-[30px] pointer-events-none overflow-hidden" style={{ zIndex: 1 }}>
                     <div
-                      className="absolute inset-0 rounded-[28px] pointer-events-none overflow-hidden"
-                      style={{ zIndex: 1 }}
-                    >
-                      <div
-                        className="absolute top-0 h-full"
-                        style={{
-                          left: `${dragUI.highlightX * 100}%`,
-                          width: "120px",
-                          transform: "translateX(-50%)",
-                          background: "radial-gradient(ellipse at center, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.03) 40%, transparent 70%)",
-                          transition: "none",
-                        }}
-                      />
-                      {/* Prismatic edge shimmer */}
-                      <div
-                        className="absolute top-0 h-full"
-                        style={{
-                          left: `${dragUI.highlightX * 100 - 4}%`,
-                          width: "8px",
-                          background: "linear-gradient(180deg, rgba(180,160,255,0.12), rgba(120,200,255,0.08), rgba(180,160,255,0.12))",
-                          filter: "blur(3px)",
-                        }}
-                      />
-                      <div
-                        className="absolute top-0 h-full"
-                        style={{
-                          left: `${dragUI.highlightX * 100 + 4}%`,
-                          width: "8px",
-                          background: "linear-gradient(180deg, rgba(255,180,200,0.08), rgba(255,200,160,0.06), rgba(255,180,200,0.08))",
-                          filter: "blur(3px)",
-                        }}
-                      />
-                    </div>
-                  )}
-
-                  {/* ═══ Layer 3: Top highlight band ═══ */}
-                  <div
-                    className="absolute top-0 left-[8%] right-[8%] h-[1px] rounded-full pointer-events-none"
-                    style={{
-                      background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.20) 30%, rgba(255,255,255,0.28) 50%, rgba(255,255,255,0.20) 70%, transparent)",
-                    }}
-                  />
-
-                  {/* ── 5-column Grid ── */}
-                  <div
-                    className="relative z-10 grid h-full items-center px-1"
-                    style={{ gridTemplateColumns: "repeat(5, minmax(0, 1fr))" }}
-                  >
-                    <GridTab
-                      id="home" label="Accueil"
-                      activeTab={activeTab} onSwitch={switchTab}
-                      tabRefs={tabRefs} col={1}
-                      highlight={dragUI.active && dragUI.hoverTab === "home"}
-                    />
-                    <GridTab
-                      id="balances" label="Soldes"
-                      activeTab={activeTab} onSwitch={switchTab}
-                      tabRefs={tabRefs} col={2}
-                      highlight={dragUI.active && dragUI.hoverTab === "balances"}
-                    />
-                    {/* FAB */}
-                    <div className="flex items-center justify-center" style={{ gridColumn: 3 }}>
-                      <button
-                        onClick={handleFab}
-                        className="nav-fab group cursor-pointer relative -top-3"
-                        style={{ WebkitTapHighlightColor: "transparent" }}
-                        aria-label="Ajouter une dépense"
-                      >
-                        <div
-                          className="absolute -inset-3 rounded-full blur-xl nav-fab-glow pointer-events-none"
-                          style={{ background: "radial-gradient(circle, rgba(126,87,255,0.18) 0%, rgba(92,54,220,0.06) 60%, transparent 100%)" }}
-                        />
-                        <div
-                          className="relative w-[60px] h-[60px] rounded-full flex items-center justify-center transition-transform duration-[250ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] group-active:scale-[0.92]"
-                          style={{
-                            background: "radial-gradient(circle at 35% 25%, rgba(255,255,255,0.30), rgba(126,87,255,0.72) 40%, rgba(92,54,220,0.76) 100%)",
-                            backdropFilter: "blur(20px) saturate(180%)",
-                            WebkitBackdropFilter: "blur(20px) saturate(180%)",
-                            border: "1px solid rgba(255,255,255,0.22)",
-                            boxShadow: "0 10px 32px rgba(91,61,220,0.40), inset 0 1px 0 rgba(255,255,255,0.30), inset 0 -1px 0 rgba(0,0,0,0.10)",
-                          }}
-                        >
-                          <Plus size={22} strokeWidth={2.5} className="relative z-10 text-white" />
-                        </div>
-                      </button>
-                    </div>
-                    <GridTab
-                      id="history" label="Historique"
-                      activeTab={activeTab} onSwitch={switchTab}
-                      tabRefs={tabRefs} col={4}
-                      highlight={dragUI.active && dragUI.hoverTab === "history"}
-                    />
-                    <GridTab
-                      id="profile" label="Profil"
-                      activeTab={activeTab} onSwitch={switchTab}
-                      tabRefs={tabRefs} col={5}
-                      highlight={dragUI.active && dragUI.hoverTab === "profile"}
-                    />
-                  </div>
-
-                  {/* ── Active capsule pill ── */}
-                  {showPill.ready && (
-                    <div
-                      ref={pillRef}
-                      className={`absolute top-1/2 -translate-y-1/2 rounded-[16px] nav-pill pointer-events-none ${
-                        dragUI.active
-                          ? "transition-none"
-                          : "transition-all duration-[300ms] ease-[cubic-bezier(0.34,1.56,0.64,1)]"
-                      }`}
+                      className="absolute top-0 h-full"
                       style={{
-                        left: showPill.left,
-                        width: showPill.width,
-                        height: dragUI.active ? "36px" : "34px",
-                        background: dragUI.active
-                          ? "linear-gradient(180deg, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0.08) 100%)"
-                          : "rgba(255,255,255,0.09)",
-                        border: "1px solid rgba(255,255,255,0.10)",
-                        boxShadow: dragUI.active
-                          ? "inset 0 1px 0 rgba(255,255,255,0.16), inset 0 -1px 0 rgba(255,255,255,0.04), 0 6px 20px rgba(0,0,0,0.16)"
-                          : "inset 0 1px 0 rgba(255,255,255,0.12), 0 4px 14px rgba(0,0,0,0.12)",
+                        left: `${dragUI.highlightX * 100}%`,
+                        width: "100px",
+                        transform: "translateX(-50%)",
+                        background: "radial-gradient(ellipse at center, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 40%, transparent 70%)",
                       }}
                     />
-                  )}
-                </nav>
-              </div>
-            )}
-          </div>
+                  </div>
+                )}
+
+                {/* ═══ 5-column grid ═══ */}
+                <div
+                  ref={gridRef}
+                  className="relative z-10 grid h-full items-center"
+                  style={{ gridTemplateColumns: "repeat(5, minmax(0, 1fr))" }}
+                >
+                  {/* Col 1: Home */}
+                  <GridTab
+                    id="home" label="Accueil" col={1}
+                    activeTab={activeTab} onSwitch={switchTab}
+                    tabRefs={tabRefs}
+                    highlight={dragUI.active && dragUI.hoverTab === "home"}
+                  />
+                  {/* Col 2: Balances */}
+                  <GridTab
+                    id="balances" label="Soldes" col={2}
+                    activeTab={activeTab} onSwitch={switchTab}
+                    tabRefs={tabRefs}
+                    highlight={dragUI.active && dragUI.hoverTab === "balances"}
+                  />
+                  {/* Col 3: Add Expense FAB */}
+                  <div className="flex items-center justify-center" style={{ gridColumn: 3 }}>
+                    <button
+                      onClick={handleFab}
+                      className="nav-fab group cursor-pointer relative"
+                      style={{
+                        WebkitTapHighlightColor: "transparent",
+                        transform: "translateY(-18px)",
+                      }}
+                      aria-label="Ajouter une dépense"
+                    >
+                      {/* Glow */}
+                      <div
+                        className="absolute -inset-2.5 rounded-full blur-lg nav-fab-glow pointer-events-none"
+                        style={{ background: "radial-gradient(circle, rgba(126,87,255,0.16) 0%, rgba(92,54,220,0.04) 60%, transparent 100%)" }}
+                      />
+                      {/* Button body */}
+                      <div
+                        className="relative w-[62px] h-[62px] rounded-full flex items-center justify-center transition-transform duration-[220ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] group-active:scale-[0.92]"
+                        style={{
+                          background: "radial-gradient(circle at 35% 25%, rgba(255,255,255,0.28), rgba(126,87,255,0.70) 40%, rgba(92,54,220,0.74) 100%)",
+                          backdropFilter: "blur(18px) saturate(170%)",
+                          WebkitBackdropFilter: "blur(18px) saturate(170%)",
+                          border: "1px solid rgba(255,255,255,0.20)",
+                          boxShadow: "0 8px 28px rgba(91,61,220,0.38), inset 0 1px 0 rgba(255,255,255,0.26), inset 0 -1px 0 rgba(0,0,0,0.08)",
+                        }}
+                      >
+                        <Plus size={22} strokeWidth={2.4} className="relative z-10 text-white" />
+                      </div>
+                    </button>
+                  </div>
+                  {/* Col 4: History */}
+                  <GridTab
+                    id="history" label="Historique" col={4}
+                    activeTab={activeTab} onSwitch={switchTab}
+                    tabRefs={tabRefs}
+                    highlight={dragUI.active && dragUI.hoverTab === "history"}
+                  />
+                  {/* Col 5: Profile */}
+                  <GridTab
+                    id="profile" label="Profil" col={5}
+                    activeTab={activeTab} onSwitch={switchTab}
+                    tabRefs={tabRefs}
+                    highlight={dragUI.active && dragUI.hoverTab === "profile"}
+                  />
+                </div>
+
+                {/* ═══ Active indicator pill ═══ */}
+                {showPill.ready && (
+                  <div
+                    className={`absolute top-1/2 -translate-y-1/2 rounded-[18px] nav-pill pointer-events-none ${
+                      dragUI.active ? "transition-none" : "transition-all duration-[300ms] ease-[cubic-bezier(0.34,1.56,0.64,1)]"
+                    }`}
+                    style={{
+                      left: showPill.left,
+                      width: showPill.width,
+                      height: "36px",
+                      background: dragUI.active
+                        ? "linear-gradient(180deg, rgba(255,255,255,0.13) 0%, rgba(255,255,255,0.07) 100%)"
+                        : "rgba(255,255,255,0.08)",
+                      border: "1px solid rgba(255,255,255,0.08)",
+                      boxShadow: dragUI.active
+                        ? "inset 0 1px 0 rgba(255,255,255,0.14), 0 4px 16px rgba(0,0,0,0.14)"
+                        : "inset 0 1px 0 rgba(255,255,255,0.10), 0 4px 12px rgba(0,0,0,0.10)",
+                    }}
+                  />
+                )}
+              </nav>
+            </div>
+          )}
         </div>
       </TooltipProvider>
     </ErrorBoundary>
@@ -420,14 +372,13 @@ const AppShell = memo(({ children, activeTab, onTabChange, onAddExpense }: AppSh
 
 AppShell.displayName = "AppShell";
 
-// ── Grid tab button ──
+// ── Grid tab — explicit column placement ──
 const GridTab = memo(({
-  id, label, activeTab, onSwitch, tabRefs, col, highlight,
+  id, label, col, activeTab, onSwitch, tabRefs, highlight,
 }: {
-  id: Tab; label: string; activeTab: Tab;
-  onSwitch: (tab: Tab) => void;
+  id: Tab; label: string; col: number;
+  activeTab: Tab; onSwitch: (tab: Tab) => void;
   tabRefs: React.MutableRefObject<Map<Tab, HTMLDivElement>>;
-  col: number;
   highlight?: boolean;
 }) => {
   const isActive = activeTab === id;
@@ -440,21 +391,27 @@ const GridTab = memo(({
       className="flex items-center justify-center"
       style={{ gridColumn: col }}
     >
-      <div
-        className={`flex flex-col items-center justify-center gap-0.5 min-w-[50px] px-1 py-1 rounded-2xl transition-all duration-[180ms] ease-out select-none ${
-          lit ? "text-white" : "text-white/50"
-        }`}
-        style={{ WebkitTapHighlightColor: "transparent" }}
+      <button
+        onClick={() => onSwitch(id)}
+        aria-label={label}
+        className="flex flex-col items-center justify-center gap-1 min-w-[50px] px-1 py-1 cursor-pointer select-none"
+        style={{
+          WebkitTapHighlightColor: "transparent",
+          transition: "opacity 220ms ease, transform 220ms ease",
+        }}
       >
         <Icon
-          size={21}
+          size={22}
           strokeWidth={lit ? 2 : 1.5}
-          className={`transition-all duration-[180ms] ${lit ? "drop-shadow-[0_0_6px_rgba(128,80,240,0.50)]" : ""}`}
+          className={`transition-all duration-[220ms] ${lit ? "text-white drop-shadow-[0_0_5px_rgba(128,80,240,0.40)]" : "text-white/45"}`}
+          style={{ transition: "opacity 220ms ease, transform 220ms ease" }}
         />
-        <span className={`text-[10px] font-medium tracking-wide leading-none transition-opacity duration-[180ms] ${lit ? "opacity-100" : "opacity-50"}`}>
+        <span
+          className={`text-[11px] font-medium tracking-wide leading-none transition-opacity duration-[220ms] ${lit ? "text-white opacity-100" : "text-white/45 opacity-60"}`}
+        >
           {label}
         </span>
-      </div>
+      </button>
     </div>
   );
 });
