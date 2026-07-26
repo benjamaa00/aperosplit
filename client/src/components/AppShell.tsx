@@ -63,11 +63,11 @@ const AppShell = memo(({ children, activeTab, onTabChange, onAddExpense }: AppSh
     if (m) setPillStyle({ left: m.left, width: m.width, ready: true });
   }, [activeTab, dragUI.active, measurePill]);
 
-  useEffect(() => {
-    if (!drag.current.active) return;
+  const startDragLoop = useCallback(() => {
+    cancelAnimationFrame(rafRef.current);
     let alive = true;
     const tick = () => {
-      if (!alive) return;
+      if (!alive || !drag.current.active) return;
       const d = drag.current;
       d.currentX = lerp(d.currentX, d.targetX, 0.24);
       d.currentW = lerp(d.currentW, d.targetW, 0.24);
@@ -80,7 +80,7 @@ const AppShell = memo(({ children, activeTab, onTabChange, onAddExpense }: AppSh
     };
     rafRef.current = requestAnimationFrame(tick);
     return () => { alive = false; cancelAnimationFrame(rafRef.current); };
-  }, [dragUI.active]);
+  }, []);
 
   const switchTab = useCallback((tab: Tab) => {
     if (!onTabChange) return;
@@ -140,6 +140,8 @@ const AppShell = memo(({ children, activeTab, onTabChange, onAddExpense }: AppSh
     d.highlightX = x / br.width;
     d.targetHighlightX = x / br.width;
     d.hoveredTab = null;
+
+    startDragLoop();
 
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
   }, [getColumns, measurePill, activeTab]);
