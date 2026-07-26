@@ -69,7 +69,8 @@ export default function App() {
  const [completedPayments, setCompletedPayments] = useState<PendingPayment[]>([]);
  const [activeTab, setActiveTab] = useState<Tab>(() => {
  const saved = localStorage.getItem("equilibra_active_tab");
- return (saved === "home" || saved === "expenses" || saved === "balances" || saved === "stats" || saved === "profile" || saved === "history") ? saved : "home";
+ if (saved === "home" || saved === "balances" || saved === "history" || saved === "profile") return saved;
+ return "home";
  });
  const [showAddExpense, setShowAddExpense] = useState(false);
  const [duplicateFrom, setDuplicateFrom] = useState<Expense | null>(null);
@@ -919,7 +920,7 @@ export default function App() {
  const myBalance = balances[currentMemberId] || 0;
 
  content = (
- <AppShell activeTab={activeTab} onTabChange={setActiveTab}>
+ <AppShell activeTab={activeTab} onTabChange={setActiveTab} onAddExpense={() => setShowAddExpense(true)}>
  <div className="min-h-screen pb-24 scrollbar-hidden overflow-y-auto">
  {activeTab === "home" && <HomeTab key="home" currentMember={currentMember} balance={myBalance} totalSpent={totalSpent} expenseCount={expenses.length} recentExpenses={recentExpenses} members={members} pendingPayments={myPendingPayments} completedPayments={myCompletedPayments} onConfirmPayment={confirmPayment} onRefusePayment={refusePayment} onResentPayment={resentPayment} onConfirmReceipt={confirmReceipt} onReportNotReceived={reportNotReceived} onMarkAsPaid={markAsPaid} onCancelPaymentRequest={cancelPaymentRequest} expenses={expenses} monthlyBudget={monthlyBudget} currency={currency} onUpdateBudget={updateBudget} />}
  {activeTab === "expenses" && <ExpensesTab key="expenses" expenses={expenses} members={members} currentMemberId={currentMemberId} onDelete={deleteExpense} onAdd={() => { setDuplicateFrom(null); setShowAddExpense(true); }} onDuplicate={(exp) => { setDuplicateFrom(exp); setShowAddExpense(true); }} onRequestPayment={requestPayment} onRequestGroupPayment={requestGroupPayment} currency={currency} pendingPayments={pendingPayments} completedPayments={completedPayments} categories={getCategoriesQuery.data?.categories || []} />}
@@ -927,13 +928,6 @@ export default function App() {
  {activeTab === "history" && <Suspense key="history" fallback={<TabContentSkeleton />}><PaymentHistory payments={[...completedPayments, ...pendingPayments].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))} expenses={expenses} members={members} currentMemberId={currentMemberId} currency={currency} onConfirmPayment={confirmPayment} onRefusePayment={refusePayment} onResentPayment={resentPayment} onConfirmReceipt={confirmReceipt} onReportNotReceived={reportNotReceived} onMarkAsPaid={markAsPaid} onCancelPayment={cancelPaymentRequest} /></Suspense>}
  {activeTab === "stats" && <ErrorBoundary><StatsTab key="stats" expenses={expenses} members={members} currentMemberId={currentMemberId} pendingPayments={pendingPayments} completedPayments={completedPayments} monthlyBudget={monthlyBudget} currency={currency} categories={getCategoriesQuery.data?.categories || []} /></ErrorBoundary>}
  {activeTab === "profile" && <ProfileTab key="profile" currentMember={currentMember} members={members} biometricEnabled={!!biometricEnabled[currentMemberId]} biometricAvailable={biometricAvailable} onToggleBiometric={toggleBiometric} onLogout={handleLogout} onRemoveMember={removeMember} isLocked={!!localStorage.getItem("equilibra_locked_member")} unreadCount={unreadCount} onOpenNotifications={goToNotifications} onOpenReports={goToReports} onOpenGroupSettings={goToGroupSettings} onOpenMembers={goToMembers} onOpenAppearance={goToAppearance} onOpenEditProfile={goToEditProfile} onOpenCategories={goToCategories} onResetAllData={handleResetAllData} onLeaveGroup={leaveGroup} currency={currency} onSetCurrency={updateCurrency} monthlyBudget={monthlyBudget} onSetBudget={updateBudget} pushNotifications={pushNotifications} onTogglePushNotifications={togglePushNotifications} autoReminders={autoReminders} onToggleReminders={toggleAutoReminders} reminderDelay={reminderDelay} onSetReminderDelay={(d: number) => setReminderDelay(d)} privacyMode={privacyMode} onTogglePrivacy={togglePrivacy} onReplayTutorial={(id) => setActiveTutorial(id)} />}
-
- {/* Floating Add Button */}
- {activeTab === "expenses" && (
- <button data-tutorial="add-expense-btn" onClick={() => setShowAddExpense(true)} className="fixed bottom-20 right-4 z-50 w-14 h-14 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg shadow-primary/30">
- <Plus size={24} />
- </button>
- )}
 
  {showAddExpense && <ErrorBoundary><AddExpenseSheet members={members} currentMemberId={currentMemberId} onAdd={(e) => { addExpense(e); setShowAddExpense(false); setDuplicateFrom(null); }} onClose={() => { setShowAddExpense(false); setDuplicateFrom(null); }} currency={currency} categories={getCategoriesQuery.data?.categories || []} duplicateFrom={duplicateFrom} allExpenses={expenses} /></ErrorBoundary>}
  </div>
