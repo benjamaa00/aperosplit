@@ -921,7 +921,7 @@ export default function App() {
  const myBalance = balances[currentMemberId] || 0;
 
  content = (
-   <AppShell activeTab={activeTab} onTabChange={setActiveTab}>
+   <AppShell activeTab={activeTab} onTabChange={setActiveTab} onAddExpense={() => setShowAddExpense(true)}>
   <div key={`tab-anim-${activeTab}`} className="tab-content-animate">
   {activeTab === "home" && <HomeTab key="home" currentMember={currentMember} balance={myBalance} totalSpent={totalSpent} expenseCount={expenses.length} recentExpenses={recentExpenses} members={members} pendingPayments={myPendingPayments} completedPayments={myCompletedPayments} onConfirmPayment={confirmPayment} onRefusePayment={refusePayment} onResentPayment={resentPayment} onConfirmReceipt={confirmReceipt} onReportNotReceived={reportNotReceived} onMarkAsPaid={markAsPaid} onCancelPaymentRequest={cancelPaymentRequest} expenses={expenses} monthlyBudget={monthlyBudget} currency={currency} onUpdateBudget={updateBudget} />}
   {activeTab === "expenses" && <ExpensesTab key="expenses" expenses={expenses} members={members} currentMemberId={currentMemberId} onDelete={deleteExpense} onAdd={() => { setDuplicateFrom(null); setShowAddExpense(true); }} onDuplicate={(exp) => { setDuplicateFrom(exp); setShowAddExpense(true); }} onRequestPayment={requestPayment} onRequestGroupPayment={requestGroupPayment} currency={currency} pendingPayments={pendingPayments} completedPayments={completedPayments} categories={getCategoriesQuery.data?.categories || []} />}

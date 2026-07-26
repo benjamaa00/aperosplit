@@ -1,5 +1,5 @@
 import { memo, useRef, useEffect, useState, useCallback, type ReactNode } from "react";
-import { Home, Scale, MessageCircle, User, type LucideIcon } from "lucide-react";
+import { Home, Scale, MessageCircle, User, Plus, type LucideIcon } from "lucide-react";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { haptics } from "../utils/haptics";
@@ -21,17 +21,19 @@ interface AppShellProps {
   children: ReactNode;
   activeTab?: Tab;
   onTabChange?: (tab: Tab) => void;
+  onAddExpense?: () => void;
 }
 
 function clamp(v: number, min: number, max: number) { return v < min ? min : v > max ? max : v; }
 function lerp(a: number, b: number, t: number) { return a + (b - a) * t; }
 
-const AppShell = memo(({ children, activeTab, onTabChange }: AppShellProps) => {
+const AppShell = memo(({ children, activeTab, onTabChange, onAddExpense }: AppShellProps) => {
   const tabRefs = useRef<Map<Tab, HTMLDivElement>>(new Map());
   const barRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const rafRef = useRef<number>(0);
-  const [pillStyle, setPillStyle] = useState({ left: 0, width: 0, ready: true });
+  const [navHidden, setNavHidden] = useState(false);
+  const [pillStyle, setPillStyle] = useState({ left: 0, width: 0, ready: false });
 
   const drag = useRef({
     active: false,
@@ -103,10 +105,17 @@ const AppShell = memo(({ children, activeTab, onTabChange }: AppShellProps) => {
 
   const switchTab = useCallback((tab: Tab) => {
     if (!onTabChange) return;
+    setNavHidden(false);
     haptics.light();
     onTabChange(tab);
     scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
   }, [onTabChange]);
+
+  const handleFab = useCallback(() => {
+    haptics.medium();
+    setNavHidden(true);
+    onAddExpense?.();
+  }, [onAddExpense]);
 
   const getColumns = useCallback(() => {
     const bar = barRef.current;
@@ -133,6 +142,8 @@ const AppShell = memo(({ children, activeTab, onTabChange }: AppShellProps) => {
 
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
     if (e.button !== 0) return;
+    const t = e.target as HTMLElement;
+    if (t.closest(".nav-fab")) return;
     const bar = barRef.current;
     if (!bar) return;
     const br = bar.getBoundingClientRect();
@@ -241,8 +252,8 @@ const AppShell = memo(({ children, activeTab, onTabChange }: AppShellProps) => {
 
           {activeTab && onTabChange && <div className="bottom-nav-scroll-edge" />}
 
-          {/* ── Liquid Glass Nav ── */}
-          {activeTab && onTabChange && (
+          {/* ── Liquid Glass Nav with Notch + FAB ── */}
+          {activeTab && onTabChange && !navHidden && (
             <nav
               ref={barRef}
               data-tutorial="tab-bar"
@@ -252,6 +263,32 @@ const AppShell = memo(({ children, activeTab, onTabChange }: AppShellProps) => {
               onPointerUp={handlePointerUp}
               onPointerCancel={handlePointerCancel}
             >
+              {/* Concave notch overlay */}
+              <div className="bottom-nav-notch" />
+
+              {/* FAB button */}
+              <button
+                onClick={handleFab}
+                className="nav-fab group cursor-pointer"
+                aria-label="Ajouter une dépense"
+              >
+                <div
+                  className="absolute -inset-3 rounded-full blur-xl nav-fab-glow pointer-events-none"
+                  style={{ background: "radial-gradient(circle, rgba(126,87,255,0.22) 0%, rgba(92,54,220,0.06) 60%, transparent 100%)" }}
+                />
+                <div
+                  className="relative w-[56px] h-[56px] rounded-full flex items-center justify-center transition-transform duration-[200ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] group-active:scale-[0.88]"
+                  style={{
+                    background: "radial-gradient(circle at 35% 25%, rgba(255,255,255,0.30), rgba(126,87,255,0.72) 40%, rgba(88,50,200,0.78) 100%)",
+                    backdropFilter: "blur(20px) saturate(190%)",
+                    WebkitBackdropFilter: "blur(20px) saturate(190%)",
+                    border: "1px solid rgba(255,255,255,0.22)",
+                    boxShadow: "0 10px 32px rgba(91,61,220,0.40), inset 0 1px 0 rgba(255,255,255,0.28), inset 0 -1px 0 rgba(0,0,0,0.08)",
+                  }}
+                >
+                  <Plus size={22} strokeWidth={2.4} className="relative z-10 text-white" />
+                </div>
+              </button>
               {/* Content grid */}
               <div className="bottom-nav-content" style={{ height: "100%" }}>
                 {NAV_TABS.map((tab, i) => (

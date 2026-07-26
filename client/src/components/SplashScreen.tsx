@@ -7,18 +7,20 @@ const FADE_END = 5.4;
 export const SplashScreen = memo(function SplashScreen({ onComplete }: { onComplete: () => void }) {
   const [brandVisible, setBrandVisible] = useState(false);
   const [brandFading, setBrandFading] = useState(false);
+  const [exiting, setExiting] = useState(false);
   const onCompleteRef = useRef(onComplete);
   onCompleteRef.current = onComplete;
 
   useEffect(() => {
     const t1 = setTimeout(() => setBrandVisible(true), 3200);
     const t2 = setTimeout(() => setBrandFading(true), FADE_START * 1000);
-    const t3 = setTimeout(() => onCompleteRef.current(), SPLASH_DURATION + 100);
-    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
+    const t3 = setTimeout(() => setExiting(true), FADE_END * 1000);
+    const t4 = setTimeout(() => onCompleteRef.current(), SPLASH_DURATION + 100);
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4); };
   }, []);
 
   return (
-    <div className="apple-splash" style={{ background: "#000000" }}>
+    <div className={`apple-splash ${exiting ? "apple-splash-fading" : ""}`} style={{ background: "#000000" }}>
       <SplashCanvas />
       <div className={`apple-splash-brand ${brandVisible ? "visible" : ""} ${brandFading ? "fading" : ""}`}>
         <div className="apple-splash-logo-text">AperoSplit</div>
