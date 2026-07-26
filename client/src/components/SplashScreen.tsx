@@ -54,6 +54,7 @@ function SplashCanvas() {
     let alive = true;
     let raf = 0;
 
+    // ── Math helpers ──
     function clamp01(v: number) { return v < 0 ? 0 : v > 1 ? 1 : v; }
     function lerp(a: number, b: number, t: number) { return a + (b - a) * clamp01(t); }
     function easeOutCubic(t: number) { const c = 1 - t; return 1 - c * c * c; }
@@ -66,46 +67,54 @@ function SplashCanvas() {
     }
 
     const rgb = (c: number[]) => `${c[0]},${c[1]},${c[2]}`;
-    function rgbMix(a: number[], b: number[], t: number) {
-      return `${Math.round(a[0] + (b[0] - a[0]) * t)},${Math.round(a[1] + (b[1] - a[1]) * t)},${Math.round(a[2] + (b[2] - a[2]) * t)}`;
-    }
 
-    // ── Logo palette — premium, well-edited luminosity ──
+    // ── Sphere radius: ~50% viewport width ──
+    const R = Math.min(W, H) * 0.12;
+    const LOGO_GAP = R * 0.76; // ~24% overlap
+
+    // ── LEFT SPHERE — Deep luminous violet ──
     const LEFT = {
-      body0: [162, 122, 255],   // center — bright luminous violet
-      body1: [134, 85, 255],    // 32% — rich violet
-      body2: [112, 62, 248],    // 68% — deep saturated
-      body3: [95, 48, 230],     // 88% — edge approach
-      edge:  [120, 90, 255],    // 100% — edge fade
-      deep:  [88, 44, 228],     // glow deep
-      mid:   [120, 78, 252],    // glow mid
-      light: [150, 115, 255],   // highlight — luminous
-      pale:  [192, 175, 255],   // pale lavender
+      c0: [168, 130, 255],   // center bright
+      c1: [145, 100, 255],   // inner
+      c2: [125, 78, 252],    // mid-inner
+      c3: [110, 60, 245],    // mid
+      c4: [98, 48, 235],     // mid-outer
+      c5: [88, 40, 225],     // outer
+      edge: [78, 35, 210],   // rim
+      glowInner: [135, 95, 255],
+      glowMid: [110, 70, 248],
+      glowOuter: [85, 45, 225],
+      highlight: [185, 160, 255],
+      subsurface: [170, 140, 255],
     };
+
+    // ── RIGHT SPHERE — Pale lavender-white, frosted glass ──
     const RIGHT = {
-      body0: [248, 245, 255],   // center — clean lavender-white
-      body1: [238, 233, 255],   // 34% — bright
-      body2: [220, 210, 255],   // 67% — warm lavender
-      body3: [198, 185, 250],   // 88% — edge approach
-      edge:  [208, 196, 255],   // 100% — edge fade
-      deep:  [185, 168, 245],   // glow deep
-      mid:   [218, 210, 255],   // glow mid
-      light: [235, 230, 255],   // highlight
-      pale:  [250, 248, 255],   // near-white
+      c0: [250, 247, 255],   // center: near-white with lavender
+      c1: [242, 238, 255],   // inner: bright
+      c2: [232, 225, 255],   // mid-inner: warm lavender
+      c3: [222, 213, 255],   // mid: lavender
+      c4: [210, 198, 252],   // mid-outer: deeper lavender
+      c5: [198, 185, 250],   // outer: soft
+      edge: [188, 175, 248], // rim: clearly violet-tinted
+      glowInner: [225, 218, 255],
+      glowMid: [210, 200, 252],
+      glowOuter: [190, 178, 248],
+      highlight: [248, 246, 255],
+      subsurface: [235, 228, 255],
     };
 
-    const R = 40;
-    const LOGO_GAP = 30;
-
-    // ── Background gradient (spec §2) ──
+    // ── Background — very dark with subtle atmospheric center ──
     function drawBackground(alpha: number) {
-      // Base fill
       ctx.globalAlpha = alpha;
       ctx.globalCompositeOperation = "source-over";
-      const bg = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(W, H) * 0.7);
-      bg.addColorStop(0, "#0B0B12");
-      bg.addColorStop(0.35, "#090910");
-      bg.addColorStop(0.65, "#070709");
+
+      // Base fill
+      const bg = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(W, H) * 0.72);
+      bg.addColorStop(0, "#0C0C14");
+      bg.addColorStop(0.25, "#0A0A11");
+      bg.addColorStop(0.50, "#08080D");
+      bg.addColorStop(0.75, "#060609");
       bg.addColorStop(1, "#050507");
       ctx.fillStyle = bg;
       ctx.fillRect(0, 0, W, H);
@@ -113,17 +122,7 @@ function SplashCanvas() {
     }
 
     // ══════════════════════════════════════════════════════════════
-    //  CHOREOGRAPHY (5.4s total)
-    //
-    //  0.00 – 0.70s   Single orb materializes
-    //  0.70 – 1.20s   Orb breathes, energy builds
-    //  1.20 – 1.65s   Orb stretches horizontally (pre-split)
-    //  1.65 – 2.10s   MITOSIS — splits into two, bright flash
-    //  2.10 – 2.60s   Two orbs drift apart
-    //  2.60 – 3.30s   Orbs slide inward — 25% overlap
-    //  3.30 – 3.80s   Logo hold: divider line, gentle breathing
-    //  3.80 – 4.40s   Logo perfectly still (frozen)
-    //  4.40 – 5.40s   Canvas fade to dark
+    //  CHOREOGRAPHY (5.4s)
     // ══════════════════════════════════════════════════════════════
 
     function draw(now: number) {
@@ -147,13 +146,12 @@ function SplashCanvas() {
         o1a = 1; o1s = 1 + breath; o2a = 0; o2s = 0;
       } else if (t < 1.65) {
         const sp = easeInOutCubic(clamp01((t - 1.20) / 0.45));
-        o1a = 1; o1s = 1;
-        o2a = 0; o2s = 0;
+        o1a = 1; o1s = 1; o2a = 0; o2s = 0;
         stretchXS = 1 + sp * 0.45;
         stretchYS = 1 - sp * 0.12;
       } else if (t < 2.10) {
         const mp = clamp01((t - 1.65) / 0.40);
-        const dist = easeOutCubic(mp) * 85;
+        const dist = easeOutCubic(mp) * R * 2.1;
         o1a = 1; o1s = 1;
         o2a = easeOutCubic(clamp01((t - 1.65) / 0.30));
         o2s = o2a;
@@ -161,20 +159,20 @@ function SplashCanvas() {
         o2x = cx + dist; o2y = cy;
       } else if (t < 2.60) {
         const dp = clamp01((t - 2.10) / 0.50);
-        const drift = lerp(85, 90, easeOutCubic(dp));
+        const drift = lerp(R * 2.1, R * 2.2, easeOutCubic(dp));
         o1a = 1; o1s = 1; o2a = 1; o2s = 1;
         o1x = cx - drift; o1y = cy;
         o2x = cx + drift; o2y = cy;
       } else if (t < 3.30) {
         const rp = clamp01((t - 2.60) / 0.65);
         const rEase = springClamp(rp, 0.6, 2);
-        const gap = lerp(90, LOGO_GAP, rEase);
+        const gap = lerp(R * 2.2, LOGO_GAP, rEase);
         o1a = 1; o1s = 1; o2a = 1; o2s = 1;
         o1x = cx - gap; o1y = cy;
         o2x = cx + gap; o2y = cy;
       } else if (t < 3.80) {
         const hold = t - 3.30;
-        const sp = 1 + Math.sin(hold * 2.2) * 0.015;
+        const sp = 1 + Math.sin(hold * 2.2) * 0.012;
         o1a = 1; o1s = sp; o2a = 1; o2s = sp;
         o1x = cx - LOGO_GAP; o1y = cy;
         o2x = cx + LOGO_GAP; o2y = cy;
@@ -189,10 +187,10 @@ function SplashCanvas() {
       }
 
       // ══════════════════════════════════════════════════════════════
-      //  SPHERE RENDERING — Premium optical glass (spec §5, §6, §7, §8, §10, §11)
+      //  SPHERE RENDERING — Premium frosted optical glass
       //
-      //  No particles, no small specular dots, no texture noise.
-      //  Large diffused highlights only. Clean anti-aliased edges.
+      //  8-stop body gradient, broad diffused highlight,
+      //  controlled 3-zone glow, minimal rim.
       // ══════════════════════════════════════════════════════════════
 
       const drawSphere = (
@@ -205,117 +203,121 @@ function SplashCanvas() {
         ctx.translate(ox, oy);
         ctx.scale(sx * scale, sy * scale);
 
-        // ── GLOW ZONE A: Close glow — rich, luminous ──
+        // ── GLOW ZONE C: Ambient glow (wide, very soft) ──
         ctx.globalCompositeOperation = "lighter";
-        ctx.globalAlpha = alpha * 0.26;
-        const closeGlow = ctx.createRadialGradient(0, 0, r * 0.45, 0, 0, r * 1.12);
-        closeGlow.addColorStop(0, `rgba(${rgb(pal.mid)},0.40)`);
-        closeGlow.addColorStop(0.5, `rgba(${rgb(pal.deep)},0.14)`);
-        closeGlow.addColorStop(1, `rgba(${rgb(pal.deep)},0)`);
-        ctx.fillStyle = closeGlow;
+        ctx.globalAlpha = alpha * 0.06;
+        const ambGlow = ctx.createRadialGradient(0, 0, R * 0.6, 0, 0, R * 2.8);
+        ambGlow.addColorStop(0, `rgba(${rgb(pal.glowInner)},0.10)`);
+        ambGlow.addColorStop(0.5, `rgba(${rgb(pal.glowOuter)},0.03)`);
+        ambGlow.addColorStop(1, `rgba(${rgb(pal.glowOuter)},0)`);
+        ctx.fillStyle = ambGlow;
         ctx.beginPath();
-        ctx.arc(0, 0, r * 1.12, 0, Math.PI * 2);
+        ctx.arc(0, 0, R * 2.8, 0, Math.PI * 2);
         ctx.fill();
 
-        // ── GLOW ZONE B: Medium glow — soft atmospheric ──
-        ctx.globalAlpha = alpha * 0.12;
-        const midGlow = ctx.createRadialGradient(0, 0, r * 0.75, 0, 0, r * 1.5);
-        midGlow.addColorStop(0, `rgba(${rgb(pal.mid)},0.20)`);
-        midGlow.addColorStop(0.5, `rgba(${rgb(pal.deep)},0.07)`);
-        midGlow.addColorStop(1, `rgba(${rgb(pal.deep)},0)`);
+        // ── GLOW ZONE B: Medium glow ──
+        ctx.globalAlpha = alpha * 0.14;
+        const midGlow = ctx.createRadialGradient(0, 0, R * 0.4, 0, 0, R * 1.5);
+        midGlow.addColorStop(0, `rgba(${rgb(pal.glowMid)},0.20)`);
+        midGlow.addColorStop(0.5, `rgba(${rgb(pal.glowOuter)},0.07)`);
+        midGlow.addColorStop(1, `rgba(${rgb(pal.glowOuter)},0)`);
         ctx.fillStyle = midGlow;
         ctx.beginPath();
-        ctx.arc(0, 0, r * 1.5, 0, Math.PI * 2);
+        ctx.arc(0, 0, R * 1.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // ── GLOW ZONE A: Close glow (tight, luminous) ──
+        ctx.globalAlpha = alpha * 0.22;
+        const closeGlow = ctx.createRadialGradient(0, 0, R * 0.35, 0, 0, R * 1.10);
+        closeGlow.addColorStop(0, `rgba(${rgb(pal.glowInner)},0.32)`);
+        closeGlow.addColorStop(0.5, `rgba(${rgb(pal.glowMid)},0.12)`);
+        closeGlow.addColorStop(1, `rgba(${rgb(pal.glowOuter)},0)`);
+        ctx.fillStyle = closeGlow;
+        ctx.beginPath();
+        ctx.arc(0, 0, R * 1.10, 0, Math.PI * 2);
         ctx.fill();
 
         ctx.globalCompositeOperation = "source-over";
 
-        // ── GLASS BODY — premium multi-stop radial ──
+        // ── GLASS BODY — 8-stop radial, smooth & full ──
         ctx.globalAlpha = alpha;
-        const body = ctx.createRadialGradient(
-          -r * 0.06, -r * 0.06, 0,
-          0, 0, r
-        );
-        body.addColorStop(0, `rgba(${rgb(pal.body0)},0.97)`);
-        body.addColorStop(0.25, `rgba(${rgb(pal.body1)},0.95)`);
-        body.addColorStop(0.50, `rgba(${rgb(pal.body2)},0.93)`);
-        body.addColorStop(0.75, `rgba(${rgb(pal.body3)},0.85)`);
-        body.addColorStop(0.90, `rgba(${rgb(pal.edge)},0.45)`);
-        body.addColorStop(1, `rgba(${rgb(pal.edge)},0.08)`);
+        const body = ctx.createRadialGradient(-R * 0.05, -R * 0.05, 0, 0, 0, R);
+        body.addColorStop(0.00, `rgba(${rgb(pal.c0)},0.98)`);
+        body.addColorStop(0.15, `rgba(${rgb(pal.c1)},0.97)`);
+        body.addColorStop(0.30, `rgba(${rgb(pal.c2)},0.95)`);
+        body.addColorStop(0.48, `rgba(${rgb(pal.c3)},0.93)`);
+        body.addColorStop(0.65, `rgba(${rgb(pal.c4)},0.88)`);
+        body.addColorStop(0.80, `rgba(${rgb(pal.c5)},0.70)`);
+        body.addColorStop(0.92, `rgba(${rgb(pal.edge)},0.35)`);
+        body.addColorStop(1.00, `rgba(${rgb(pal.edge)},0.06)`);
         ctx.fillStyle = body;
         ctx.beginPath();
-        ctx.arc(0, 0, r, 0, Math.PI * 2);
+        ctx.arc(0, 0, R, 0, Math.PI * 2);
         ctx.fill();
 
-        // ── BROAD DIFFUSED HIGHLIGHT — large, luminous, upper-left ──
+        // ── BROAD DIFFUSED HIGHLIGHT — upper-left, ~40% coverage ──
         ctx.globalCompositeOperation = "lighter";
-        ctx.globalAlpha = alpha * 0.42;
-        const diffusedHL = ctx.createRadialGradient(
-          -r * 0.26, -r * 0.30, 0,
-          -r * 0.14, -r * 0.16, r * 0.45
-        );
-        diffusedHL.addColorStop(0, "rgba(255,255,255,0.45)");
-        diffusedHL.addColorStop(0.25, `rgba(${rgb(pal.pale)},0.26)`);
-        diffusedHL.addColorStop(0.55, `rgba(${rgb(pal.light)},0.08)`);
-        diffusedHL.addColorStop(1, `rgba(${rgb(pal.deep)},0)`);
-        ctx.fillStyle = diffusedHL;
+        ctx.globalAlpha = alpha * 0.40;
+        const hl = ctx.createRadialGradient(-R * 0.25, -R * 0.28, 0, -R * 0.12, -R * 0.14, R * 0.44);
+        hl.addColorStop(0.00, "rgba(255,255,255,0.44)");
+        hl.addColorStop(0.20, `rgba(${rgb(pal.highlight)},0.28)`);
+        hl.addColorStop(0.50, `rgba(${rgb(pal.highlight)},0.10)`);
+        hl.addColorStop(0.80, `rgba(${rgb(pal.glowInner)},0.03)`);
+        hl.addColorStop(1.00, `rgba(${rgb(pal.glowOuter)},0)`);
+        ctx.fillStyle = hl;
         ctx.beginPath();
-        ctx.arc(-r * 0.18, -r * 0.20, r * 0.45, 0, Math.PI * 2);
+        ctx.arc(-R * 0.16, -R * 0.18, R * 0.44, 0, Math.PI * 2);
         ctx.fill();
 
-        // ── LOWER SUBSURFACE LIFT — warm inner glow ──
+        // ── LOWER SUBSURFACE LIFT — soft warmth from below ──
         ctx.globalCompositeOperation = "lighter";
-        ctx.globalAlpha = alpha * 0.14;
-        const sss = ctx.createRadialGradient(
-          r * 0.10, r * 0.12, 0,
-          r * 0.06, r * 0.08, r * 0.52
-        );
-        sss.addColorStop(0, `rgba(${rgb(pal.pale)},0.35)`);
-        sss.addColorStop(0.45, `rgba(${rgb(pal.light)},0.12)`);
-        sss.addColorStop(1, `rgba(${rgb(pal.deep)},0)`);
+        ctx.globalAlpha = alpha * 0.12;
+        const sss = ctx.createRadialGradient(R * 0.08, R * 0.10, 0, R * 0.05, R * 0.07, R * 0.50);
+        sss.addColorStop(0, `rgba(${rgb(pal.subsurface)},0.30)`);
+        sss.addColorStop(0.45, `rgba(${rgb(pal.glowInner)},0.10)`);
+        sss.addColorStop(1, `rgba(${rgb(pal.glowOuter)},0)`);
         ctx.fillStyle = sss;
         ctx.beginPath();
-        ctx.arc(r * 0.06, r * 0.08, r * 0.52, 0, Math.PI * 2);
+        ctx.arc(R * 0.05, R * 0.07, R * 0.50, 0, Math.PI * 2);
         ctx.fill();
 
-        // ── RIM LIGHT — minimal, 0.5-0.8px, 6-10% opacity (spec §8) ──
+        // ── RIM — very thin, 0.7px, minimal ──
         ctx.globalCompositeOperation = "source-over";
-        ctx.globalAlpha = alpha * 0.07;
-        ctx.strokeStyle = `rgba(${rgb(pal.pale)},0.25)`;
+        ctx.globalAlpha = alpha * 0.06;
+        ctx.strokeStyle = `rgba(${rgb(pal.highlight)},0.22)`;
         ctx.lineWidth = 0.7;
         ctx.beginPath();
-        ctx.arc(0, 0, r * 0.97, 0, Math.PI * 2);
+        ctx.arc(0, 0, R * 0.97, 0, Math.PI * 2);
         ctx.stroke();
 
         ctx.restore();
       };
 
-      const r = R;
-
-      // Draw spheres
+      // Draw both spheres
       drawSphere(o1x, o1y, o1s, o1a, stretchXS, stretchYS, LEFT);
       drawSphere(o2x, o2y, o2s, o2a, 1, 1, RIGHT);
 
       // ══════════════════════════════════════════════════════════════
-      //  AMBIENT BACKGROUND GLOW — subtle atmospheric depth (spec §2, §14)
+      //  AMBIENT ATMOSPHERE — subtle violet wash behind composition
       // ══════════════════════════════════════════════════════════════
-      if (o1a > 0.3 || o2a > 0.3) {
+      if (o1a > 0.3 && o2a > 0.3) {
         ctx.save();
         ctx.globalCompositeOperation = "lighter";
-        ctx.globalAlpha = Math.min(o1a, o2a) * 0.08 * globalFade;
-        const atmoGlow = ctx.createRadialGradient(cx, cy, R * 0.5, cx, cy, R * 3.5);
-        atmoGlow.addColorStop(0, `rgba(130,100,240,0.18)`);
-        atmoGlow.addColorStop(0.4, `rgba(100,70,220,0.06)`);
-        atmoGlow.addColorStop(1, `rgba(80,50,200,0)`);
-        ctx.fillStyle = atmoGlow;
+        ctx.globalAlpha = Math.min(o1a, o2a) * 0.10 * globalFade;
+        const atmo = ctx.createRadialGradient(cx, cy, R * 0.4, cx, cy, R * 4.0);
+        atmo.addColorStop(0, "rgba(120,90,230,0.15)");
+        atmo.addColorStop(0.35, "rgba(100,70,220,0.06)");
+        atmo.addColorStop(0.7, "rgba(80,50,200,0.02)");
+        atmo.addColorStop(1, "rgba(60,40,180,0)");
+        ctx.fillStyle = atmo;
         ctx.beginPath();
-        ctx.arc(cx, cy, R * 3.5, 0, Math.PI * 2);
+        ctx.arc(cx, cy, R * 4.0, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
       }
 
       // ══════════════════════════════════════════════════════════════
-      //  INTERSECTION — vesica piscis, wide soft lavender (spec §9)
+      //  INTERSECTION — vesica piscis, violet-dominant
       // ══════════════════════════════════════════════════════════════
       if (o1a > 0.4 && o2a > 0.4) {
         const halfDist = Math.abs(o2x - o1x) / 2;
@@ -327,55 +329,57 @@ function SplashCanvas() {
             const intY = cy;
             const blendA = Math.min(o1a, o2a) * globalFade;
 
-            // ── Merged glow around intersection — violet-dominant ──
+            // ── Merged glow — violet-dominant ──
             ctx.save();
             ctx.globalCompositeOperation = "lighter";
-            ctx.globalAlpha = blendA * overlapRatio * 0.26;
-            const mergeGlow = ctx.createRadialGradient(intX, intY, 0, intX, intY, R * 3.5);
-            mergeGlow.addColorStop(0, `rgba(190,165,255,0.48)`);
-            mergeGlow.addColorStop(0.2, `rgba(160,130,255,0.28)`);
-            mergeGlow.addColorStop(0.45, `rgba(${rgb(LEFT.mid)},0.12)`);
-            mergeGlow.addColorStop(0.7, `rgba(${rgb(LEFT.deep)},0.04)`);
-            mergeGlow.addColorStop(1, `rgba(${rgb(LEFT.deep)},0)`);
-            ctx.fillStyle = mergeGlow;
+            ctx.globalAlpha = blendA * overlapRatio * 0.24;
+            const mg = ctx.createRadialGradient(intX, intY, 0, intX, intY, R * 3.2);
+            mg.addColorStop(0, "rgba(175,150,255,0.42)");
+            mg.addColorStop(0.20, "rgba(155,128,252,0.24)");
+            mg.addColorStop(0.45, "rgba(130,100,248,0.10)");
+            mg.addColorStop(0.70, `rgba(${rgb(LEFT.glowOuter)},0.03)`);
+            mg.addColorStop(1, `rgba(${rgb(LEFT.glowOuter)},0)`);
+            ctx.fillStyle = mg;
             ctx.beginPath();
-            ctx.arc(intX, intY, R * 3.5, 0, Math.PI * 2);
+            ctx.arc(intX, intY, R * 3.2, 0, Math.PI * 2);
             ctx.fill();
             ctx.restore();
 
-            // ── Intersection body — vesica piscis clip, violet-dominant ──
+            // ── Intersection body — vesica piscis clip ──
             ctx.save();
+            const acosVal = Math.acos(clamp01(halfDist / R));
             ctx.beginPath();
-            ctx.arc(o1x, o1y, R, -Math.acos(clamp01(halfDist / R)), Math.acos(clamp01(halfDist / R)));
-            ctx.arc(o2x, o2y, R, Math.PI - Math.acos(clamp01(halfDist / R)), Math.PI + Math.acos(clamp01(halfDist / R)));
+            ctx.arc(o1x, o1y, R, -acosVal, acosVal);
+            ctx.arc(o2x, o2y, R, Math.PI - acosVal, Math.PI + acosVal);
             ctx.closePath();
             ctx.clip();
 
-            // Horizontal optical gradient — violet dominates center
-            const intGradW = overlapHalf * 2;
-            const intGrad = ctx.createLinearGradient(intX - intGradW / 2, intY, intX + intGradW / 2, intY);
-            intGrad.addColorStop(0, "rgba(158,130,255,0.72)");
-            intGrad.addColorStop(0.2, "rgba(175,150,255,0.78)");
-            intGrad.addColorStop(0.4, "rgba(192,168,255,0.82)");
-            intGrad.addColorStop(0.55, "rgba(205,185,255,0.80)");
-            intGrad.addColorStop(0.75, "rgba(215,205,255,0.76)");
-            intGrad.addColorStop(1, "rgba(210,198,255,0.72)");
+            // Horizontal gradient: violet stays dominant from edge to center
+            const gw = overlapHalf * 2;
+            const ig = ctx.createLinearGradient(intX - gw / 2, intY, intX + gw / 2, intY);
+            ig.addColorStop(0.00, "rgba(148,118,255,0.74)");
+            ig.addColorStop(0.15, "rgba(165,138,255,0.78)");
+            ig.addColorStop(0.30, "rgba(180,155,255,0.82)");
+            ig.addColorStop(0.50, "rgba(195,175,255,0.84)");
+            ig.addColorStop(0.70, "rgba(205,190,255,0.80)");
+            ig.addColorStop(0.85, "rgba(208,195,255,0.76)");
+            ig.addColorStop(1.00, "rgba(200,188,255,0.72)");
 
-            ctx.globalAlpha = blendA * 0.88;
-            ctx.fillStyle = intGrad;
-            ctx.fillRect(intX - intGradW / 2 - 5, intY - R, intGradW + 10, R * 2);
+            ctx.globalAlpha = blendA * 0.90;
+            ctx.fillStyle = ig;
+            ctx.fillRect(intX - gw / 2 - 5, intY - R, gw + 10, R * 2);
 
-            // ── Inner luminosity — violet-core, not white ──
+            // ── Inner luminosity — lavender-core, NOT white ──
             ctx.globalCompositeOperation = "lighter";
-            ctx.globalAlpha = blendA * overlapRatio * 0.52;
-            const innerLum = ctx.createRadialGradient(intX, intY, 0, intX, intY, overlapHalf * 1.2);
-            innerLum.addColorStop(0, "rgba(210,195,255,0.70)");
-            innerLum.addColorStop(0.3, "rgba(185,165,255,0.38)");
-            innerLum.addColorStop(0.65, `rgba(${rgb(LEFT.mid)},0.10)`);
-            innerLum.addColorStop(1, `rgba(${rgb(LEFT.deep)},0)`);
-            ctx.fillStyle = innerLum;
+            ctx.globalAlpha = blendA * overlapRatio * 0.48;
+            const il = ctx.createRadialGradient(intX, intY, 0, intX, intY, overlapHalf * 1.3);
+            il.addColorStop(0.00, "rgba(200,185,255,0.60)");
+            il.addColorStop(0.30, "rgba(180,160,255,0.30)");
+            il.addColorStop(0.65, `rgba(${rgb(LEFT.glowMid)},0.08)`);
+            il.addColorStop(1.00, `rgba(${rgb(LEFT.glowOuter)},0)`);
+            ctx.fillStyle = il;
             ctx.beginPath();
-            ctx.arc(intX, intY, overlapHalf * 1.2, 0, Math.PI * 2);
+            ctx.arc(intX, intY, overlapHalf * 1.3, 0, Math.PI * 2);
             ctx.fill();
 
             ctx.restore();
@@ -383,76 +387,76 @@ function SplashCanvas() {
         }
       }
 
-      // ── Split flash (1.55–2.0s) — subtle, not particle-based ──
+      // ── Split flash (1.55–2.0s) ──
       if (t > 1.55 && t < 2.05) {
         const ft = clamp01((t - 1.55) / 0.50);
         const fa = ft < 0.1 ? ft / 0.1 : Math.pow(1 - (ft - 0.1) / 0.9, 3);
-        const intensity = 0.65 * fa * globalFade;
+        const intensity = 0.55 * fa * globalFade;
 
         ctx.save();
         ctx.globalCompositeOperation = "lighter";
 
         ctx.globalAlpha = intensity;
-        const fc1 = ctx.createRadialGradient(cx, cy, 0, cx, cy, 50);
-        fc1.addColorStop(0, "rgba(255,255,255,0.85)");
-        fc1.addColorStop(0.3, "rgba(240,235,255,0.5)");
-        fc1.addColorStop(0.65, `rgba(${rgb(LEFT.mid)},0.15)`);
-        fc1.addColorStop(1, `rgba(${rgb(LEFT.deep)},0)`);
+        const fc1 = ctx.createRadialGradient(cx, cy, 0, cx, cy, R * 1.2);
+        fc1.addColorStop(0, "rgba(240,235,255,0.70)");
+        fc1.addColorStop(0.25, "rgba(200,185,255,0.40)");
+        fc1.addColorStop(0.60, `rgba(${rgb(LEFT.glowMid)},0.12)`);
+        fc1.addColorStop(1, `rgba(${rgb(LEFT.glowOuter)},0)`);
         ctx.fillStyle = fc1;
-        ctx.beginPath(); ctx.arc(cx, cy, 50, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(cx, cy, R * 1.2, 0, Math.PI * 2); ctx.fill();
 
-        ctx.globalAlpha = intensity * 0.35;
-        const fc2 = ctx.createRadialGradient(cx, cy, 0, cx, cy, 180);
-        fc2.addColorStop(0, "rgba(220,215,255,0.3)");
-        fc2.addColorStop(0.4, `rgba(${rgb(LEFT.mid)},0.10)`);
-        fc2.addColorStop(1, `rgba(${rgb(LEFT.deep)},0)`);
+        ctx.globalAlpha = intensity * 0.30;
+        const fc2 = ctx.createRadialGradient(cx, cy, 0, cx, cy, R * 4.0);
+        fc2.addColorStop(0, "rgba(190,175,255,0.22)");
+        fc2.addColorStop(0.35, `rgba(${rgb(LEFT.glowMid)},0.06)`);
+        fc2.addColorStop(1, `rgba(${rgb(LEFT.glowOuter)},0)`);
         ctx.fillStyle = fc2;
-        ctx.beginPath(); ctx.arc(cx, cy, 180, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(cx, cy, R * 4.0, 0, Math.PI * 2); ctx.fill();
 
         ctx.restore();
       }
 
       // ══════════════════════════════════════════════════════════════
-      //  DIVIDER LINE — thin, elegant, not dominant (spec §12)
+      //  DIVIDER — very thin, elegant, secondary
       // ══════════════════════════════════════════════════════════════
       if (t > 3.0 && t < FADE_START + 0.1) {
         const lineIn = smoothstep(3.0, 3.5, t);
         const lineOut = t > FADE_START ? smoothstep(FADE_END, FADE_START, t) : 1;
-        const lineH = 100 * easeOutExpo(lineIn) * lineOut;
+        const lineH = R * 2.5 * easeOutExpo(lineIn) * lineOut;
         const lineAlpha = lineIn * lineOut * globalFade;
 
         ctx.save();
 
-        // Outer glow — 2px, 14-20% opacity (spec §12)
-        ctx.globalAlpha = lineAlpha * 0.16;
-        ctx.shadowColor = "rgba(210,205,255,0.4)";
-        ctx.shadowBlur = 12;
+        // Outer glow — 2px, soft
+        ctx.globalAlpha = lineAlpha * 0.14;
+        ctx.shadowColor = "rgba(195,185,255,0.35)";
+        ctx.shadowBlur = 10;
         ctx.lineWidth = 2;
-        const glowLine = ctx.createLinearGradient(cx, cy - lineH / 2, cx, cy + lineH / 2);
-        glowLine.addColorStop(0, "rgba(255,255,255,0)");
-        glowLine.addColorStop(0.10, "rgba(230,225,255,0.35)");
-        glowLine.addColorStop(0.5, "rgba(255,255,255,0.5)");
-        glowLine.addColorStop(0.90, "rgba(230,225,255,0.35)");
-        glowLine.addColorStop(1, "rgba(255,255,255,0)");
-        ctx.strokeStyle = glowLine;
+        const gl = ctx.createLinearGradient(cx, cy - lineH / 2, cx, cy + lineH / 2);
+        gl.addColorStop(0, "rgba(255,255,255,0)");
+        gl.addColorStop(0.12, "rgba(210,200,255,0.30)");
+        gl.addColorStop(0.5, "rgba(235,230,255,0.45)");
+        gl.addColorStop(0.88, "rgba(210,200,255,0.30)");
+        gl.addColorStop(1, "rgba(255,255,255,0)");
+        ctx.strokeStyle = gl;
         ctx.beginPath();
         ctx.moveTo(cx, cy - lineH / 2);
         ctx.lineTo(cx, cy + lineH / 2);
         ctx.stroke();
 
-        // Core — 1px, 72-84% opacity (spec §12)
+        // Core — 1px
         ctx.shadowBlur = 0;
-        ctx.globalAlpha = lineAlpha * 0.78;
+        ctx.globalAlpha = lineAlpha * 0.72;
         ctx.lineWidth = 1;
-        const coreLine = ctx.createLinearGradient(cx, cy - lineH / 2, cx, cy + lineH / 2);
-        coreLine.addColorStop(0, "rgba(255,255,255,0)");
-        coreLine.addColorStop(0.06, "rgba(245,242,255,0.70)");
-        coreLine.addColorStop(0.18, "rgba(255,255,255,0.84)");
-        coreLine.addColorStop(0.5, "rgba(255,255,255,0.84)");
-        coreLine.addColorStop(0.82, "rgba(255,255,255,0.84)");
-        coreLine.addColorStop(0.94, "rgba(245,242,255,0.70)");
-        coreLine.addColorStop(1, "rgba(255,255,255,0)");
-        ctx.strokeStyle = coreLine;
+        const cl = ctx.createLinearGradient(cx, cy - lineH / 2, cx, cy + lineH / 2);
+        cl.addColorStop(0, "rgba(255,255,255,0)");
+        cl.addColorStop(0.08, "rgba(230,225,255,0.60)");
+        cl.addColorStop(0.20, "rgba(245,240,255,0.80)");
+        cl.addColorStop(0.50, "rgba(245,240,255,0.80)");
+        cl.addColorStop(0.80, "rgba(245,240,255,0.80)");
+        cl.addColorStop(0.92, "rgba(230,225,255,0.60)");
+        cl.addColorStop(1, "rgba(255,255,255,0)");
+        ctx.strokeStyle = cl;
         ctx.beginPath();
         ctx.moveTo(cx, cy - lineH / 2);
         ctx.lineTo(cx, cy + lineH / 2);
@@ -461,19 +465,19 @@ function SplashCanvas() {
         ctx.restore();
       }
 
-      // ── Vignette — subtle (spec §2) ──
+      // ── Vignette ──
       if (t > 0.15) {
-        const va = Math.min(0.35, (t - 0.15) * 0.20) * (t < FADE_START ? 1 : globalFade);
+        const va = Math.min(0.30, (t - 0.15) * 0.18) * (t < FADE_START ? 1 : globalFade);
         ctx.globalAlpha = va;
-        const vg = ctx.createRadialGradient(cx, cy, Math.min(W, H) * 0.12, cx, cy, Math.max(W, H) * 0.68);
+        const vg = ctx.createRadialGradient(cx, cy, Math.min(W, H) * 0.14, cx, cy, Math.max(W, H) * 0.68);
         vg.addColorStop(0, "rgba(5,5,7,0)");
-        vg.addColorStop(0.5, "rgba(5,5,7,0.10)");
-        vg.addColorStop(1, "rgba(5,5,7,0.50)");
+        vg.addColorStop(0.5, "rgba(5,5,7,0.08)");
+        vg.addColorStop(1, "rgba(5,5,7,0.45)");
         ctx.fillStyle = vg;
         ctx.fillRect(0, 0, W, H);
       }
 
-      // ── Final fade overlay ──
+      // ── Final fade ──
       if (t > FADE_START) {
         ctx.globalAlpha = clamp01((t - FADE_START) / (FADE_END - FADE_START));
         ctx.fillStyle = "#050507";
