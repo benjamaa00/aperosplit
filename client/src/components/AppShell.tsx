@@ -31,6 +31,7 @@ const AppShell = memo(({ children, activeTab, onTabChange, onAddExpense }: AppSh
   const barRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const rafRef = useRef<number>(0);
+  const [navHidden, setNavHidden] = useState(false);
 
   const [pillStyle, setPillStyle] = useState({ left: 0, width: 0, ready: false });
 
@@ -104,6 +105,7 @@ const AppShell = memo(({ children, activeTab, onTabChange, onAddExpense }: AppSh
 
   const switchTab = useCallback((tab: Tab) => {
     if (!onTabChange) return;
+    setNavHidden(false);
     haptics.light();
     onTabChange(tab);
     scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
@@ -111,6 +113,7 @@ const AppShell = memo(({ children, activeTab, onTabChange, onAddExpense }: AppSh
 
   const handleFab = useCallback(() => {
     haptics.medium();
+    setNavHidden(true);
     onAddExpense?.();
   }, [onAddExpense]);
 
@@ -249,42 +252,8 @@ const AppShell = memo(({ children, activeTab, onTabChange, onAddExpense }: AppSh
 
           {activeTab && onTabChange && <div className="bottom-nav-scroll-edge" />}
 
-          {/* ── Floating FAB — separate layer above nav ── */}
-          {activeTab && onTabChange && (
-            <button
-              onClick={handleFab}
-              className="nav-fab group cursor-pointer"
-              style={{
-                position: "fixed",
-                left: "50%",
-                bottom: "calc(68px + env(safe-area-inset-bottom, 10px))",
-                transform: "translateX(-50%)",
-                zIndex: 1001,
-                WebkitTapHighlightColor: "transparent",
-              }}
-              aria-label="Ajouter une dépense"
-            >
-              <div
-                className="absolute -inset-3 rounded-full blur-xl nav-fab-glow pointer-events-none"
-                style={{ background: "radial-gradient(circle, rgba(126,87,255,0.20) 0%, rgba(92,54,220,0.06) 60%, transparent 100%)" }}
-              />
-              <div
-                className="relative w-[58px] h-[58px] rounded-full flex items-center justify-center transition-transform duration-[200ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] group-active:scale-[0.88]"
-                style={{
-                  background: "radial-gradient(circle at 35% 25%, rgba(255,255,255,0.30), rgba(126,87,255,0.72) 40%, rgba(88,50,200,0.78) 100%)",
-                  backdropFilter: "blur(20px) saturate(190%)",
-                  WebkitBackdropFilter: "blur(20px) saturate(190%)",
-                  border: "1px solid rgba(255,255,255,0.22)",
-                  boxShadow: "0 10px 32px rgba(91,61,220,0.40), inset 0 1px 0 rgba(255,255,255,0.28), inset 0 -1px 0 rgba(0,0,0,0.08)",
-                }}
-              >
-                <Plus size={22} strokeWidth={2.4} className="relative z-10 text-white" />
-              </div>
-            </button>
-          )}
-
-          {/* ── Liquid Glass Nav ── */}
-          {activeTab && onTabChange && (
+          {/* ── Liquid Glass Nav with Notch + FAB ── */}
+          {activeTab && onTabChange && !navHidden && (
             <nav
               ref={barRef}
               data-tutorial="tab-bar"
@@ -301,7 +270,7 @@ const AppShell = memo(({ children, activeTab, onTabChange, onAddExpense }: AppSh
                   style={{
                     position: "absolute",
                     inset: 0,
-                    borderRadius: "inherit",
+                    borderRadius: "28px",
                     zIndex: 1,
                   }}
                 >
@@ -317,6 +286,38 @@ const AppShell = memo(({ children, activeTab, onTabChange, onAddExpense }: AppSh
                   />
                 </div>
               )}
+
+              {/* FAB button — sits in the notch */}
+              <button
+                onClick={handleFab}
+                className="nav-fab group cursor-pointer"
+                style={{
+                  position: "absolute",
+                  left: "50%",
+                  top: "-28px",
+                  transform: "translateX(-50%)",
+                  zIndex: 10,
+                  WebkitTapHighlightColor: "transparent",
+                }}
+                aria-label="Ajouter une dépense"
+              >
+                <div
+                  className="absolute -inset-3 rounded-full blur-xl nav-fab-glow pointer-events-none"
+                  style={{ background: "radial-gradient(circle, rgba(126,87,255,0.22) 0%, rgba(92,54,220,0.06) 60%, transparent 100%)" }}
+                />
+                <div
+                  className="relative w-[56px] h-[56px] rounded-full flex items-center justify-center transition-transform duration-[200ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] group-active:scale-[0.88]"
+                  style={{
+                    background: "radial-gradient(circle at 35% 25%, rgba(255,255,255,0.30), rgba(126,87,255,0.72) 40%, rgba(88,50,200,0.78) 100%)",
+                    backdropFilter: "blur(20px) saturate(190%)",
+                    WebkitBackdropFilter: "blur(20px) saturate(190%)",
+                    border: "1px solid rgba(255,255,255,0.22)",
+                    boxShadow: "0 10px 32px rgba(91,61,220,0.40), inset 0 1px 0 rgba(255,255,255,0.28), inset 0 -1px 0 rgba(0,0,0,0.08)",
+                  }}
+                >
+                  <Plus size={22} strokeWidth={2.4} className="relative z-10 text-white" />
+                </div>
+              </button>
 
               {/* Content grid */}
               <div className="bottom-nav-content" style={{ height: "100%" }}>
@@ -340,8 +341,7 @@ const AppShell = memo(({ children, activeTab, onTabChange, onAddExpense }: AppSh
                   className="nav-pill"
                   style={{
                     position: "absolute",
-                    top: "50%",
-                    transform: "translateY(-50%)",
+                    bottom: "18px",
                     left: showPill.left,
                     width: showPill.width,
                     height: "36px",

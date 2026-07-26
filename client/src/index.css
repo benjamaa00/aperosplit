@@ -1091,10 +1091,10 @@
   left: 14px;
   right: 14px;
   bottom: calc(10px + env(safe-area-inset-bottom, 10px));
-  height: 70px;
+  height: 82px;
   z-index: 1000;
 
-  overflow: hidden;
+  overflow: visible;
   border-radius: 28px;
 
   background: linear-gradient(
@@ -1114,6 +1114,9 @@
     0 4px 12px rgba(0, 0, 0, 0.12),
     inset 0 1px 0 rgba(255, 255, 255, 0.18),
     inset 0 -1px 0 rgba(255, 255, 255, 0.03);
+
+  -webkit-mask-image: radial-gradient(circle 38px at 50% 0px, transparent 36px, black 38px);
+  mask-image: radial-gradient(circle 38px at 50% 0px, transparent 36px, black 38px);
 
   touch-action: none;
   user-select: none;
@@ -1187,6 +1190,18 @@
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   .bottom-nav {
     background: rgba(22, 21, 34, 0.95);
+  }
+}
+
+/* Fallback when mask unsupported — use clip-path for notch */
+@supports not ((-webkit-mask-image: radial-gradient(circle, black, black)) or (mask-image: radial-gradient(circle, black, black))) {
+  .bottom-nav {
+    clip-path: polygon(
+      0% 0%, 42% 0%, 42% 5%,
+      46% 14%, 50% 18%, 54% 14%, 58% 5%,
+      58% 0%, 100% 0%,
+      100% 100%, 0% 100%
+    );
   }
 }
 
