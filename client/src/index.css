@@ -985,7 +985,7 @@
     transition-duration: 0.01ms !important;
   }
   .apple-splash {
-    background: var(--background) !important;
+    background: #050505 !important;
   }
   .apple-splash-brand {
     transition: none !important;
