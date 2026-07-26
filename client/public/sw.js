@@ -12,6 +12,7 @@ self.addEventListener('install', (event) => {
       '/icon-512.png',
       '/icon-192.png',
       '/apple-touch-icon.png',
+      '/assets/aperosplit-logo.png',
     ]))
   );
 });

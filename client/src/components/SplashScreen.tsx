@@ -1,28 +1,79 @@
-import { useState, useEffect, memo, useRef } from "react";
+import { useState, useEffect, memo, useRef, useCallback } from "react";
 
 const SPLASH_DURATION = 5400;
+const CROSSFADE_START = 3.1;
+const CROSSFADE_END = 3.55;
 const FADE_START = 4.4;
 const FADE_END = 5.4;
 
+const LOGO_SRC = "/assets/aperosplit-logo.png";
+
 export const SplashScreen = memo(function SplashScreen({ onComplete }: { onComplete: () => void }) {
-  const [brandVisible, setBrandVisible] = useState(false);
-  const [brandFading, setBrandFading] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [crossfadeProgress, setCrossfadeProgress] = useState(0);
+  const [globalFade, setGlobalFade] = useState(0);
   const onCompleteRef = useRef(onComplete);
   onCompleteRef.current = onComplete;
 
+  const handleImageLoad = useCallback(() => setImageLoaded(true), []);
+
   useEffect(() => {
-    const t1 = setTimeout(() => setBrandVisible(true), 3200);
-    const t2 = setTimeout(() => setBrandFading(true), FADE_START * 1000);
-    const t3 = setTimeout(() => onCompleteRef.current(), SPLASH_DURATION + 100);
-    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
-  }, []);
+    const img = new Image();
+    img.src = LOGO_SRC;
+    img.onload = handleImageLoad;
+
+    const start = performance.now();
+    let raf: number;
+
+    function tick(now: number) {
+      const t = (now - start) / 1000;
+
+      if (t < CROSSFADE_START) {
+        setCrossfadeProgress(0);
+      } else if (t < CROSSFADE_END) {
+        const p = (t - CROSSFADE_START) / (CROSSFADE_END - CROSSFADE_START);
+        const eased = p * p * (3 - 2 * p);
+        setCrossfadeProgress(eased);
+      } else {
+        setCrossfadeProgress(1);
+      }
+
+      if (t > FADE_START) {
+        setGlobalFade(Math.min(1, (t - FADE_START) / (FADE_END - FADE_START)));
+      }
+
+      if (t >= SPLASH_DURATION / 1000 + 0.1) {
+        onCompleteRef.current();
+        return;
+      }
+
+      raf = requestAnimationFrame(tick);
+    }
+
+    raf = requestAnimationFrame(tick);
+    return () => {
+      cancelAnimationFrame(raf);
+      img.onload = null;
+    };
+  }, [handleImageLoad]);
 
   return (
-    <div className="apple-splash" style={{ background: "#0C0C0E" }}>
-      <SplashCanvas />
-      <div className={`apple-splash-brand ${brandVisible ? "visible" : ""} ${brandFading ? "fading" : ""}`}>
-        <div className="apple-splash-logo-text">AperoSplit</div>
-        <div className="apple-splash-tagline">Partagez, équilibrez</div>
+    <div
+      className={`apple-splash ${globalFade > 0 ? "apple-splash-fading" : ""}`}
+      style={{ background: "#0C0C0E" }}
+    >
+      <div className="splash-logo-stage">
+        <div className="procedural-animation" style={{ opacity: 1 - crossfadeProgress }}>
+          <SplashCanvas crossfadeStart={CROSSFADE_START} crossfadeEnd={CROSSFADE_END} />
+        </div>
+
+        <img
+          className="official-final-logo"
+          src={LOGO_SRC}
+          alt="AperoSplit"
+          draggable={false}
+          style={{ opacity: crossfadeProgress }}
+        />
       </div>
     </div>
   );
@@ -30,7 +81,7 @@ export const SplashScreen = memo(function SplashScreen({ onComplete }: { onCompl
 
 SplashScreen.displayName = "SplashScreen";
 
-function SplashCanvas() {
+function SplashCanvas({ crossfadeStart, crossfadeEnd }: { crossfadeStart: number; crossfadeEnd: number }) {
   const ref = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -54,7 +105,6 @@ function SplashCanvas() {
     let alive = true;
     let raf = 0;
 
-    // ── Math helpers ──
     function clamp01(v: number) { return v < 0 ? 0 : v > 1 ? 1 : v; }
     function lerp(a: number, b: number, t: number) { return a + (b - a) * clamp01(t); }
     function easeOutCubic(t: number) { const c = 1 - t; return 1 - c * c * c; }
@@ -68,43 +118,39 @@ function SplashCanvas() {
 
     const rgb = (c: number[]) => `${c[0]},${c[1]},${c[2]}`;
 
-    // ── Sphere radius: ~50% viewport width ──
     const R = Math.min(W, H) * 0.12;
-    const LOGO_GAP = R * 0.76; // ~24% overlap
+    const LOGO_GAP = R * 0.76;
 
-    // ── LEFT SPHERE — Vivid electric violet ──
     const LEFT = {
-      c0: [114, 64, 252],    // center: #7240FC
-      c1: [122, 82, 255],    // main mid: #7A52FF
-      c2: [134, 90, 254],    // between mid
-      c3: [145, 101, 251],   // upper light: #9165FB
-      c4: [109, 58, 252],    // lower dense: #6D3AFC
-      c5: [106, 68, 214],    // outer edge: #6A44D6
-      edge: [96, 52, 200],   // dark rim
-      glowInner: [110, 71, 247],  // #6E47F7
-      glowMid: [139, 108, 251],   // #8B6CFB
+      c0: [114, 64, 252],
+      c1: [122, 82, 255],
+      c2: [134, 90, 254],
+      c3: [145, 101, 251],
+      c4: [109, 58, 252],
+      c5: [106, 68, 214],
+      edge: [96, 52, 200],
+      glowInner: [110, 71, 247],
+      glowMid: [139, 108, 251],
       glowOuter: [96, 52, 230],
-      highlight: [166, 139, 250],  // near intersection: #A68BFA
+      highlight: [166, 139, 250],
       subsurface: [140, 105, 252],
     };
 
-    // ── RIGHT SPHERE — Pale frosted lavender-white glass ──
     const RIGHT = {
-      c0: [195, 179, 250],   // center: #C3B3FA
-      c1: [209, 198, 255],   // main mid: #D1C6FF
-      c2: [213, 198, 252],   // upper light: #D5C6FC
-      c3: [205, 192, 252],   // between
-      c4: [194, 177, 252],   // lower soft: #C2B1FC
-      c5: [180, 167, 226],   // outer edge: #B4A7E2
-      edge: [168, 155, 215], // darker rim
-      glowInner: [207, 194, 250],  // #CFC2FA
-      glowMid: [226, 218, 255],    // #E2DAFF
+      c0: [195, 179, 250],
+      c1: [209, 198, 255],
+      c2: [213, 198, 252],
+      c3: [205, 192, 252],
+      c4: [194, 177, 252],
+      c5: [180, 167, 226],
+      edge: [168, 155, 215],
+      glowInner: [207, 194, 250],
+      glowMid: [226, 218, 255],
       glowOuter: [195, 180, 240],
       highlight: [220, 212, 252],
       subsurface: [200, 188, 250],
     };
 
-    // ── Background — #0C0C0E, dark minimal with violet depth ──
     function drawBackground(alpha: number) {
       ctx.globalAlpha = alpha;
       ctx.globalCompositeOperation = "source-over";
@@ -118,18 +164,12 @@ function SplashCanvas() {
       ctx.globalAlpha = 1;
     }
 
-    // ══════════════════════════════════════════════════════════════
-    //  CHOREOGRAPHY (5.4s)
-    // ══════════════════════════════════════════════════════════════
-
     function draw(now: number) {
       if (!alive) return;
       const t = (now - start) / 1000;
-      const globalFade = t > FADE_START ? clamp01(1 - (t - FADE_START) / (FADE_END - FADE_START)) : 1;
 
-      drawBackground(globalFade);
+      drawBackground(1);
 
-      // ── Compute positions ──
       let o1x = cx, o1y = cy, o2x = cx, o2y = cy;
       let o1a = 0, o2a = 0, o1s = 0, o2s = 0;
       let stretchXS = 1, stretchYS = 1;
@@ -173,22 +213,17 @@ function SplashCanvas() {
         o1a = 1; o1s = sp; o2a = 1; o2s = sp;
         o1x = cx - LOGO_GAP; o1y = cy;
         o2x = cx + LOGO_GAP; o2y = cy;
-      } else if (t < FADE_START) {
+      } else if (t < crossfadeStart) {
         o1a = 1; o1s = 1; o2a = 1; o2s = 1;
         o1x = cx - LOGO_GAP; o1y = cy;
         o2x = cx + LOGO_GAP; o2y = cy;
       } else {
-        o1a = globalFade; o1s = 1; o2a = globalFade; o2s = 1;
+        const cf = clamp01((t - crossfadeStart) / (crossfadeEnd - crossfadeStart));
+        const fade = 1 - cf;
+        o1a = fade; o1s = 1; o2a = fade; o2s = 1;
         o1x = cx - LOGO_GAP; o1y = cy;
         o2x = cx + LOGO_GAP; o2y = cy;
       }
-
-      // ══════════════════════════════════════════════════════════════
-      //  SPHERE RENDERING — Premium frosted optical glass
-      //
-      //  8-stop body gradient, broad diffused highlight,
-      //  controlled 3-zone glow, minimal rim.
-      // ══════════════════════════════════════════════════════════════
 
       const drawSphere = (
         ox: number, oy: number, scale: number, alpha: number,
@@ -200,7 +235,6 @@ function SplashCanvas() {
         ctx.translate(ox, oy);
         ctx.scale(sx * scale, sy * scale);
 
-        // ── GLOW ZONE C: Ambient glow (wide, very soft) ──
         ctx.globalCompositeOperation = "lighter";
         ctx.globalAlpha = alpha * 0.06;
         const ambGlow = ctx.createRadialGradient(0, 0, R * 0.6, 0, 0, R * 2.8);
@@ -212,7 +246,6 @@ function SplashCanvas() {
         ctx.arc(0, 0, R * 2.8, 0, Math.PI * 2);
         ctx.fill();
 
-        // ── GLOW ZONE B: Medium glow ──
         ctx.globalAlpha = alpha * 0.14;
         const midGlow = ctx.createRadialGradient(0, 0, R * 0.4, 0, 0, R * 1.5);
         midGlow.addColorStop(0, `rgba(${rgb(pal.glowMid)},0.20)`);
@@ -223,7 +256,6 @@ function SplashCanvas() {
         ctx.arc(0, 0, R * 1.5, 0, Math.PI * 2);
         ctx.fill();
 
-        // ── GLOW ZONE A: Close glow (tight, luminous) ──
         ctx.globalAlpha = alpha * 0.22;
         const closeGlow = ctx.createRadialGradient(0, 0, R * 0.35, 0, 0, R * 1.10);
         closeGlow.addColorStop(0, `rgba(${rgb(pal.glowInner)},0.32)`);
@@ -236,7 +268,6 @@ function SplashCanvas() {
 
         ctx.globalCompositeOperation = "source-over";
 
-        // ── GLASS BODY — 8-stop radial, smooth & full ──
         ctx.globalAlpha = alpha;
         const body = ctx.createRadialGradient(-R * 0.05, -R * 0.05, 0, 0, 0, R);
         body.addColorStop(0.00, `rgba(${rgb(pal.c0)},0.98)`);
@@ -252,7 +283,6 @@ function SplashCanvas() {
         ctx.arc(0, 0, R, 0, Math.PI * 2);
         ctx.fill();
 
-        // ── BROAD DIFFUSED HIGHLIGHT — upper-left, warm violet ──
         ctx.globalCompositeOperation = "lighter";
         ctx.globalAlpha = alpha * 0.30;
         const hl = ctx.createRadialGradient(-R * 0.22, -R * 0.25, 0, -R * 0.10, -R * 0.12, R * 0.42);
@@ -266,7 +296,6 @@ function SplashCanvas() {
         ctx.arc(-R * 0.14, -R * 0.16, R * 0.42, 0, Math.PI * 2);
         ctx.fill();
 
-        // ── TOP SHADOW — clean dark crescent at top ──
         ctx.globalCompositeOperation = "source-over";
         ctx.globalAlpha = alpha * 0.60;
         const topShadow = ctx.createRadialGradient(0, -R * 0.92, R * 0.08, 0, -R * 0.20, R * 0.85);
@@ -279,7 +308,6 @@ function SplashCanvas() {
         ctx.arc(0, 0, R, 0, Math.PI * 2);
         ctx.fill();
 
-        // ── BOTTOM LUMINOSITY — bright glow from below ──
         ctx.globalCompositeOperation = "lighter";
         ctx.globalAlpha = alpha * 0.22;
         const bottomGlow = ctx.createRadialGradient(0, R * 0.82, R * 0.06, 0, R * 0.40, R * 0.60);
@@ -292,7 +320,6 @@ function SplashCanvas() {
         ctx.arc(0, 0, R, 0, Math.PI * 2);
         ctx.fill();
 
-        // ── RIM — very thin edge definition ──
         ctx.globalCompositeOperation = "source-over";
         ctx.globalAlpha = alpha * 0.05;
         ctx.strokeStyle = `rgba(${rgb(pal.highlight)},0.18)`;
@@ -304,20 +331,16 @@ function SplashCanvas() {
         ctx.restore();
       };
 
-      // Draw both spheres
       drawSphere(o1x, o1y, o1s, o1a, stretchXS, stretchYS, LEFT);
       drawSphere(o2x, o2y, o2s, o2a, 1, 1, RIGHT);
 
-      // ══════════════════════════════════════════════════════════════
-      //  AMBIENT ATMOSPHERE — subtle violet wash behind composition
-      // ══════════════════════════════════════════════════════════════
       if (o1a > 0.3 && o2a > 0.3) {
         ctx.save();
         ctx.globalCompositeOperation = "lighter";
-        ctx.globalAlpha = Math.min(o1a, o2a) * 0.10 * globalFade;
+        ctx.globalAlpha = Math.min(o1a, o2a) * 0.10;
         const atmo = ctx.createRadialGradient(cx, cy, R * 0.4, cx, cy, R * 4.0);
-        atmo.addColorStop(0, "rgba(114,64,252,0.12)");  // #7240FC
-        atmo.addColorStop(0.35, "rgba(110,71,247,0.05)"); // #6E47F7
+        atmo.addColorStop(0, "rgba(114,64,252,0.12)");
+        atmo.addColorStop(0.35, "rgba(110,71,247,0.05)");
         atmo.addColorStop(0.7, "rgba(96,52,230,0.02)");
         atmo.addColorStop(1, "rgba(80,40,200,0)");
         ctx.fillStyle = atmo;
@@ -327,9 +350,6 @@ function SplashCanvas() {
         ctx.restore();
       }
 
-      // ══════════════════════════════════════════════════════════════
-      //  INTERSECTION — vesica piscis, violet-dominant
-      // ══════════════════════════════════════════════════════════════
       if (o1a > 0.4 && o2a > 0.4) {
         const halfDist = Math.abs(o2x - o1x) / 2;
         if (halfDist < R) {
@@ -338,14 +358,13 @@ function SplashCanvas() {
           if (overlapRatio > 0.05) {
             const intX = (o1x + o2x) / 2;
             const intY = cy;
-            const blendA = Math.min(o1a, o2a) * globalFade;
+            const blendA = Math.min(o1a, o2a);
 
-            // ── Merged glow — #C6B8FF atmosphere ──
             ctx.save();
             ctx.globalCompositeOperation = "lighter";
             ctx.globalAlpha = blendA * overlapRatio * 0.18;
             const mg = ctx.createRadialGradient(intX, intY, 0, intX, intY, R * 3.2);
-            mg.addColorStop(0, "rgba(198,184,255,0.28)");  // #C6B8FF
+            mg.addColorStop(0, "rgba(198,184,255,0.28)");
             mg.addColorStop(0.20, "rgba(180,165,252,0.14)");
             mg.addColorStop(0.45, "rgba(140,115,245,0.06)");
             mg.addColorStop(0.70, `rgba(${rgb(LEFT.glowOuter)},0.02)`);
@@ -356,7 +375,6 @@ function SplashCanvas() {
             ctx.fill();
             ctx.restore();
 
-            // ── Intersection body — vesica piscis clip ──
             ctx.save();
             const acosVal = Math.acos(clamp01(halfDist / R));
             ctx.beginPath();
@@ -365,27 +383,25 @@ function SplashCanvas() {
             ctx.closePath();
             ctx.clip();
 
-            // Optical glass fusion — mauve dominant, NOT white
             const gw = overlapHalf * 2;
             const ig = ctx.createLinearGradient(intX - gw / 2, intY, intX + gw / 2, intY);
-            ig.addColorStop(0.00, "rgba(160,136,249,0.80)");  // #A088F9 left
-            ig.addColorStop(0.15, "rgba(166,139,250,0.84)");  // #A68BFA
+            ig.addColorStop(0.00, "rgba(160,136,249,0.80)");
+            ig.addColorStop(0.15, "rgba(166,139,250,0.84)");
             ig.addColorStop(0.35, "rgba(190,175,254,0.88)");
-            ig.addColorStop(0.50, "rgba(230,222,254,0.86)");  // #E6DEFE center
+            ig.addColorStop(0.50, "rgba(230,222,254,0.86)");
             ig.addColorStop(0.65, "rgba(210,198,254,0.84)");
-            ig.addColorStop(0.85, "rgba(195,178,250,0.80)");  // #C3B2FA right
-            ig.addColorStop(1.00, "rgba(195,178,250,0.76)");  // #C3B2FA
+            ig.addColorStop(0.85, "rgba(195,178,250,0.80)");
+            ig.addColorStop(1.00, "rgba(195,178,250,0.76)");
 
             ctx.globalAlpha = blendA * 0.88;
             ctx.fillStyle = ig;
             ctx.fillRect(intX - gw / 2 - 5, intY - R, gw + 10, R * 2);
 
-            // ── Inner luminosity — soft mauve core ──
             ctx.globalCompositeOperation = "lighter";
             ctx.globalAlpha = blendA * overlapRatio * 0.32;
             const il = ctx.createRadialGradient(intX, intY, 0, intX, intY, overlapHalf * 1.3);
-            il.addColorStop(0.00, "rgba(230,222,254,0.38)");  // #E6DEFE
-            il.addColorStop(0.30, "rgba(198,184,255,0.18)");  // #C6B8FF
+            il.addColorStop(0.00, "rgba(230,222,254,0.38)");
+            il.addColorStop(0.30, "rgba(198,184,255,0.18)");
             il.addColorStop(0.65, `rgba(${rgb(LEFT.glowMid)},0.05)`);
             il.addColorStop(1.00, `rgba(${rgb(LEFT.glowOuter)},0)`);
             ctx.fillStyle = il;
@@ -398,19 +414,18 @@ function SplashCanvas() {
         }
       }
 
-      // ── Split flash (1.55–2.0s) ──
       if (t > 1.55 && t < 2.05) {
         const ft = clamp01((t - 1.55) / 0.50);
         const fa = ft < 0.1 ? ft / 0.1 : Math.pow(1 - (ft - 0.1) / 0.9, 3);
-        const intensity = 0.55 * fa * globalFade;
+        const intensity = 0.55 * fa;
 
         ctx.save();
         ctx.globalCompositeOperation = "lighter";
 
         ctx.globalAlpha = intensity;
         const fc1 = ctx.createRadialGradient(cx, cy, 0, cx, cy, R * 1.2);
-        fc1.addColorStop(0, "rgba(230,222,254,0.50)");   // #E6DEFE
-        fc1.addColorStop(0.25, "rgba(198,184,255,0.28)"); // #C6B8FF
+        fc1.addColorStop(0, "rgba(230,222,254,0.50)");
+        fc1.addColorStop(0.25, "rgba(198,184,255,0.28)");
         fc1.addColorStop(0.60, `rgba(${rgb(LEFT.glowMid)},0.10)`);
         fc1.addColorStop(1, `rgba(${rgb(LEFT.glowOuter)},0)`);
         ctx.fillStyle = fc1;
@@ -427,18 +442,14 @@ function SplashCanvas() {
         ctx.restore();
       }
 
-      // ══════════════════════════════════════════════════════════════
-      //  DIVIDER — very thin, elegant, secondary
-      // ══════════════════════════════════════════════════════════════
-      if (t > 3.0 && t < FADE_START + 0.1) {
+      if (t > 3.0 && t < crossfadeStart + 0.3) {
         const lineIn = smoothstep(3.0, 3.5, t);
-        const lineOut = t > FADE_START ? smoothstep(FADE_END, FADE_START, t) : 1;
+        const lineOut = t > crossfadeStart ? smoothstep(crossfadeEnd + 0.3, crossfadeStart, t) : 1;
         const lineH = R * 2.5 * easeOutExpo(lineIn) * lineOut;
-        const lineAlpha = lineIn * lineOut * globalFade;
+        const lineAlpha = lineIn * lineOut;
 
         ctx.save();
 
-        // Outer glow — 2px, soft
         ctx.globalAlpha = lineAlpha * 0.12;
         ctx.shadowColor = "rgba(198,184,255,0.30)";
         ctx.shadowBlur = 8;
@@ -455,7 +466,6 @@ function SplashCanvas() {
         ctx.lineTo(cx, cy + lineH / 2);
         ctx.stroke();
 
-        // Core — 1px, #FBF9FE
         ctx.shadowBlur = 0;
         ctx.globalAlpha = lineAlpha * 0.65;
         ctx.lineWidth = 1;
@@ -476,9 +486,8 @@ function SplashCanvas() {
         ctx.restore();
       }
 
-      // ── Vignette ──
       if (t > 0.15) {
-        const va = Math.min(0.30, (t - 0.15) * 0.18) * (t < FADE_START ? 1 : globalFade);
+        const va = Math.min(0.30, (t - 0.15) * 0.18);
         ctx.globalAlpha = va;
         const vg = ctx.createRadialGradient(cx, cy, Math.min(W, H) * 0.14, cx, cy, Math.max(W, H) * 0.68);
         vg.addColorStop(0, "rgba(12,12,14,0)");
@@ -488,16 +497,9 @@ function SplashCanvas() {
         ctx.fillRect(0, 0, W, H);
       }
 
-      // ── Final fade ──
-      if (t > FADE_START) {
-        ctx.globalAlpha = clamp01((t - FADE_START) / (FADE_END - FADE_START));
-        ctx.fillStyle = "#0C0C0E";
-        ctx.fillRect(0, 0, W, H);
-      }
-
       ctx.globalAlpha = 1;
 
-      if (t >= FADE_END + 0.05) {
+      if (t >= crossfadeEnd + 0.1) {
         ctx.fillStyle = "#0C0C0E";
         ctx.fillRect(0, 0, W, H);
         return;
@@ -508,7 +510,7 @@ function SplashCanvas() {
 
     raf = requestAnimationFrame(draw);
     return () => { alive = false; cancelAnimationFrame(raf); };
-  }, []);
+  }, [crossfadeStart, crossfadeEnd]);
 
   return <canvas ref={ref} className="apple-splash-canvas" />;
 }
