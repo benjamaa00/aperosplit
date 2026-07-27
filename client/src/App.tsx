@@ -9,7 +9,7 @@ import { GROUP_ID, MAIN_TUTORIAL_ID } from "./constants";
 import { formatCurrency } from "./utils/currency";
 import { simplifyDebts } from "./utils/debts";
 import { checkBiometricAvailable, registerBiometric, authenticateBiometric } from "./utils/biometric";
-import { storePhotoAvatar } from "./utils/avatarStorage";
+import { storePhotoAvatar, resolveAvatar } from "./utils/avatarStorage";
 import { subscribeToPush, unsubscribeFromPush, getCurrentPushSubscription } from "./utils/pushSubscription";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { useNotifications } from "./hooks/useNotifications";
@@ -54,7 +54,7 @@ const isNetlify = import.meta.env.VITE_NETLIFY === "true";
 function prepareAvatar(memberId: string, avatar: string): string {
  if (avatar.startsWith("data:")) {
  storePhotoAvatar(memberId, avatar);
- return avatar;
+ return `photo:${memberId}`;
  }
  return avatar;
 }
@@ -267,7 +267,7 @@ export default function App() {
  useEffect(() => {
  if (syncingFromServer.current) { syncingFromServer.current = false; return; }
  if (!isNetlify && members.length > 0) {
- initGroup.mutateAsync({ members: members.map(m => ({ id: m.id, name: m.name, avatar: m.avatar, role: m.role as "admin" | "member" | undefined, status: m.status as "active" | "pending" | undefined })) }).catch(() => {});
+ initGroup.mutateAsync({ members: members.map(m => ({ id: m.id, name: m.name, avatar: resolveAvatar(m.avatar), role: m.role as "admin" | "member" | undefined, status: m.status as "active" | "pending" | undefined })) }).catch(() => {});
  }
  // eslint-disable-next-line react-hooks/exhaustive-deps
  }, [isNetlify, members]);
@@ -660,7 +660,7 @@ export default function App() {
  setCurrentMemberId(newMember.id);
  if (!isNetlify && inviteToken) {
  try {
- const r = await joinGroupByInviteMutation.mutateAsync({ token: inviteToken, memberId: newMember.id, memberName: name, memberAvatar: avatar });
+ const r = await joinGroupByInviteMutation.mutateAsync({ token: inviteToken, memberId: newMember.id, memberName: name, memberAvatar: resolveAvatar(avatar) });
  if ((r as any)?.accessPin) {
  localStorage.setItem("equilibra_access", (r as any).accessPin);
  }
@@ -675,7 +675,7 @@ export default function App() {
  const avatar = prepareAvatar(memberId, rawAvatar);
  const newMember: Member = { id: memberId, name, avatar };
  setMembers((prev) => [...prev, newMember]);
- if (!isNetlify) { try { await initGroup.mutateAsync({ members: [...members, newMember].map(m => ({ id: m.id, name: m.name, avatar: m.avatar, role: m.role as "admin" | "member" | undefined })) }); await refetch(); } catch {} }
+ if (!isNetlify) { try { await initGroup.mutateAsync({ members: [...members, newMember].map(m => ({ id: m.id, name: m.name, avatar: resolveAvatar(m.avatar), role: m.role as "admin" | "member" | undefined })) }); await refetch(); } catch {} }
  }, [members, initGroup, refetch, isNetlify]);
 
  const removeMember = useCallback((id: string) => {
@@ -741,7 +741,7 @@ export default function App() {
  const avatar = prepareAvatar(currentMemberId, rawAvatar);
  setMembers((prev) => prev.map((m) => m.id === currentMemberId ? { ...m, name, avatar } : m));
  if (!isNetlify) {
- await updateMemberProfileMutation.mutateAsync({ memberId: currentMemberId, name, avatar });
+ await updateMemberProfileMutation.mutateAsync({ memberId: currentMemberId, name, avatar: resolveAvatar(avatar) });
  await refetch();
  }
  setScreen("main");
@@ -835,7 +835,7 @@ export default function App() {
  setScreen("main");
  if (!isNetlify) {
  syncingFromServer.current = true;
- initGroup.mutateAsync({ members: [{ id: memberId, name, avatar, role: "admin", status: "active" }] }).catch(() => {});
+ initGroup.mutateAsync({ members: [{ id: memberId, name, avatar: resolveAvatar(avatar), role: "admin", status: "active" }] }).catch(() => {});
  }
  }} onBack={handleOnBackToAccess} groupName="Équilibra" /></AppShell>;
  } else {
