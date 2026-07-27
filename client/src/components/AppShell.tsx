@@ -113,7 +113,6 @@ const AppShell = memo(({ children, activeTab, onTabChange, onAddExpense }: AppSh
 
   const handleFab = useCallback(() => {
     haptics.medium();
-    setNavHidden(true);
     onAddExpense?.();
   }, [onAddExpense]);
 

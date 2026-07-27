@@ -901,23 +901,27 @@ export const equilibraRouter = router({
     .input(z.object({
       conversationId: z.string().min(1).max(128),
       memberId: z.string().min(1).max(128),
-      content: z.string().trim().min(1).max(2000),
+      content: z.string().trim().min(1).max(512000),
+      type: z.enum(["text", "image", "audio"]).optional().default("text"),
     }))
     .mutation(async ({ input }) => {
-      const message = await sendConversationMessage(input.conversationId, input.memberId, input.content);
+      const message = await sendConversationMessage(input.conversationId, input.memberId, input.content, input.type);
       if (!message) return { success: false };
 
       // Send push notifications to other participants
       const participants = await getConversationParticipants(input.conversationId);
       const sender = participants.find(p => p.memberId === input.memberId);
       const senderName = sender?.name || "Un membre";
+      const pushBody = input.type === "text"
+        ? (input.content.length > 100 ? input.content.slice(0, 100) + "..." : input.content)
+        : input.type === "image" ? "📷 Image" : "🎤 Audio";
 
       for (const p of participants) {
         if (p.memberId === input.memberId) continue;
         await sendPushToMember(
           p.memberId,
           `Nouveau message de ${senderName}`,
-          input.content.length > 100 ? input.content.slice(0, 100) + "..." : input.content,
+          pushBody,
           "/"
         );
       }
@@ -928,7 +932,7 @@ export const equilibraRouter = router({
         await addNotification(
           p.memberId, GROUP_ID, "new_message",
           `Message de ${senderName}`,
-          input.content.length > 200 ? input.content.slice(0, 200) + "..." : input.content,
+          pushBody,
           { conversationId: input.conversationId, senderId: input.memberId }
         );
       }

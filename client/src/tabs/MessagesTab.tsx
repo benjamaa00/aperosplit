@@ -1,11 +1,38 @@
 import { memo, useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { ArrowLeft, Send, Users, Search, X, MessageCircle, Shield } from "lucide-react";
+import {
+  ArrowLeft, Send, Users, Search, X, MessageCircle, Shield,
+  Image as ImageIcon, Mic, MicOff, Play, Pause, Camera, X as XIcon,
+} from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { AvatarImg } from "../components/AvatarImg";
 import { EmptyState } from "../components/EmptyState";
 import { haptics } from "../utils/haptics";
 import type { Member, Conversation, ConversationMessage } from "../types";
+
+function compressImage(file: File, maxW = 1200, quality = 0.75): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      let w = img.width, h = img.height;
+      if (w > maxW) { h = (h * maxW) / w; w = maxW; }
+      const c = document.createElement("canvas");
+      c.width = w; c.height = h;
+      c.getContext("2d")!.drawImage(img, 0, 0, w, h);
+      c.toBlob((blob) => {
+        URL.revokeObjectURL(url);
+        if (!blob) return reject(new Error("Compression failed"));
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      }, "image/jpeg", quality);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("Image load failed")); };
+    img.src = url;
+  });
+}
 
 export const MessagesTab = memo(function MessagesTab({
   currentMemberId,
@@ -21,8 +48,17 @@ export const MessagesTab = memo(function MessagesTab({
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [newMessage, setNewMessage] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const [lightbox, setLightbox] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const recordingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
 
   // tRPC queries
   const regularConversationsQuery = trpc.equilibra.getConversations.useQuery(
@@ -54,37 +90,144 @@ export const MessagesTab = memo(function MessagesTab({
     [conversations, activeConversationId]
   );
 
-  // Auto-scroll to bottom when messages change
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages]);
 
-  // Mark conversation as read when opened
   useEffect(() => {
     if (activeConversationId && currentMemberId) {
       markReadMutation.mutate({ conversationId: activeConversationId, memberId: currentMemberId });
     }
   }, [activeConversationId, currentMemberId]);
 
-  const handleSendMessage = useCallback(async () => {
-    if (!newMessage.trim() || !activeConversationId) return;
-    const content = newMessage.trim();
-    setNewMessage("");
+  useEffect(() => {
+    return () => {
+      if (recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+        mediaRecorderRef.current.stop();
+      }
+    };
+  }, []);
+
+  const doSend = useCallback(async (content: string, type: "text" | "image" | "audio" = "text") => {
+    if (!activeConversationId) return;
     haptics.light();
     try {
       await sendMessageMutation.mutateAsync({
         conversationId: activeConversationId,
         memberId: currentMemberId,
         content,
+        type,
       });
       conversationsQuery.refetch();
       messagesQuery.refetch();
     } catch {
-      setNewMessage(content);
+      if (type === "text") toast.error("Erreur lors de l'envoi");
     }
-  }, [newMessage, activeConversationId, currentMemberId, sendMessageMutation, conversationsQuery, messagesQuery]);
+  }, [activeConversationId, currentMemberId, sendMessageMutation, conversationsQuery, messagesQuery]);
+
+  const handleSendMessage = useCallback(async () => {
+    if (imagePreview) {
+      const img = imagePreview;
+      setImagePreview(null);
+      await doSend(img, "image");
+      return;
+    }
+    if (!newMessage.trim()) return;
+    const content = newMessage.trim();
+    setNewMessage("");
+    await doSend(content, "text");
+  }, [newMessage, imagePreview, doSend]);
+
+  const handlePaste = useCallback(async (e: React.ClipboardEvent) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.startsWith("image/")) {
+        e.preventDefault();
+        const file = items[i].getAsFile();
+        if (!file) return;
+        try {
+          const compressed = await compressImage(file);
+          setImagePreview(compressed);
+        } catch {
+          toast.error("Erreur lors du traitement de l'image");
+        }
+        return;
+      }
+    }
+  }, []);
+
+  const handleFileSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    if (!file.type.startsWith("image/")) {
+      toast.error("Seules les images sont acceptées");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("Image trop volumineuse (max 10 Mo)");
+      return;
+    }
+    try {
+      const compressed = await compressImage(file);
+      setImagePreview(compressed);
+    } catch {
+      toast.error("Erreur lors du traitement de l'image");
+    }
+  }, []);
+
+  const startRecording = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mr = new MediaRecorder(stream, { mimeType: "audio/webm;codecs=opus" });
+      audioChunksRef.current = [];
+      mr.ondataavailable = (e) => { if (e.data.size > 0) audioChunksRef.current.push(e.data); };
+      mr.onstop = async () => {
+        stream.getTracks().forEach(t => t.stop());
+        const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+        if (blob.size < 1000) return;
+        const reader = new FileReader();
+        reader.onload = () => doSend(reader.result as string, "audio");
+        reader.readAsDataURL(blob);
+      };
+      mr.start();
+      mediaRecorderRef.current = mr;
+      setIsRecording(true);
+      setRecordingTime(0);
+      recordingIntervalRef.current = setInterval(() => setRecordingTime(t => t + 1), 1000);
+      haptics.light();
+    } catch {
+      toast.error("Accès au microphone refusé");
+    }
+  }, [doSend]);
+
+  const stopRecording = useCallback(() => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      mediaRecorderRef.current.stop();
+    }
+    setIsRecording(false);
+    if (recordingIntervalRef.current) {
+      clearInterval(recordingIntervalRef.current);
+      recordingIntervalRef.current = null;
+    }
+    haptics.light();
+  }, []);
+
+  const cancelRecording = useCallback(() => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      mediaRecorderRef.current.stop();
+    }
+    audioChunksRef.current = [];
+    setIsRecording(false);
+    if (recordingIntervalRef.current) {
+      clearInterval(recordingIntervalRef.current);
+      recordingIntervalRef.current = null;
+    }
+  }, []);
 
   const handleStartDirectConversation = useCallback(async (targetMemberId: string) => {
     if (targetMemberId === currentMemberId) return;
@@ -100,20 +243,17 @@ export const MessagesTab = memo(function MessagesTab({
       } else {
         toast.error("Impossible de créer la conversation");
       }
-    } catch (e) {
-      console.error("Failed to create DM:", e);
+    } catch {
       toast.error("Erreur lors de la création de la conversation");
     }
   }, [currentMemberId, createDirectConversationMutation, conversationsQuery]);
 
   const handleSelectGroupChat = useCallback(async () => {
     haptics.light();
-    // Find the group conversation (auto-created by getConversations query)
     const groupConv = conversations.find((c: Conversation) => c.type === "group");
     if (groupConv) {
       setActiveConversationId(groupConv.id);
     } else {
-      // Force refetch to ensure group conversation is created
       await conversationsQuery.refetch();
       const updated = conversationsQuery.data;
       const gConv = updated?.find((c: Conversation) => c.type === "group");
@@ -157,15 +297,48 @@ export const MessagesTab = memo(function MessagesTab({
     return d.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
   }, []);
 
+  const formatRecordingTime = useCallback((s: number) => {
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return `${m}:${sec.toString().padStart(2, "0")}`;
+  }, []);
+
+  const lastMessagePreview = useCallback((conv: Conversation) => {
+    if (conv.lastMessage?.startsWith("data:image")) return "📷 Image";
+    if (conv.lastMessage?.startsWith("data:audio")) return "🎤 Audio";
+    return conv.lastMessage || "Aucun message";
+  }, []);
+
   // ─── RENDER ───
   return (
     <div className="flex h-[calc(100dvh-110px)]">
+      {/* ── Lightbox ── */}
+      {lightbox && (
+        <div
+          className="fixed inset-0 z-[9999] bg-black/90 flex items-center justify-center p-4"
+          onClick={() => setLightbox(null)}
+          style={{ WebkitTapHighlightColor: "transparent" }}
+        >
+          <button
+            onClick={() => setLightbox(null)}
+            className="absolute top-12 right-4 w-10 h-10 rounded-full bg-white/10 flex items-center justify-center z-10"
+          >
+            <XIcon size={20} className="text-white" />
+          </button>
+          <img
+            src={lightbox}
+            alt="Aperçu"
+            className="max-w-full max-h-[85vh] object-contain rounded-xl"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
+
       {/* ── Main Content Area ── */}
       <div className="flex-1 flex flex-col min-w-0">
         {!activeConversationId ? (
-          /* ── Conversation List / New Chat ── */
+          /* ── Conversation List ── */
           <div className="flex flex-col h-full">
-            {/* Header */}
             <div className="px-4 pt-12 pb-3">
               <div className="flex items-center gap-2">
                 <h1 className="text-2xl font-bold tracking-tight">Messages</h1>
@@ -183,7 +356,6 @@ export const MessagesTab = memo(function MessagesTab({
               </p>
             </div>
 
-            {/* Conversations */}
             {conversations.length > 0 && (
               <div className="px-3 space-y-1">
                 {conversations.map((conv: Conversation) => {
@@ -195,20 +367,14 @@ export const MessagesTab = memo(function MessagesTab({
                   return (
                     <button
                       key={conv.id}
-                      onClick={() => {
-                        setActiveConversationId(conv.id);
-                        haptics.light();
-                      }}
+                      onClick={() => { setActiveConversationId(conv.id); haptics.light(); }}
                       className="w-full flex items-center gap-3 p-3 rounded-2xl bg-card/30 border border-border/50 hover:bg-card/50 transition-all text-left"
                     >
                       <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
                         {isGroup ? (
                           <Users size={20} className="text-primary" />
                         ) : (
-                          <AvatarImg
-                            avatar={otherMember?.avatar || "👤"}
-                            size="text-xl"
-                          />
+                          <AvatarImg avatar={otherMember?.avatar || "👤"} size="text-xl" />
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -216,9 +382,7 @@ export const MessagesTab = memo(function MessagesTab({
                           <span className="font-semibold text-sm truncate">
                             {isGroup ? "Chat du groupe" : otherMember?.name || "Conversation"}
                             {!isGroup && isAdmin && (
-                              <span className="ml-1.5 text-[9px] font-medium text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded-full align-middle">
-                                Privé
-                              </span>
+                              <span className="ml-1.5 text-[9px] font-medium text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded-full align-middle">Privé</span>
                             )}
                           </span>
                           {conv.lastMessageAt && (
@@ -229,7 +393,7 @@ export const MessagesTab = memo(function MessagesTab({
                         </div>
                         <div className="flex items-center justify-between mt-0.5">
                           <p className="text-xs text-muted-foreground truncate max-w-[200px]">
-                            {conv.lastMessage || "Aucun message"}
+                            {lastMessagePreview(conv)}
                           </p>
                           {(conv.unreadCount || 0) > 0 && (
                             <span className="ml-2 w-5 h-5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center flex-shrink-0">
@@ -244,12 +408,10 @@ export const MessagesTab = memo(function MessagesTab({
               </div>
             )}
 
-            {/* New Chat Section */}
             <div className="px-4 mt-4">
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
                 Nouvelle conversation
               </p>
-              {/* Group Chat Button */}
               <button
                 onClick={handleSelectGroupChat}
                 className="w-full flex items-center gap-3 p-3 rounded-2xl bg-primary/5 border border-primary/20 hover:bg-primary/10 transition-all mb-3"
@@ -259,18 +421,12 @@ export const MessagesTab = memo(function MessagesTab({
                 </div>
                 <div className="text-left">
                   <span className="font-semibold text-sm block">Chat du groupe</span>
-                  <span className="text-xs text-muted-foreground">
-                    Parlez avec tout le groupe
-                  </span>
+                  <span className="text-xs text-muted-foreground">Parlez avec tout le groupe</span>
                 </div>
               </button>
 
-              {/* Search members */}
               <div className="relative mb-3">
-                <Search
-                  size={16}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-                />
+                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                 <input
                   type="text"
                   placeholder="Rechercher un membre..."
@@ -279,16 +435,12 @@ export const MessagesTab = memo(function MessagesTab({
                   className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-card/30 border border-border/50 text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/50 transition-colors"
                 />
                 {searchQuery && (
-                  <button
-                    onClick={() => setSearchQuery("")}
-                    className="absolute right-3 top-1/2 -translate-y-1/2"
-                  >
+                  <button onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2">
                     <X size={14} className="text-muted-foreground" />
                   </button>
                 )}
               </div>
 
-              {/* Member list for new DMs */}
               <div className="space-y-1">
                 {filteredMembers.map((member) => (
                   <button
@@ -299,9 +451,7 @@ export const MessagesTab = memo(function MessagesTab({
                     <AvatarImg avatar={member.avatar} size="text-xl" />
                     <div>
                       <span className="font-medium text-sm">{member.name}</span>
-                      <span className="text-xs text-muted-foreground ml-2 capitalize">
-                        {member.role || "membre"}
-                      </span>
+                      <span className="text-xs text-muted-foreground ml-2 capitalize">{member.role || "membre"}</span>
                     </div>
                   </button>
                 ))}
@@ -310,11 +460,7 @@ export const MessagesTab = memo(function MessagesTab({
 
             {conversations.length === 0 && (
               <div className="flex-1 flex items-center justify-center px-6">
-                <EmptyState
-                  icon={MessageCircle}
-                  title="Aucune conversation"
-                  description="Sélectionnez un membre ou le groupe pour commencer à discuter"
-                />
+                <EmptyState icon={MessageCircle} title="Aucune conversation" description="Sélectionnez un membre ou le groupe pour commencer à discuter" />
               </div>
             )}
           </div>
@@ -322,7 +468,7 @@ export const MessagesTab = memo(function MessagesTab({
           /* ── Chat View ── */
           <div className="flex flex-col h-full">
             {/* Chat Header */}
-            <div className="flex items-center gap-3 px-3 pt-12 pb-3 border-b border-border/30">
+            <div className="flex items-center gap-3 px-3 pt-12 pb-3 border-b border-border/30 flex-shrink-0">
               <button
                 onClick={handleBack}
                 className="w-10 h-10 rounded-2xl bg-card/30 border border-border/50 flex items-center justify-center flex-shrink-0"
@@ -346,45 +492,64 @@ export const MessagesTab = memo(function MessagesTab({
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+            <div ref={chatContainerRef} className="flex-1 overflow-y-auto px-4 py-3 space-y-3" style={{ WebkitOverflowScrolling: "touch" }}>
               {messages.length === 0 && (
                 <div className="flex items-center justify-center h-full">
-                  <p className="text-sm text-muted-foreground">
-                    Aucun message. Envoyez le premier !
-                  </p>
+                  <p className="text-sm text-muted-foreground">Aucun message. Envoyez le premier !</p>
                 </div>
               )}
               {messages.map((msg: ConversationMessage) => {
                 const isMe = msg.memberId === currentMemberId;
                 const author = getMemberById(msg.memberId);
+                const isImage = msg.type === "image" || msg.content?.startsWith("data:image");
+                const isAudio = msg.type === "audio" || msg.content?.startsWith("data:audio");
                 return (
-                  <div
-                    key={msg.id}
-                    className={`flex ${isMe ? "justify-end" : "justify-start"}`}
-                  >
+                  <div key={msg.id} className={`flex ${isMe ? "justify-end" : "justify-start"}`}>
                     <div
                       className={`max-w-[80%] ${
                         isMe
                           ? "bg-primary text-primary-foreground rounded-2xl rounded-br-md"
                           : "bg-card/60 border border-border/50 rounded-2xl rounded-bl-md"
-                      } px-4 py-2.5`}
+                      } ${isImage ? "p-1 overflow-hidden" : "px-4 py-2.5"}`}
                     >
-                      {!isMe && author && (
+                      {!isMe && author && !isImage && (
                         <div className="flex items-center gap-2 mb-1">
                           <AvatarImg avatar={author.avatar} size="text-xs" />
-                          <span className="text-[10px] font-semibold opacity-70">
-                            {author.name}
-                          </span>
+                          <span className="text-[10px] font-semibold opacity-70">{author.name}</span>
                         </div>
                       )}
-                      <p className="text-sm leading-relaxed">{msg.content}</p>
-                      <p
-                        className={`text-[10px] mt-1 ${
-                          isMe ? "text-primary-foreground/60" : "text-muted-foreground"
-                        }`}
-                      >
-                        {formatTime(msg.createdAt)}
-                      </p>
+                      {!isMe && author && isImage && (
+                        <div className="flex items-center gap-2 mb-1 px-2 pt-1">
+                          <AvatarImg avatar={author.avatar} size="text-xs" />
+                          <span className="text-[10px] font-semibold opacity-70">{author.name}</span>
+                        </div>
+                      )}
+
+                      {isImage ? (
+                        <img
+                          src={msg.content}
+                          alt="Image"
+                          className="max-w-full rounded-xl cursor-pointer"
+                          style={{ maxHeight: 280 }}
+                          onClick={() => setLightbox(msg.content)}
+                          loading="lazy"
+                        />
+                      ) : isAudio ? (
+                        <AudioMessage dataUrl={msg.content} isMe={isMe} />
+                      ) : (
+                        <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{msg.content}</p>
+                      )}
+
+                      {!isImage && (
+                        <p className={`text-[10px] mt-1 ${isMe ? "text-primary-foreground/60" : "text-muted-foreground"}`}>
+                          {formatTime(msg.createdAt)}
+                        </p>
+                      )}
+                      {isImage && (
+                        <p className={`text-[10px] mt-1 px-2 pb-1 ${isMe ? "text-primary-foreground/60" : "text-muted-foreground"}`}>
+                          {formatTime(msg.createdAt)}
+                        </p>
+                      )}
                     </div>
                   </div>
                 );
@@ -392,30 +557,102 @@ export const MessagesTab = memo(function MessagesTab({
               <div ref={messagesEndRef} />
             </div>
 
+            {/* Image Preview Bar */}
+            {imagePreview && (
+              <div className="px-3 pt-2 pb-1 border-t border-border/30 flex items-center gap-3">
+                <div className="relative">
+                  <img src={imagePreview} alt="Aperçu" className="h-20 rounded-xl object-cover" />
+                  <button
+                    onClick={() => setImagePreview(null)}
+                    className="absolute -top-1.5 -right-1.5 w-6 h-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center"
+                  >
+                    <XIcon size={12} />
+                  </button>
+                </div>
+                <span className="text-xs text-muted-foreground">Image prête à envoyer</span>
+              </div>
+            )}
+
+            {/* Recording Bar */}
+            {isRecording && (
+              <div className="px-3 pt-2 pb-1 border-t border-red-500/30 bg-red-500/5 flex items-center gap-3">
+                <div className="flex items-center gap-2 flex-1">
+                  <div className="w-3 h-3 rounded-full bg-red-500 animate-pulse" />
+                  <span className="text-sm font-mono text-red-400">{formatRecordingTime(recordingTime)}</span>
+                </div>
+                <button
+                  onClick={cancelRecording}
+                  className="px-3 py-1.5 rounded-xl bg-card/30 border border-border/50 text-xs font-medium"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={stopRecording}
+                  className="px-3 py-1.5 rounded-xl bg-red-500 text-white text-xs font-medium"
+                >
+                  Envoyer
+                </button>
+              </div>
+            )}
+
             {/* Message Input */}
-            <div className="px-3 py-3 border-t border-border/30">
-              <div className="flex items-center gap-2">
+            <div className="px-3 py-3 border-t border-border/30 flex-shrink-0" style={{ paddingBottom: "calc(12px + env(safe-area-inset-bottom, 0px))" }}>
+              <div className="flex items-end gap-2">
+                {/* Image button */}
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-10 h-10 rounded-xl bg-card/30 border border-border/50 flex items-center justify-center flex-shrink-0 hover:bg-card/50 transition-colors"
+                  aria-label="Joindre une image"
+                >
+                  <Camera size={18} className="text-muted-foreground" />
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
+
+                {/* Text input */}
                 <input
                   ref={inputRef}
                   type="text"
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
+                  onPaste={handlePaste}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && !e.shiftKey) {
                       e.preventDefault();
                       handleSendMessage();
                     }
                   }}
-                  placeholder="Écrire un message..."
-                  className="flex-1 px-4 py-2.5 rounded-xl bg-card/30 border border-border/50 text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/50 transition-colors"
+                  placeholder={imagePreview ? "Légende (optionnel)..." : "Écrire un message..."}
+                  className="flex-1 px-4 py-2.5 rounded-xl bg-card/30 border border-border/50 text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/50 transition-colors min-h-[42px]"
                 />
-                <button
-                  onClick={handleSendMessage}
-                  disabled={!newMessage.trim()}
-                  className="w-10 h-10 rounded-xl bg-primary text-primary-foreground flex items-center justify-center disabled:opacity-30 transition-opacity"
-                >
-                  <Send size={16} />
-                </button>
+
+                {/* Mic / Send button */}
+                {newMessage.trim() || imagePreview ? (
+                  <button
+                    onClick={handleSendMessage}
+                    className="w-10 h-10 rounded-xl bg-primary text-primary-foreground flex items-center justify-center flex-shrink-0 active:scale-90 transition-transform"
+                  >
+                    <Send size={16} />
+                  </button>
+                ) : (
+                  <button
+                    onMouseDown={(e) => { e.preventDefault(); isRecording ? stopRecording() : startRecording(); }}
+                    className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 active:scale-90 transition-all ${
+                      isRecording
+                        ? "bg-red-500 text-white animate-pulse"
+                        : "bg-card/30 border border-border/50 text-muted-foreground hover:bg-card/50"
+                    }`}
+                    aria-label={isRecording ? "Arrêter l'enregistrement" : "Enregistrer un audio"}
+                  >
+                    {isRecording ? <MicOff size={18} /> : <Mic size={18} />}
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -424,7 +661,6 @@ export const MessagesTab = memo(function MessagesTab({
 
       {/* ── Vertical Profile Rail (Right Side) ── */}
       <div className="w-16 border-l border-border/30 flex flex-col items-center py-12 gap-2 overflow-y-auto scrollbar-hidden bg-card/10">
-        {/* Group avatar */}
         <button
           onClick={handleSelectGroupChat}
           className={`relative w-11 h-11 rounded-full flex items-center justify-center transition-all ${
@@ -434,8 +670,7 @@ export const MessagesTab = memo(function MessagesTab({
           }`}
         >
           <Users size={16} className="text-primary" />
-          {(conversations.find((c: Conversation) => c.type === "group")?.unreadCount || 0) >
-            0 && (
+          {(conversations.find((c: Conversation) => c.type === "group")?.unreadCount || 0) > 0 && (
             <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-primary text-primary-foreground text-[8px] font-bold flex items-center justify-center">
               {conversations.find((c: Conversation) => c.type === "group")?.unreadCount}
             </span>
@@ -444,25 +679,18 @@ export const MessagesTab = memo(function MessagesTab({
 
         <div className="w-8 h-px bg-border/50 my-1" />
 
-        {/* Individual member avatars */}
         {otherMembers.map((member) => {
           const memberConv = conversations.find(
-            (c: Conversation) =>
-              c.type === "direct" && c.otherMemberId === member.id
+            (c: Conversation) => c.type === "direct" && c.otherMemberId === member.id
           );
-          const isActive =
-            activeConversationId &&
-            memberConv &&
-            activeConversationId === memberConv.id;
+          const isActive = activeConversationId && memberConv && activeConversationId === memberConv.id;
 
           return (
             <button
               key={member.id}
               onClick={() => handleStartDirectConversation(member.id)}
               className={`relative w-11 h-11 rounded-full overflow-hidden transition-all ${
-                isActive
-                  ? "ring-2 ring-primary"
-                  : "hover:ring-1 hover:ring-border"
+                isActive ? "ring-2 ring-primary" : "hover:ring-1 hover:ring-border"
               }`}
             >
               <AvatarImg avatar={member.avatar} size="text-lg" />
@@ -478,3 +706,73 @@ export const MessagesTab = memo(function MessagesTab({
     </div>
   );
 });
+
+MessagesTab.displayName = "MessagesTab";
+
+/* ── Inline Audio Player ── */
+const AudioMessage = memo(function AudioMessage({ dataUrl, isMe }: { dataUrl: string; isMe: boolean }) {
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const [playing, setPlaying] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [duration, setDuration] = useState(0);
+
+  useEffect(() => {
+    const a = audioRef.current;
+    if (!a) return;
+    const onTime = () => { if (a.duration) setProgress(a.currentTime / a.duration); };
+    const onEnd = () => { setPlaying(false); setProgress(0); };
+    const onMeta = () => setDuration(a.duration || 0);
+    a.addEventListener("timeupdate", onTime);
+    a.addEventListener("ended", onEnd);
+    a.addEventListener("loadedmetadata", onMeta);
+    return () => { a.removeEventListener("timeupdate", onTime); a.removeEventListener("ended", onEnd); a.removeEventListener("loadedmetadata", onMeta); };
+  }, [dataUrl]);
+
+  const togglePlay = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    const a = audioRef.current;
+    if (!a) return;
+    if (playing) { a.pause(); setPlaying(false); } else { a.play(); setPlaying(true); }
+  }, [playing]);
+
+  const fmt = useCallback((s: number) => {
+    const m = Math.floor(s / 60);
+    const sec = Math.floor(s % 60);
+    return `${m}:${sec.toString().padStart(2, "0")}`;
+  }, []);
+
+  return (
+    <div className="flex items-center gap-2.5 px-2 py-1.5 min-w-[180px]" onClick={(e) => e.stopPropagation()}>
+      <audio ref={audioRef} src={dataUrl} preload="metadata" />
+      <button
+        onClick={togglePlay}
+        className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${
+          isMe ? "bg-white/20" : "bg-primary/15"
+        }`}
+      >
+        {playing ? <Pause size={14} className={isMe ? "text-white" : "text-primary"} /> : <Play size={14} className={`ml-0.5 ${isMe ? "text-white" : "text-primary"}`} />}
+      </button>
+      <div className="flex-1 min-w-0">
+        <div className={`h-1.5 rounded-full overflow-hidden ${isMe ? "bg-white/20" : "bg-primary/10"}`}>
+          <div
+            className={`h-full rounded-full transition-all duration-100 ${isMe ? "bg-white/70" : "bg-primary/60"}`}
+            style={{ width: `${progress * 100}%` }}
+          />
+        </div>
+        <div className="flex justify-between mt-0.5">
+          <span className={`text-[9px] ${isMe ? "text-white/50" : "text-muted-foreground"}`}>
+            {playing ? fmt(audioRef.current?.currentTime || 0) : duration ? fmt(duration) : "0:00"}
+          </span>
+          <span className={`text-[9px] ${isMe ? "text-white/50" : "text-muted-foreground"}`}>
+            {formatTimeShort(new Date().toISOString())}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+});
+
+function formatTimeShort(dateStr: string) {
+  const d = new Date(dateStr);
+  return d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+}

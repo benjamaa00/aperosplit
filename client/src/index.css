@@ -1279,3 +1279,94 @@
   .ambient-orb { animation: none; }
   .tab-content-animate { animation: none; opacity: 1; }
 }
+
+/* ═══ iOS Safari / PWA polish ═══ */
+
+/* Prevent rubber-band bounce on the body */
+html {
+  overscroll-behavior: none;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  overscroll-behavior: none;
+  position: fixed;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--background, #08080D);
+}
+
+/* Smooth momentum scroll inside containers */
+.scroll-container,
+#root {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Input focus ring fix for iOS */
+input, textarea {
+  -webkit-appearance: none;
+  appearance: none;
+  border-radius: 12px;
+}
+
+input:focus, textarea:focus {
+  outline: none;
+}
+
+/* Prevent iOS zoom on input focus */
+@media screen and (max-width: 768px) {
+  input[type="text"],
+  input[type="number"],
+  input[type="email"],
+  input[type="password"],
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Safe area utilities */
+.safe-top { padding-top: env(safe-area-inset-top, 0px); }
+.safe-bottom { padding-bottom: env(safe-area-inset-bottom, 0px); }
+.safe-left { padding-left: env(safe-area-inset-left, 0px); }
+.safe-right { padding-right: env(safe-area-inset-right, 0px); }
+
+/* iOS standalone mode indicator bar */
+@media all and (display-mode: standalone) {
+  body {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+}
+
+/* Prevent double-tap zoom on buttons */
+button, a, [role="button"] {
+  touch-action: manipulation;
+}
+
+/* Image in chat - prevent context menu on long press */
+.chat-image {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Smooth scrollbar */
+.scrollbar-hidden::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hidden {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* iOS momentum scroll fix for chat */
+.chat-scroll {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  scroll-behavior: smooth;
+}
+
+/* Prevent pull-to-refresh in the app */
+#root {
+  overscroll-behavior-y: contain;
+}
