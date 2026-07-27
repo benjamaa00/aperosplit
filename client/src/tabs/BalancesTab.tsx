@@ -20,8 +20,8 @@ function RequestSheet({ member, amount, currency, onClose, onConfirm }: RequestS
 
  return (
  <div
- className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end justify-center"
- onClick={onClose}
+   className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[1100] flex items-end justify-center"
+   onClick={onClose}
  >
  <div
  className="w-full max-w-md bg-card rounded-t-[1.5rem] max-h-[80vh] overflow-y-auto [&::-webkit-scrollbar]:hidden"
@@ -123,7 +123,7 @@ export const BalancesTab = memo(function BalancesTab({
  const isNegative = memberBalance < -0.01;
  const isCurrentMember = member.id === currentMemberId;
  const showDemandButton =
- isNegative && !isCurrentMember && currentMemberBalance > 0.01;
+  isNegative && !isCurrentMember;
 
  return (
  <div key={member.id}>
