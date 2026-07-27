@@ -3,6 +3,7 @@ import { Home, Scale, MessageCircle, User, Plus, type LucideIcon } from "lucide-
 import { ErrorBoundary } from "./ErrorBoundary";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { haptics } from "../utils/haptics";
+import { useThemeContext } from "../contexts/ThemeContext";
 import type { Tab } from "../types";
 
 const TAB_ICONS: Record<Tab, LucideIcon> = {
@@ -320,12 +321,9 @@ const AppShell = memo(({ children, activeTab, onTabChange, onAddExpense }: AppSh
                     zIndex: 3,
                     transition: dragUI.active ? "none" : "left 320ms cubic-bezier(0.34,1.56,0.64,1), width 320ms cubic-bezier(0.34,1.56,0.64,1)",
                     background: dragUI.active
-                      ? "linear-gradient(180deg, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0.06) 100%)"
-                      : "rgba(255,255,255,0.08)",
-                    border: "1px solid rgba(255,255,255,0.09)",
-                    boxShadow: dragUI.active
-                      ? "inset 0 1px 0 rgba(255,255,255,0.16), 0 4px 18px rgba(0,0,0,0.16)"
-                      : "inset 0 1px 0 rgba(255,255,255,0.10), 0 4px 12px rgba(0,0,0,0.10)",
+                      ? "var(--nav-pill-bg-active)"
+                      : "var(--nav-pill-bg)",
+                    border: "1px solid var(--nav-pill-border)",
                   }}
                 />
               )}
@@ -368,14 +366,14 @@ const GridTab = memo(({
           strokeWidth={lit ? 2 : 1.5}
           className="transition-all duration-[200ms]"
           style={{
-            color: lit ? "rgba(255,255,255,1)" : "rgba(255,255,255,0.40)",
+            color: lit ? "var(--nav-icon-active, rgba(255,255,255,1))" : "var(--nav-icon-inactive, rgba(255,255,255,0.40))",
             filter: lit ? "drop-shadow(0 0 6px rgba(128,80,240,0.45))" : "none",
           }}
         />
         <span
           className="text-[11px] font-medium tracking-wide leading-none transition-opacity duration-[200ms]"
           style={{
-            color: lit ? "rgba(255,255,255,1)" : "rgba(255,255,255,0.40)",
+            color: lit ? "var(--nav-icon-active, rgba(255,255,255,1))" : "var(--nav-icon-inactive, rgba(255,255,255,0.40))",
             opacity: lit ? 1 : 0.6,
           }}
         >

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { groupProcedure, groupAdminProcedure, publicProcedure, router } from "../_core/trpc";
+import { TRPCError } from "@trpc/server";
 import { storagePut } from "../storage";
 import { invokeLLM } from "../_core/llm";
 import { randomUUID } from "node:crypto";
@@ -672,7 +673,7 @@ export const equilibraRouter = router({
       memberId: z.string().min(1).max(128),
       name: z.string().trim().min(1).max(64),
       emoji: z.string().min(1).max(8),
-      icon: z.string().max(32).optional(),
+      icon: z.string().max(128).optional(),
       color: z.string().max(16).optional(),
       sortOrder: z.number().int().optional(),
     }))
@@ -688,7 +689,7 @@ export const equilibraRouter = router({
       categoryId: z.string().min(1).max(128),
       name: z.string().trim().min(1).max(64).optional(),
       emoji: z.string().min(1).max(8).optional(),
-      icon: z.string().max(32).optional(),
+      icon: z.string().max(128).optional(),
       color: z.string().max(16).optional(),
       sortOrder: z.number().int().optional(),
       isActive: z.boolean().optional(),
@@ -873,15 +874,21 @@ export const equilibraRouter = router({
       return conversations;
     }),
 
-  getAllConversations: groupAdminProcedure
+  getAllConversations: groupProcedure
     .input(z.object({ memberId: z.string().min(1).max(128) }))
     .query(async ({ input }) => {
-      // Auto-create group conversation
+      // Admin check inside handler (middleware can't read GET query input)
+      const db = await getDb();
+      if (db) {
+        const result = await db.query(`SELECT role FROM group_members WHERE id = $1`, [input.memberId]);
+        if (!result.rows[0] || result.rows[0].role !== 'admin') {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Réservé aux administrateurs" });
+        }
+      }
       const groupConvId = await getOrCreateGroupConversation(GROUP_ID);
       if (groupConvId) {
         await addParticipantToConversation(groupConvId, input.memberId);
       }
-      // Return ALL conversations in the group (admin visibility)
       const conversations = await getAllGroupConversations(GROUP_ID, input.memberId);
       return conversations;
     }),

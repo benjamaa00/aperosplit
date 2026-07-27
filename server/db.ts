@@ -272,6 +272,7 @@ export function initializeDatabase(): Promise<void> {
       } catch {}
       // Enhance expense_categories
       try { await pool!.query(`ALTER TABLE expense_categories ADD COLUMN IF NOT EXISTS icon VARCHAR(32)`); } catch {}
+      try { await pool!.query(`ALTER TABLE expense_categories ALTER COLUMN icon TYPE VARCHAR(128)`); } catch {}
       try { await pool!.query(`ALTER TABLE expense_categories ADD COLUMN IF NOT EXISTS color VARCHAR(16)`); } catch {}
       try { await pool!.query(`ALTER TABLE expense_categories ADD COLUMN IF NOT EXISTS sort_order INTEGER NOT NULL DEFAULT 0`); } catch {}
       try { await pool!.query(`ALTER TABLE expense_categories ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE`); } catch {}
