@@ -1371,15 +1371,14 @@ export async function getOrCreateGroupConversation(groupId: string) {
 export async function findOrCreateDirectConversation(groupId: string, memberA: string, memberB: string) {
   const db = await ready();
   if (!db) return null;
-  // Check if a direct conversation already exists between these two members
   const existing = await db.query(
     `SELECT c.id FROM conversations c
-     JOIN conversation_participants cp1 ON cp1.conversation_id = c.id AND cp1.member_id = $3
-     JOIN conversation_participants cp2 ON cp2.conversation_id = c.id AND cp2.member_id = $4
+     JOIN conversation_participants cp1 ON cp1.conversation_id = c.id AND cp1.member_id = $2
+     JOIN conversation_participants cp2 ON cp2.conversation_id = c.id AND cp2.member_id = $3
      WHERE c.group_id = $1 AND c.type = 'direct'
      AND (SELECT COUNT(*) FROM conversation_participants WHERE conversation_id = c.id) = 2
      LIMIT 1`,
-    [groupId, null, memberA, memberB]
+    [groupId, memberA, memberB]
   );
   if (existing.rows[0]) return existing.rows[0].id;
   const id = `conv_dm_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -1411,6 +1410,25 @@ export async function getConversationsForMember(groupId: string, memberId: strin
      WHERE c.group_id = $1
      ORDER BY COALESCE(c.last_message_at, c.created_at) DESC`,
     [groupId, memberId]
+  );
+  return result.rows;
+}
+
+export async function getAllGroupConversations(groupId: string, viewerMemberId: string) {
+  const db = await ready();
+  if (!db) return [];
+  const result = await db.query(
+    `SELECT c.id, c.type, c.name, c.last_message_at AS "lastMessageAt", c.created_at AS "createdAt",
+     (SELECT COUNT(*) FROM conversation_messages cm WHERE cm.conversation_id = c.id AND cm.created_at > COALESCE(
+       (SELECT cpv.last_read_at FROM conversation_participants cpv WHERE cpv.conversation_id = c.id AND cpv.member_id = $2),
+       '1970-01-01'))::int AS "unreadCount",
+     (SELECT cm.content FROM conversation_messages cm WHERE cm.conversation_id = c.id ORDER BY cm.created_at DESC LIMIT 1) AS "lastMessage",
+     (SELECT cm.member_id FROM conversation_messages cm WHERE cm.conversation_id = c.id ORDER BY cm.created_at DESC LIMIT 1) AS "lastMessageAuthor",
+     (SELECT other.member_id FROM conversation_participants other WHERE other.conversation_id = c.id AND other.member_id != $2 LIMIT 1) AS "otherMemberId"
+     FROM conversations c
+     WHERE c.group_id = $1
+     ORDER BY COALESCE(c.last_message_at, c.created_at) DESC`,
+    [groupId, viewerMemberId]
   );
   return result.rows;
 }

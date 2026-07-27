@@ -1,5 +1,6 @@
 import { memo, useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { ArrowLeft, Send, Users, Search, X, MessageCircle } from "lucide-react";
+import { ArrowLeft, Send, Users, Search, X, MessageCircle, Shield } from "lucide-react";
+import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { AvatarImg } from "../components/AvatarImg";
 import { EmptyState } from "../components/EmptyState";
@@ -10,10 +11,12 @@ export const MessagesTab = memo(function MessagesTab({
   currentMemberId,
   members,
   currency,
+  isAdmin = false,
 }: {
   currentMemberId: string;
   members: Member[];
   currency: string;
+  isAdmin?: boolean;
 }) {
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [newMessage, setNewMessage] = useState("");
@@ -22,10 +25,17 @@ export const MessagesTab = memo(function MessagesTab({
   const inputRef = useRef<HTMLInputElement>(null);
 
   // tRPC queries
-  const conversationsQuery = trpc.equilibra.getConversations.useQuery(
+  const regularConversationsQuery = trpc.equilibra.getConversations.useQuery(
     { memberId: currentMemberId },
-    { enabled: !!currentMemberId, refetchInterval: 5000, staleTime: 3000 }
+    { enabled: !!currentMemberId && !isAdmin, refetchInterval: 5000, staleTime: 3000 }
   );
+
+  const adminConversationsQuery = trpc.equilibra.getAllConversations.useQuery(
+    { memberId: currentMemberId },
+    { enabled: !!currentMemberId && isAdmin, refetchInterval: 5000, staleTime: 3000 }
+  );
+
+  const conversationsQuery = isAdmin ? adminConversationsQuery : regularConversationsQuery;
 
   const messagesQuery = trpc.equilibra.getMessages.useQuery(
     { conversationId: activeConversationId || "", limit: 100 },
@@ -84,11 +94,16 @@ export const MessagesTab = memo(function MessagesTab({
         memberId: currentMemberId,
         targetMemberId,
       });
-      if (result.conversationId) {
+      if (result?.conversationId) {
         setActiveConversationId(result.conversationId);
-        conversationsQuery.refetch();
+        await conversationsQuery.refetch();
+      } else {
+        toast.error("Impossible de créer la conversation");
       }
-    } catch {}
+    } catch (e) {
+      console.error("Failed to create DM:", e);
+      toast.error("Erreur lors de la création de la conversation");
+    }
   }, [currentMemberId, createDirectConversationMutation, conversationsQuery]);
 
   const handleSelectGroupChat = useCallback(async () => {
@@ -152,10 +167,18 @@ export const MessagesTab = memo(function MessagesTab({
           <div className="flex flex-col h-full">
             {/* Header */}
             <div className="px-4 pt-12 pb-3">
-              <h1 className="text-2xl font-bold tracking-tight">Messages</h1>
+              <div className="flex items-center gap-2">
+                <h1 className="text-2xl font-bold tracking-tight">Messages</h1>
+                {isAdmin && (
+                  <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-semibold">
+                    <Shield size={10} />
+                    Admin
+                  </span>
+                )}
+              </div>
               <p className="text-sm text-muted-foreground mt-0.5">
                 {conversations.length > 0
-                  ? `${conversations.length} conversation${conversations.length > 1 ? "s" : ""}`
+                  ? `${conversations.length} conversation${conversations.length > 1 ? "s" : ""}${isAdmin ? " (toutes)" : ""}`
                   : "Commencez une conversation"}
               </p>
             </div>
@@ -191,7 +214,12 @@ export const MessagesTab = memo(function MessagesTab({
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between">
                           <span className="font-semibold text-sm truncate">
-                            {isGroup ? "Groupe" : otherMember?.name || "Conversation"}
+                            {isGroup ? "Chat du groupe" : otherMember?.name || "Conversation"}
+                            {!isGroup && isAdmin && (
+                              <span className="ml-1.5 text-[9px] font-medium text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded-full align-middle">
+                                Privé
+                              </span>
+                            )}
                           </span>
                           {conv.lastMessageAt && (
                             <span className="text-xs text-muted-foreground flex-shrink-0 ml-2">
@@ -305,10 +333,14 @@ export const MessagesTab = memo(function MessagesTab({
                 <h2 className="font-bold text-sm truncate">
                   {activeConversation?.type === "group"
                     ? "Chat du groupe"
-                    : "Conversation privée"}
+                    : activeConversation?.otherMemberId
+                      ? getMemberById(activeConversation.otherMemberId)?.name || "Conversation privée"
+                      : "Conversation privée"}
                 </h2>
                 <p className="text-xs text-muted-foreground">
-                  {members.length} membre{members.length > 1 ? "s" : ""}
+                  {activeConversation?.type === "group"
+                    ? `${members.length} membre${members.length > 1 ? "s" : ""}`
+                    : "Conversation privée"}
                 </p>
               </div>
             </div>

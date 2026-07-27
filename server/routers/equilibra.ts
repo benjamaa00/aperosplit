@@ -60,10 +60,12 @@ import {
   getOrCreateGroupConversation,
   findOrCreateDirectConversation,
   getConversationsForMember,
+  getAllGroupConversations,
   getConversationMessages,
   sendConversationMessage,
   markConversationRead,
   getConversationParticipants,
+  addParticipantToConversation,
 } from "../db";
 
 const GROUP_ID = "equilibra-fixed-group";
@@ -863,13 +865,24 @@ export const equilibraRouter = router({
   getConversations: groupProcedure
     .input(z.object({ memberId: z.string().min(1).max(128) }))
     .query(async ({ input }) => {
-      // Auto-create group conversation and ensure member is in it
       const groupConvId = await getOrCreateGroupConversation(GROUP_ID);
       if (groupConvId) {
-        const { addParticipantToConversation } = await import("../db");
         await addParticipantToConversation(groupConvId, input.memberId);
       }
       const conversations = await getConversationsForMember(GROUP_ID, input.memberId);
+      return conversations;
+    }),
+
+  getAllConversations: groupAdminProcedure
+    .input(z.object({ memberId: z.string().min(1).max(128) }))
+    .query(async ({ input }) => {
+      // Auto-create group conversation
+      const groupConvId = await getOrCreateGroupConversation(GROUP_ID);
+      if (groupConvId) {
+        await addParticipantToConversation(groupConvId, input.memberId);
+      }
+      // Return ALL conversations in the group (admin visibility)
+      const conversations = await getAllGroupConversations(GROUP_ID, input.memberId);
       return conversations;
     }),
 
