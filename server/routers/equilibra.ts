@@ -674,6 +674,7 @@ export const equilibraRouter = router({
       name: z.string().trim().min(1).max(64),
       emoji: z.string().min(1).max(8),
       icon: z.string().max(128).optional(),
+      iconData: z.string().max(2_000_000).optional(),
       color: z.string().max(16).optional(),
       sortOrder: z.number().int().optional(),
     }))
@@ -690,6 +691,7 @@ export const equilibraRouter = router({
       name: z.string().trim().min(1).max(64).optional(),
       emoji: z.string().min(1).max(8).optional(),
       icon: z.string().max(128).optional(),
+      iconData: z.string().max(2_000_000).nullable().optional(),
       color: z.string().max(16).optional(),
       sortOrder: z.number().int().optional(),
       isActive: z.boolean().optional(),

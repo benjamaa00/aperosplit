@@ -273,6 +273,7 @@ export function initializeDatabase(): Promise<void> {
       // Enhance expense_categories
       try { await pool!.query(`ALTER TABLE expense_categories ADD COLUMN IF NOT EXISTS icon VARCHAR(32)`); } catch {}
       try { await pool!.query(`ALTER TABLE expense_categories ALTER COLUMN icon TYPE VARCHAR(128)`); } catch {}
+      try { await pool!.query(`ALTER TABLE expense_categories ADD COLUMN IF NOT EXISTS icon_data TEXT`); } catch {}
       try { await pool!.query(`ALTER TABLE expense_categories ADD COLUMN IF NOT EXISTS color VARCHAR(16)`); } catch {}
       try { await pool!.query(`ALTER TABLE expense_categories ADD COLUMN IF NOT EXISTS sort_order INTEGER NOT NULL DEFAULT 0`); } catch {}
       try { await pool!.query(`ALTER TABLE expense_categories ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE`); } catch {}
@@ -468,7 +469,7 @@ export async function getGroupData(groupId: string) {
     db.query(`SELECT id, group_id AS "groupId", description, amount, category, payer_id AS "payerId", participants, photo_url AS "photoUrl", category_emoji AS "categoryEmoji", status, is_recurring AS "isRecurring", recurrence_interval AS "recurrenceInterval", recurrence_end_date AS "recurrenceEndDate", validated_by AS "validatedBy", date, created_at AS "createdAt" FROM expenses WHERE group_id = $1 ORDER BY date`, [groupId]),
     db.query(`SELECT id, group_id AS "groupId", from_id AS "fromId", from_name AS "fromName", to_id AS "toId", to_name AS "toName", amount, original_amount AS "originalAmount", status, expense_id AS "expenseId", notification_count AS "notificationCount", attempt_count AS "attemptCount", is_group_request AS "isGroupRequest", request_group_id AS "requestGroupId", request_note AS "requestNote", accept_note AS "acceptNote", paid_at AS "paidAt", confirmed_at AS "confirmedAt", dispute_note AS "disputeNote", date, responded_at AS "respondedAt", created_at AS "createdAt" FROM payments WHERE group_id = $1 ORDER BY created_at DESC`, [groupId]),
     db.query(`SELECT id, group_id AS "groupId", type, author_id AS "authorId", description, amount, from_id AS "fromId", to_id AS "toId", date FROM activity_history WHERE group_id = $1 ORDER BY date DESC LIMIT 200`, [groupId]),
-    db.query(`SELECT id, name, emoji, icon, color, sort_order AS "sortOrder", is_active AS "isActive", is_default AS "isDefault", created_by AS "createdBy", created_at AS "createdAt", updated_at AS "updatedAt" FROM expense_categories WHERE group_id = $1 ORDER BY sort_order, name`, [groupId]),
+    db.query(`SELECT id, name, emoji, icon, icon_data AS "iconData", color, sort_order AS "sortOrder", is_active AS "isActive", is_default AS "isDefault", created_by AS "createdBy", created_at AS "createdAt", updated_at AS "updatedAt" FROM expense_categories WHERE group_id = $1 ORDER BY sort_order, name`, [groupId]),
     db.query(`SELECT id, category_id AS "categoryId", group_id AS "groupId", name, emoji, sort_order AS "sortOrder", is_active AS "isActive", created_at AS "createdAt", updated_at AS "updatedAt" FROM expense_subcategories WHERE group_id = $1 ORDER BY sort_order, name`, [groupId]),
   ]);
   const memberList = members.rows;
@@ -932,19 +933,19 @@ export async function getGroupCategories(groupId: string) {
   }));
 }
 
-export async function createGroupCategory(groupId: string, data: { name: string; emoji: string; icon?: string; color?: string; sortOrder?: number }, createdBy: string) {
+export async function createGroupCategory(groupId: string, data: { name: string; emoji: string; icon?: string; iconData?: string; color?: string; sortOrder?: number }, createdBy: string) {
   const db = await ready();
   if (!db) return { id: `cat_${Date.now()}`, name: data.name, emoji: data.emoji };
   const id = `cat_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   await db.query(
-    `INSERT INTO expense_categories (id, group_id, name, emoji, icon, color, sort_order, created_by)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-    [id, groupId, data.name, data.emoji, data.icon ?? null, data.color ?? null, data.sortOrder ?? 0, createdBy]
+    `INSERT INTO expense_categories (id, group_id, name, emoji, icon, icon_data, color, sort_order, created_by)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+    [id, groupId, data.name, data.emoji, data.icon ?? null, data.iconData ?? null, data.color ?? null, data.sortOrder ?? 0, createdBy]
   );
-  return { id, groupId, name: data.name, emoji: data.emoji, icon: data.icon ?? null, color: data.color ?? null, sortOrder: data.sortOrder ?? 0, isActive: true, isDefault: false, createdBy, subcategories: [] };
+  return { id, groupId, name: data.name, emoji: data.emoji, icon: data.icon ?? null, iconData: data.iconData ?? null, color: data.color ?? null, sortOrder: data.sortOrder ?? 0, isActive: true, isDefault: false, createdBy, subcategories: [] };
 }
 
-export async function updateGroupCategory(categoryId: string, data: { name?: string; emoji?: string; icon?: string; color?: string; sortOrder?: number; isActive?: boolean }) {
+export async function updateGroupCategory(categoryId: string, data: { name?: string; emoji?: string; icon?: string; iconData?: string | null; color?: string; sortOrder?: number; isActive?: boolean }) {
   const db = await ready();
   if (!db) return false;
   const setClauses: string[] = [];
@@ -953,6 +954,7 @@ export async function updateGroupCategory(categoryId: string, data: { name?: str
   if (data.name !== undefined) { setClauses.push(`name = $${idx++}`); params.push(data.name); }
   if (data.emoji !== undefined) { setClauses.push(`emoji = $${idx++}`); params.push(data.emoji); }
   if (data.icon !== undefined) { setClauses.push(`icon = $${idx++}`); params.push(data.icon); }
+  if (data.iconData !== undefined) { setClauses.push(`icon_data = $${idx++}`); params.push(data.iconData); }
   if (data.color !== undefined) { setClauses.push(`color = $${idx++}`); params.push(data.color); }
   if (data.sortOrder !== undefined) { setClauses.push(`sort_order = $${idx++}`); params.push(data.sortOrder); }
   if (data.isActive !== undefined) { setClauses.push(`is_active = $${idx++}`); params.push(data.isActive); }

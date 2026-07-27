@@ -76,6 +76,7 @@ export interface GroupCategory {
   name: string;
   emoji: string;
   icon?: string;
+  iconData?: string;
   color?: string;
   sortOrder: number;
   isActive: boolean;

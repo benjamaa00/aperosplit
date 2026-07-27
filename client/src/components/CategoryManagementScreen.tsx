@@ -62,9 +62,12 @@ function compressImage(file: File, maxDim = 600, quality = 0.7): Promise<string>
 function storeCategoryImage(catId: string, dataUrl: string) {
   try { localStorage.setItem(`equilibra_catimg_${catId}`, dataUrl); } catch {}
 }
-function resolveCategoryImage(icon?: string | null): string | null {
-  if (!icon || !icon.startsWith("img:")) return null;
-  try { return localStorage.getItem(`equilibra_catimg_${icon.slice(4)}`) || null; } catch { return null; }
+function resolveCategoryImage(cat: GroupCategory): string | null {
+  if (cat.iconData) return cat.iconData;
+  if (cat.icon && cat.icon.startsWith("img:")) {
+    try { return localStorage.getItem(`equilibra_catimg_${cat.icon.slice(4)}`) || null; } catch { return null; }
+  }
+  return null;
 }
 
 interface EmojiPickerProps {
@@ -218,7 +221,7 @@ const CategoryCard = memo(function CategoryCard({
   const updateSub = trpc.equilibra.updateSubcategory.useMutation();
   const deleteSub = trpc.equilibra.deleteSubcategory.useMutation();
 
-  const catImage = resolveCategoryImage(category.icon);
+  const catImage = resolveCategoryImage(category);
 
   const handleCreateSub = async () => {
     if (!newSubName.trim()) return;
@@ -512,16 +515,10 @@ export const CategoryManagementScreen = memo(function CategoryManagementScreen({
         name: newName.trim(),
         emoji: newEmoji,
         color: newColor,
+        iconData: newIcon || undefined,
       });
       if (newIcon && result.category?.id) {
-        const catId = result.category.id;
-        const ref = `img:${catId}`;
-        storeCategoryImage(catId, newIcon);
-        await updateCategory.mutateAsync({
-          memberId: currentMemberId,
-          categoryId: catId,
-          icon: ref,
-        });
+        storeCategoryImage(result.category.id, newIcon);
       }
       toast.success("Catégorie créée");
       resetForm();
@@ -543,12 +540,10 @@ export const CategoryManagementScreen = memo(function CategoryManagementScreen({
         color: newColor,
       };
       if (newIcon) {
-        const catId = editingCategory.id;
-        const ref = `img:${catId}`;
-        storeCategoryImage(catId, newIcon);
-        updateData.icon = ref;
+        storeCategoryImage(editingCategory.id, newIcon);
+        updateData.iconData = newIcon;
       } else {
-        updateData.icon = null;
+        updateData.iconData = null;
       }
       await updateCategory.mutateAsync(updateData);
       toast.success("Catégorie mise à jour");
@@ -618,7 +613,7 @@ export const CategoryManagementScreen = memo(function CategoryManagementScreen({
     setNewName(cat.name);
     setNewEmoji(cat.emoji);
     setNewColor(cat.color);
-    setNewIcon(resolveCategoryImage(cat.icon));
+    setNewIcon(resolveCategoryImage(cat));
     setEditingCategory(cat);
   };
 

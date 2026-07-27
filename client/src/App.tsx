@@ -284,16 +284,15 @@ export default function App() {
  const stored = localStorage.getItem("equilibra_data");
  if (stored) {
  const data = JSON.parse(stored);
- if (data.members) {
- const migrated = data.members.map((m: any) => {
- if (m.avatar && m.avatar.startsWith("data:")) {
- storePhotoAvatar(m.id, m.avatar);
- return { ...m, avatar: `photo:${m.id}` };
- }
- return m;
- });
- setMembers(migrated);
- }
+  if (data.members) {
+  const migrated = data.members.map((m: any) => {
+  if (m.avatar && m.avatar.startsWith("data:")) {
+  try { storePhotoAvatar(m.id, m.avatar); } catch {}
+  }
+  return m;
+  });
+  setMembers(migrated);
+  }
  if (data.expenses) setExpenses(data.expenses);
  if (data.pendingPayments) setPendingPayments(data.pendingPayments);
  if (data.currentMemberId) setCurrentMemberId(data.currentMemberId);
@@ -313,23 +312,22 @@ export default function App() {
  // Prevent sending server-synced data back to server (infinite loop guard)
  const syncingFromServer = useRef(false);
 
- // Sync server data to client state (server is source of truth)
- useEffect(() => {
- if (!groupData) return;
- syncingFromServer.current = true;
- if (groupData.members && groupData.members.length > 0) {
- setMembers(groupData.members.map((m: any) => {
- let avatar = m.avatar;
- if (avatar && avatar.startsWith("data:")) {
- storePhotoAvatar(m.id, avatar);
- avatar = `photo:${m.id}`;
- }
- if (m.biometricEnabled && m.userId) {
- setBiometricEnabled((prev) => ({ ...prev, [m.id]: m.biometricEnabled }));
- }
- return { id: m.id, name: m.name, avatar, role: m.role, status: m.status };
- }));
- }
+  // Sync server data to client state (server is source of truth)
+  useEffect(() => {
+  if (!groupData) return;
+  syncingFromServer.current = true;
+  if (groupData.members && groupData.members.length > 0) {
+  setMembers(groupData.members.map((m: any) => {
+  let avatar = m.avatar;
+  if (avatar && avatar.startsWith("data:")) {
+  try { storePhotoAvatar(m.id, avatar); } catch {}
+  }
+  if (m.biometricEnabled && m.userId) {
+  setBiometricEnabled((prev) => ({ ...prev, [m.id]: m.biometricEnabled }));
+  }
+  return { id: m.id, name: m.name, avatar: avatar || "👤", role: m.role, status: m.status };
+  }));
+  }
  if (groupData.expenses) setExpenses(groupData.expenses);
  if (groupData.pending) setPendingPayments(groupData.pending);
  if (groupData.history) setCompletedPayments(groupData.history);
