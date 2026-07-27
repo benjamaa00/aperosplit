@@ -253,11 +253,14 @@ export const MessagesTab = memo(function MessagesTab({
     const groupConv = conversations.find((c: Conversation) => c.type === "group");
     if (groupConv) {
       setActiveConversationId(groupConv.id);
+      return;
+    }
+    const result = await conversationsQuery.refetch();
+    const gConv = result.data?.find((c: Conversation) => c.type === "group");
+    if (gConv) {
+      setActiveConversationId(gConv.id);
     } else {
-      await conversationsQuery.refetch();
-      const updated = conversationsQuery.data;
-      const gConv = updated?.find((c: Conversation) => c.type === "group");
-      if (gConv) setActiveConversationId(gConv.id);
+      toast.error("Impossible d'ouvrir le chat du groupe");
     }
   }, [conversations, conversationsQuery]);
 
