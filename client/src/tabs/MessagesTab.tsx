@@ -533,14 +533,14 @@ export const MessagesTab = memo(function MessagesTab({
                 const isAudio = msg.type === "audio" || msg.content?.startsWith("data:audio");
                 const isVideo = msg.type === "video" || msg.content?.startsWith("data:video");
                 return (
-                  <div key={msg.id} className={`flex ${isMe ? "justify-end" : "justify-start"} group/message relative`}>
+                  <div key={msg.id} className={`flex ${isMe ? "justify-end" : "justify-start"} relative`}>
                     {isMe && (
                       <button
                         onClick={() => handleDeleteMessage(msg.id)}
-                        className="absolute -left-8 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-destructive/10 border border-destructive/20 flex items-center justify-center opacity-0 group-hover/message:opacity-100 transition-opacity hover:bg-destructive/20"
-                        aria-label="Supprimer"
+                        className="absolute -left-8 bottom-0 z-10 w-6 h-6 rounded-full bg-destructive/15 border border-destructive/25 flex items-center justify-center hover:bg-destructive/30 transition-all active:scale-90"
+                        aria-label="Supprimer le message"
                       >
-                        <Trash2 size={12} className="text-destructive" />
+                        <Trash2 size={10} className="text-destructive" />
                       </button>
                     )}
                     <div
