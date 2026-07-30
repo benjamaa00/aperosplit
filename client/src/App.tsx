@@ -155,7 +155,7 @@ export default function App() {
  const getCategoriesQuery = trpc.equilibra.getCategories.useQuery(undefined, { enabled: !isNetlify, staleTime: 60000, gcTime: 600000 });
 
  // ─── Effects ───────────────────────────────────────────────
- // Keep Render server awake by pinging API every 5 minutes
+  // Keep Render server awake by pinging API every 60 seconds
  useEffect(() => {
   if (isNetlify) return;
   const ping = () => fetch("/api/trpc/equilibra.getGroupData?input=%7B%7D", { cache: "no-store" }).catch(() => {});
