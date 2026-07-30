@@ -159,47 +159,41 @@ export const ProfileTab = memo(function ProfileTab({
  { code: "EUR", symbol: "€", label: "Euro" },
  { code: "USD", symbol: "$", label: "Dollar américain" },
  ];
+  return (
+    <div className="max-w-md mx-auto px-5 pt-12 space-y-6">
+      {/* Cover Photo + Profile Picture */}
+      <div className="relative -mx-5">
+        <div className="h-36 bg-gradient-to-br from-primary/40 via-primary/20 to-primary/5 rounded-b-2xl" />
+        <button
+          onClick={() => { haptic("light"); onOpenEditProfile?.(); }}
+          className="absolute -bottom-12 left-5 z-10"
+        >
+          <div className="relative">
+            <div className="w-24 h-24 rounded-2xl border-4 border-background shadow-xl overflow-hidden bg-card">
+              <AvatarImg avatar={currentMember.avatar} size="text-6xl" />
+            </div>
+            {currentMember.role === "admin" && (
+              <div className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg shadow-primary/30 border-2 border-background">
+                <Sparkles size={14} className="text-white" />
+              </div>
+            )}
+          </div>
+        </button>
+      </div>
 
- return (
- <div  className="max-w-md mx-auto px-5 pt-16 space-y-6">
- {/* Profile Header */}
- <div
- 
- 
- className="text-center py-6"
- >
- <button
- onClick={() => { haptic("light"); onOpenEditProfile?.(); }}
- className="relative inline-block"
- >
- <div
- className="relative inline-block"
- 
- >
- <div className="w-24 h-24 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border-2 border-primary/30 shadow-2xl shadow-primary/20 backdrop-blur-sm mb-4">
- <AvatarImg avatar={currentMember.avatar} size="text-6xl" />
- </div>
- <div className="absolute inset-0 rounded-full bg-primary/[0.08] blur-xl -z-10" />
- {currentMember.role === "admin" && (
- <div
- 
- 
- className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg shadow-primary/30 border-2 border-background"
- >
- <Sparkles size={14} className="text-white" />
- </div>
- )}
- </div>
- <div className="flex items-center justify-center gap-1.5 mt-1">
- <h1 className="text-2xl font-bold tracking-tight">{currentMember.name}</h1>
- <Pencil size={14} className="text-muted-foreground" />
- </div>
- </button>
- <div className="flex items-center justify-center gap-2 mt-1">
- <span className="text-sm text-muted-foreground">Membre du groupe</span>
- <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold border ${currentMember.role === "admin" ? "bg-primary/10 text-primary border-primary/20" : "bg-secondary text-muted-foreground border-border"}`}>{currentMember.role === "admin" ? "Admin" : "Membre"}</span>
- </div>
- </div>
+      {/* Name & Role */}
+      <div className="pt-14">
+        <div className="flex items-center gap-2">
+          <h1 className="text-2xl font-bold tracking-tight">{currentMember.name}</h1>
+          <button onClick={() => { haptic("light"); onOpenEditProfile?.(); }}>
+            <Pencil size={14} className="text-muted-foreground hover:text-foreground transition-colors" />
+          </button>
+        </div>
+        <div className="flex items-center gap-2 mt-1">
+          <span className="text-sm text-muted-foreground">Membre du groupe</span>
+          <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold border ${currentMember.role === "admin" ? "bg-primary/10 text-primary border-primary/20" : "bg-secondary text-muted-foreground border-border"}`}>{currentMember.role === "admin" ? "Admin" : "Membre"}</span>
+        </div>
+      </div>
 
  {/* ─── PARAMÈTRES ────────────────────────────────── */}
  <div
@@ -210,7 +204,7 @@ export const ProfileTab = memo(function ProfileTab({
  <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3 px-1">Paramètres</p>
 
  {/* Devise */}
- <div data-tutorial="profile-settings" className="glass-card-enhanced rounded-[1.25rem] overflow-hidden mb-3">
+ <div data-tutorial="profile-settings" className="glass-card-enhanced rounded-2xl overflow-hidden mb-3">
  <SettingRow
  icon={<DollarSign size={20} className="text-primary" />}
  iconBg="bg-primary/10"
@@ -236,7 +230,7 @@ export const ProfileTab = memo(function ProfileTab({
  </div>
 
  {/* Budget */}
- <div className="glass-card-enhanced rounded-[1.25rem] overflow-hidden mb-3">
+ <div className="glass-card-enhanced rounded-2xl overflow-hidden mb-3">
  <SettingRow
  icon={<DollarSign size={20} className="text-emerald-500" />}
  iconBg="bg-emerald-500/10"
@@ -308,7 +302,7 @@ export const ProfileTab = memo(function ProfileTab({
  </div>
 
  {/* Notifications */}
- <div data-tutorial="profile-notifications" className="glass-card-enhanced rounded-[1.25rem] overflow-hidden mb-3">
+ <div data-tutorial="profile-notifications" className="glass-card-enhanced rounded-2xl overflow-hidden mb-3">
  <div className="p-4 pb-2 flex items-center gap-2">
  <Bell size={14} className="text-muted-foreground" />
  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Notifications</p>
@@ -352,7 +346,7 @@ export const ProfileTab = memo(function ProfileTab({
  </div>
 
  {/* Sécurité & Confidentialité */}
- <div data-tutorial="profile-security" className="glass-card-enhanced rounded-[1.25rem] overflow-hidden mb-3">
+ <div data-tutorial="profile-security" className="glass-card-enhanced rounded-2xl overflow-hidden mb-3">
  <div className="p-4 pb-2 flex items-center gap-2">
  <Shield size={14} className="text-muted-foreground" />
  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Sécurité</p>
@@ -384,7 +378,7 @@ export const ProfileTab = memo(function ProfileTab({
  </div>
 
  {/* Apparence */}
- <div className="glass-card-enhanced rounded-[1.25rem] overflow-hidden">
+ <div className="glass-card-enhanced rounded-2xl overflow-hidden">
  <div className="p-4 pb-2 flex items-center gap-2">
  <Moon size={14} className="text-muted-foreground" />
  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Apparence</p>
@@ -587,7 +581,7 @@ export const ProfileTab = memo(function ProfileTab({
  {/* Members */}
  <div
  data-tutorial="profile-members"
- className="glass-card-enhanced rounded-[1.25rem] overflow-hidden"
+ className="glass-card-enhanced rounded-2xl overflow-hidden"
  >
  <div className="p-4 pb-2 flex items-center justify-between">
  <div>
@@ -631,7 +625,7 @@ export const ProfileTab = memo(function ProfileTab({
  {/* ─── AIDE & TUTORIELS ──────────────────────────── */}
  <div
  data-tutorial="profile-help"
- className="glass-card-enhanced rounded-[1.25rem] overflow-hidden"
+ className="glass-card-enhanced rounded-2xl overflow-hidden"
  >
  <div className="p-4 pb-2 flex items-center justify-between">
  <div>

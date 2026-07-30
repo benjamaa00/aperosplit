@@ -96,7 +96,7 @@ export const HomeTab = memo(function HomeTab({
  
  
  
- className={`relative overflow-hidden rounded-3xl p-6 text-white shadow-2xl ${
+  className={`relative overflow-hidden rounded-2xl p-5 text-white shadow-2xl ${
  balance > 0
  ? "bg-gradient-to-br from-emerald-500 via-emerald-600 to-emerald-700 shadow-emerald-500/30"
  : balance < 0
@@ -133,11 +133,11 @@ export const HomeTab = memo(function HomeTab({
  
  
  
- className="glass-card-enhanced rounded-[1.25rem] p-4"
- >
- <div className="flex items-center justify-between mb-3">
- <div className="flex items-center gap-2">
- <h3 className="text-sm font-semibold">Budget mensuel</h3>
+  className="glass-card-enhanced rounded-2xl p-5"
+  >
+  <div className="flex items-center justify-between mb-3">
+  <div className="flex items-center gap-2">
+  <h3 className="text-sm font-semibold">Budget mensuel</h3>
  <HelpIcon variant="info" title="Budget mensuel" description="Suivez vos dépenses du mois par rapport au budget défini. Le code couleur indique si vous êtes dans les limites." />
  </div>
  <p className="text-xs text-muted-foreground">
@@ -181,9 +181,9 @@ export const HomeTab = memo(function HomeTab({
  
  
  
- className="glass-card-enhanced rounded-[1.25rem] p-4"
- >
- <h3 className="text-sm font-semibold mb-3">Détail des comptes</h3>
+  className="glass-card-enhanced rounded-2xl p-5"
+  >
+  <h3 className="text-sm font-semibold mb-3">Détail des comptes</h3>
  
  {breakdown.owesTo.length > 0 && (
  <div className="mb-4">
@@ -249,16 +249,16 @@ export const HomeTab = memo(function HomeTab({
  
  
  
- className="glass-card-enhanced rounded-[1.25rem] p-4"
- >
- <p className="text-[11px] text-muted-foreground mb-1 font-medium uppercase tracking-wide">Total dépensé</p>
- <p className="text-xl font-bold">{formatCurrency(totalSpent, currency)}</p>
- </div>
- <div
- 
- 
- 
- className="glass-card-enhanced rounded-[1.25rem] p-4"
+  className="glass-card-enhanced rounded-2xl p-5"
+  >
+  <p className="text-[11px] text-muted-foreground mb-1 font-medium uppercase tracking-wide">Total dépensé</p>
+  <p className="text-xl font-bold">{formatCurrency(totalSpent, currency)}</p>
+  </div>
+  <div
+
+
+
+  className="glass-card-enhanced rounded-2xl p-5"
  >
  <p className="text-[11px] text-muted-foreground mb-1 font-medium uppercase tracking-wide">Dépenses</p>
  <p className="text-xl font-bold">{expenseCount}</p>
@@ -323,7 +323,7 @@ export const HomeTab = memo(function HomeTab({
  
  
  
- className="glass-card-enhanced rounded-[1.25rem] p-3.5 flex items-center gap-3"
+  className="glass-card-enhanced rounded-2xl p-4 flex items-center gap-3"
  >
  <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 border border-emerald-500/15 flex items-center justify-center flex-shrink-0">
  <CheckCircle2 size={18} className="text-emerald-500" />
@@ -378,7 +378,7 @@ export const HomeTab = memo(function HomeTab({
  
  
  
- className="glass-card-enhanced hover:bg-card/60 transition-colors duration-200 rounded-[1.25rem] p-4 flex items-center gap-3"
+  className="glass-card-enhanced hover:bg-card/60 transition-colors duration-200 rounded-2xl p-4 flex items-center gap-3"
  >
  <div className="w-11 h-11 rounded-2xl bg-secondary/50 flex items-center justify-center text-lg">
  {exp.categoryEmoji}
