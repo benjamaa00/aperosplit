@@ -334,23 +334,27 @@ export const MessagesTab = memo(function MessagesTab({
       )}
 
       {/* ── Vertical Profile Rail (Left Side) ── */}
-      <div className="w-[4.5rem] border-r border-border/30 flex flex-col items-center pt-14 pb-6 gap-3 overflow-y-auto scrollbar-hidden bg-card/10 flex-shrink-0">
-        <button
-          onClick={handleSelectGroupChat}
-          className={`relative w-11 h-11 flex items-center justify-center transition-all rounded-xl ${
-            activeConversation?.type === "group"
-              ? "bg-primary/20 ring-2 ring-primary"
-              : "bg-primary/10 hover:bg-primary/20"
-          }`}
-          title="Chat du groupe"
-        >
-          <Users size={16} className="text-primary" />
-          {(conversations.find((c: Conversation) => c.type === "group")?.unreadCount || 0) > 0 && (
-            <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-primary text-primary-foreground text-[8px] font-bold flex items-center justify-center">
-              {conversations.find((c: Conversation) => c.type === "group")?.unreadCount}
-            </span>
-          )}
-        </button>
+      <div className="w-16 border-r border-border/30 flex flex-col items-center pt-14 pb-6 gap-3 overflow-y-auto scrollbar-hidden bg-card/10 flex-shrink-0">
+        <div className="relative group">
+          <button
+            onClick={handleSelectGroupChat}
+            className={`relative w-11 h-11 flex items-center justify-center transition-all rounded-xl ${
+              activeConversation?.type === "group"
+                ? "bg-primary/20 ring-2 ring-primary"
+                : "bg-primary/10 hover:bg-primary/20"
+            }`}
+          >
+            <Users size={16} className="text-primary" />
+            {(conversations.find((c: Conversation) => c.type === "group")?.unreadCount || 0) > 0 && (
+              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-primary text-primary-foreground text-[8px] font-bold flex items-center justify-center">
+                {conversations.find((c: Conversation) => c.type === "group")?.unreadCount}
+              </span>
+            )}
+          </button>
+          <span className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2.5 py-1 rounded-lg bg-popover border border-border text-xs font-semibold whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-lg z-20">
+            Groupe
+          </span>
+        </div>
 
         <div className="w-8 h-px bg-border/50" />
 
@@ -361,21 +365,24 @@ export const MessagesTab = memo(function MessagesTab({
           const isActive = activeConversationId && memberConv && activeConversationId === memberConv.id;
 
           return (
-            <button
-              key={member.id}
-              onClick={() => handleStartDirectConversation(member.id)}
-              className={`relative w-11 h-11 overflow-hidden transition-all rounded-xl ${
-                isActive ? "ring-2 ring-primary" : "hover:ring-1 hover:ring-border"
-              }`}
-              title={member.name}
-            >
-              <AvatarImg avatar={member.avatar} size="text-lg" />
-              {(memberConv?.unreadCount || 0) > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-primary text-primary-foreground text-[8px] font-bold flex items-center justify-center">
-                  {memberConv?.unreadCount}
-                </span>
-              )}
-            </button>
+            <div key={member.id} className="relative group">
+              <button
+                onClick={() => handleStartDirectConversation(member.id)}
+                className={`relative w-11 h-11 overflow-hidden transition-all rounded-xl ${
+                  isActive ? "ring-2 ring-primary" : "hover:ring-1 hover:ring-border"
+                }`}
+              >
+                <AvatarImg avatar={member.avatar} size="text-lg" />
+                {(memberConv?.unreadCount || 0) > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-primary text-primary-foreground text-[8px] font-bold flex items-center justify-center">
+                    {memberConv?.unreadCount}
+                  </span>
+                )}
+              </button>
+              <span className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2.5 py-1 rounded-lg bg-popover border border-border text-xs font-semibold whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-lg z-20">
+                {member.name}
+              </span>
+            </div>
           );
         })}
       </div>
