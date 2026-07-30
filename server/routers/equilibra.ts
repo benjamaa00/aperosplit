@@ -67,6 +67,7 @@ import {
   markConversationRead,
   getConversationParticipants,
   addParticipantToConversation,
+  getDb,
 } from "../db";
 
 const GROUP_ID = "equilibra-fixed-group";
@@ -917,34 +918,24 @@ export const equilibraRouter = router({
       const message = await sendConversationMessage(input.conversationId, input.memberId, input.content, input.type);
       if (!message) return { success: false };
 
-      // Send push notifications to other participants
-      const participants = await getConversationParticipants(input.conversationId);
-      const sender = participants.find(p => p.memberId === input.memberId);
-      const senderName = sender?.name || "Un membre";
-      const pushBody = input.type === "text"
-        ? (input.content.length > 100 ? input.content.slice(0, 100) + "..." : input.content)
-        : input.type === "image" ? "📷 Image" : "🎤 Audio";
+      try {
+        const participants = await getConversationParticipants(input.conversationId);
+        const sender = participants.find(p => p.memberId === input.memberId);
+        const senderName = sender?.name || "Un membre";
+        const pushBody = input.type === "text"
+          ? (input.content.length > 100 ? input.content.slice(0, 100) + "..." : input.content)
+          : input.type === "image" ? "📷 Image" : "🎤 Audio";
 
-      for (const p of participants) {
-        if (p.memberId === input.memberId) continue;
-        await sendPushToMember(
-          p.memberId,
-          `Nouveau message de ${senderName}`,
-          pushBody,
-          "/"
-        );
-      }
+        for (const p of participants) {
+          if (p.memberId === input.memberId) continue;
+          try { await sendPushToMember(p.memberId, `Nouveau message de ${senderName}`, pushBody, "/"); } catch {}
+        }
 
-      // Also create in-app notifications
-      for (const p of participants) {
-        if (p.memberId === input.memberId) continue;
-        await addNotification(
-          p.memberId, GROUP_ID, "new_message",
-          `Message de ${senderName}`,
-          pushBody,
-          { conversationId: input.conversationId, senderId: input.memberId }
-        );
-      }
+        for (const p of participants) {
+          if (p.memberId === input.memberId) continue;
+          try { await addNotification(p.memberId, GROUP_ID, "new_message", `Message de ${senderName}`, pushBody, { conversationId: input.conversationId, senderId: input.memberId }); } catch {}
+        }
+      } catch {}
 
       return { success: true, message };
     }),

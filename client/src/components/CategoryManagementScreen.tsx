@@ -83,7 +83,7 @@ const EmojiPicker = memo(function EmojiPicker({ onSelect, onClose }: EmojiPicker
     if (search.trim()) {
       const q = search.toLowerCase();
       const all = Object.values(EMOJI_CATEGORIES).flat();
-      const unique = [...new Set(all)];
+      const unique = Array.from(new Set(all));
       return unique.filter(e => e.includes(q));
     }
     return EMOJI_CATEGORIES[activeCat] || [];
@@ -532,7 +532,16 @@ export const CategoryManagementScreen = memo(function CategoryManagementScreen({
   const handleEdit = async () => {
     if (!editingCategory || !newName.trim()) return;
     try {
-      const updateData: Record<string, any> = {
+      const updateData: Partial<{
+          memberId: string;
+          categoryId: string;
+          name?: string;
+          emoji?: string;
+          iconData?: string | null;
+          color?: string;
+          sortOrder?: number;
+          isActive?: boolean;
+        }> = {
         memberId: currentMemberId,
         categoryId: editingCategory.id,
         name: newName.trim(),
@@ -545,7 +554,7 @@ export const CategoryManagementScreen = memo(function CategoryManagementScreen({
       } else {
         updateData.iconData = null;
       }
-      await updateCategory.mutateAsync(updateData);
+      await updateCategory.mutateAsync(updateData as any);
       toast.success("Catégorie mise à jour");
       resetForm();
       setEditingCategory(null);

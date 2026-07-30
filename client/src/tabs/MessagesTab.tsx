@@ -183,12 +183,14 @@ export const MessagesTab = memo(function MessagesTab({
   const startRecording = useCallback(async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mr = new MediaRecorder(stream, { mimeType: "audio/webm;codecs=opus" });
+      const audioMime = ["audio/webm;codecs=opus", "audio/mp4", "audio/aac", "audio/ogg;codecs=opus"].find(t => MediaRecorder.isTypeSupported(t)) || "";
+      const mr = new MediaRecorder(stream, audioMime ? { mimeType: audioMime } : undefined);
       audioChunksRef.current = [];
       mr.ondataavailable = (e) => { if (e.data.size > 0) audioChunksRef.current.push(e.data); };
       mr.onstop = async () => {
         stream.getTracks().forEach(t => t.stop());
-        const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+        const blobType = audioMime || "audio/webm";
+        const blob = new Blob(audioChunksRef.current, { type: blobType });
         if (blob.size < 1000) return;
         const reader = new FileReader();
         reader.onload = () => doSend(reader.result as string, "audio");
@@ -255,8 +257,9 @@ export const MessagesTab = memo(function MessagesTab({
       setActiveConversationId(groupConv.id);
       return;
     }
+    // Try refetch in case it wasn't loaded yet
     const result = await conversationsQuery.refetch();
-    const gConv = result.data?.find((c: Conversation) => c.type === "group");
+    const gConv = (Array.isArray(result.data) ? result.data : []).find((c: Conversation) => c.type === "group");
     if (gConv) {
       setActiveConversationId(gConv.id);
     } else {
@@ -516,15 +519,25 @@ export const MessagesTab = memo(function MessagesTab({
                       } ${isImage ? "p-1 overflow-hidden" : "px-4 py-2.5"}`}
                     >
                       {!isMe && author && !isImage && (
-                        <div className="flex items-center gap-2 mb-1">
-                          <AvatarImg avatar={author.avatar} size="text-xs" />
-                          <span className="text-[10px] font-semibold opacity-70">{author.name}</span>
+                        <div className="flex items-center gap-2 mb-1.5 -ml-1">
+                          <div className="w-6 h-6 rounded-full overflow-hidden ring-1 ring-border/50 flex-shrink-0">
+                            <AvatarImg avatar={author.avatar} size="text-xs" />
+                          </div>
+                          <span className="text-[11px] font-bold tracking-tight text-foreground/80">{author.name}</span>
+                          {author.role === "admin" && (
+                            <span className="text-[8px] font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded-full">Admin</span>
+                          )}
                         </div>
                       )}
                       {!isMe && author && isImage && (
                         <div className="flex items-center gap-2 mb-1 px-2 pt-1">
-                          <AvatarImg avatar={author.avatar} size="text-xs" />
-                          <span className="text-[10px] font-semibold opacity-70">{author.name}</span>
+                          <div className="w-5 h-5 rounded-full overflow-hidden ring-1 ring-border/50 flex-shrink-0">
+                            <AvatarImg avatar={author.avatar} size="text-xs" />
+                          </div>
+                          <span className="text-[10px] font-bold tracking-tight text-foreground/80">{author.name}</span>
+                          {author.role === "admin" && (
+                            <span className="text-[8px] font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded-full">Admin</span>
+                          )}
                         </div>
                       )}
 
@@ -670,7 +683,8 @@ export const MessagesTab = memo(function MessagesTab({
             activeConversation?.type === "group"
               ? "bg-primary/20 ring-2 ring-primary"
               : "bg-primary/10 hover:bg-primary/20"
-          }`}
+          } group`}
+          title="Chat du groupe"
         >
           <Users size={16} className="text-primary" />
           {(conversations.find((c: Conversation) => c.type === "group")?.unreadCount || 0) > 0 && (
@@ -678,6 +692,9 @@ export const MessagesTab = memo(function MessagesTab({
               {conversations.find((c: Conversation) => c.type === "group")?.unreadCount}
             </span>
           )}
+          <span className="absolute left-full ml-2 px-2 py-0.5 rounded-lg bg-card/90 border border-border text-[10px] font-medium whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-lg z-10">
+            Groupe
+          </span>
         </button>
 
         <div className="w-8 h-px bg-border/50 my-1" />
@@ -692,7 +709,7 @@ export const MessagesTab = memo(function MessagesTab({
             <button
               key={member.id}
               onClick={() => handleStartDirectConversation(member.id)}
-              className={`relative w-11 h-11 rounded-full overflow-hidden transition-all ${
+              className={`relative w-11 h-11 rounded-full overflow-hidden transition-all group ${
                 isActive ? "ring-2 ring-primary" : "hover:ring-1 hover:ring-border"
               }`}
             >
@@ -702,6 +719,9 @@ export const MessagesTab = memo(function MessagesTab({
                   {memberConv?.unreadCount}
                 </span>
               )}
+              <span className="absolute left-full ml-2 px-2 py-0.5 rounded-lg bg-card/90 border border-border text-[10px] font-medium whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-lg z-10">
+                {member.name}
+              </span>
             </button>
           );
         })}
@@ -765,9 +785,6 @@ const AudioMessage = memo(function AudioMessage({ dataUrl, isMe }: { dataUrl: st
         <div className="flex justify-between mt-0.5">
           <span className={`text-[9px] ${isMe ? "text-white/50" : "text-muted-foreground"}`}>
             {playing ? fmt(audioRef.current?.currentTime || 0) : duration ? fmt(duration) : "0:00"}
-          </span>
-          <span className={`text-[9px] ${isMe ? "text-white/50" : "text-muted-foreground"}`}>
-            {formatTimeShort(new Date().toISOString())}
           </span>
         </div>
       </div>

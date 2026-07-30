@@ -967,7 +967,7 @@ export async function updateGroupCategory(categoryId: string, data: { name?: str
 export async function deleteGroupCategory(categoryId: string) {
   const db = await ready();
   if (!db) return false;
-  const used = await db.query(`SELECT COUNT(*) AS cnt FROM expenses WHERE category = (SELECT name FROM expense_categories WHERE id = $1)`, [categoryId]);
+  const used = await db.query(`SELECT COUNT(*) AS cnt FROM expenses WHERE category = (SELECT name FROM expense_categories WHERE id = $1) AND group_id = (SELECT group_id FROM expense_categories WHERE id = $1)`, [categoryId]);
   if (parseInt(used.rows[0]?.cnt || "0") > 0) return false;
   return (await db.query(`DELETE FROM expense_categories WHERE id = $1 AND is_active = FALSE`, [categoryId])).rowCount === 1;
 }
