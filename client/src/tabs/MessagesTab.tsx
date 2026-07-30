@@ -1,7 +1,7 @@
 import { memo, useState, useRef, useEffect, useCallback, useMemo } from "react";
 import {
-  ArrowLeft, Send, Users, Search, X, MessageCircle, Shield,
-  Image as ImageIcon, Mic, MicOff, Play, Pause, Camera, X as XIcon,
+  ArrowLeft, Send, Users, X, MessageCircle,
+  Mic, MicOff, Play, Pause, Camera, X as XIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
@@ -46,7 +46,6 @@ export const MessagesTab = memo(function MessagesTab({
 }) {
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [newMessage, setNewMessage] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
@@ -276,12 +275,6 @@ export const MessagesTab = memo(function MessagesTab({
     [members, currentMemberId]
   );
 
-  const filteredMembers = useMemo(() => {
-    if (!searchQuery.trim()) return otherMembers;
-    const q = searchQuery.toLowerCase();
-    return otherMembers.filter((m) => m.name.toLowerCase().includes(q));
-  }, [otherMembers, searchQuery]);
-
   const getMemberById = useCallback(
     (id: string) => members.find((m) => m.id === id),
     [members]
@@ -351,7 +344,7 @@ export const MessagesTab = memo(function MessagesTab({
               </span>
             )}
           </button>
-          <span className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2.5 py-1 rounded-lg bg-popover border border-border text-xs font-semibold whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-lg z-20">
+          <span className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2.5 py-1 rounded-lg bg-popover border border-border text-xs font-semibold whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-lg z-[1100]">
             Groupe
           </span>
         </div>
@@ -379,7 +372,7 @@ export const MessagesTab = memo(function MessagesTab({
                   </span>
                 )}
               </button>
-              <span className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2.5 py-1 rounded-lg bg-popover border border-border text-xs font-semibold whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-lg z-20">
+              <span className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2.5 py-1 rounded-lg bg-popover border border-border text-xs font-semibold whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-lg z-[1100]">
                 {member.name}
               </span>
             </div>
@@ -663,7 +656,3 @@ const AudioMessage = memo(function AudioMessage({ dataUrl, isMe }: { dataUrl: st
     </div>
   );
 });
-
-MessagesTab.displayName = "MessagesTab";
-
-/* ── Inline Audio Player ── */
