@@ -6,7 +6,6 @@ import {
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { AvatarImg } from "../components/AvatarImg";
-import { EmptyState } from "../components/EmptyState";
 import { haptics } from "../utils/haptics";
 import type { Member, Conversation, ConversationMessage } from "../types";
 
@@ -309,12 +308,6 @@ export const MessagesTab = memo(function MessagesTab({
     return `${m}:${sec.toString().padStart(2, "0")}`;
   }, []);
 
-  const lastMessagePreview = useCallback((conv: Conversation) => {
-    if (conv.lastMessage?.startsWith("data:image")) return "📷 Image";
-    if (conv.lastMessage?.startsWith("data:audio")) return "🎤 Audio";
-    return conv.lastMessage || "Aucun message";
-  }, []);
-
   // ─── RENDER ───
   return (
     <div className="flex h-[calc(100dvh-110px)]">
@@ -340,135 +333,59 @@ export const MessagesTab = memo(function MessagesTab({
         </div>
       )}
 
+      {/* ── Vertical Profile Rail (Left Side) ── */}
+      <div className="w-[4.5rem] border-r border-border/30 flex flex-col items-center pt-14 pb-6 gap-3 overflow-y-auto scrollbar-hidden bg-card/10 flex-shrink-0">
+        <button
+          onClick={handleSelectGroupChat}
+          className={`relative w-11 h-11 flex items-center justify-center transition-all rounded-xl ${
+            activeConversation?.type === "group"
+              ? "bg-primary/20 ring-2 ring-primary"
+              : "bg-primary/10 hover:bg-primary/20"
+          }`}
+          title="Chat du groupe"
+        >
+          <Users size={16} className="text-primary" />
+          {(conversations.find((c: Conversation) => c.type === "group")?.unreadCount || 0) > 0 && (
+            <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-primary text-primary-foreground text-[8px] font-bold flex items-center justify-center">
+              {conversations.find((c: Conversation) => c.type === "group")?.unreadCount}
+            </span>
+          )}
+        </button>
+
+        <div className="w-8 h-px bg-border/50" />
+
+        {otherMembers.map((member) => {
+          const memberConv = conversations.find(
+            (c: Conversation) => c.type === "direct" && c.otherMemberId === member.id
+          );
+          const isActive = activeConversationId && memberConv && activeConversationId === memberConv.id;
+
+          return (
+            <button
+              key={member.id}
+              onClick={() => handleStartDirectConversation(member.id)}
+              className={`relative w-11 h-11 overflow-hidden transition-all rounded-xl ${
+                isActive ? "ring-2 ring-primary" : "hover:ring-1 hover:ring-border"
+              }`}
+              title={member.name}
+            >
+              <AvatarImg avatar={member.avatar} size="text-lg" />
+              {(memberConv?.unreadCount || 0) > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-primary text-primary-foreground text-[8px] font-bold flex items-center justify-center">
+                  {memberConv?.unreadCount}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
       {/* ── Main Content Area ── */}
       <div className="flex-1 flex flex-col min-w-0">
         {!activeConversationId ? (
-          /* ── Conversation List ── */
-          <div className="flex flex-col h-full">
-            <div className="px-4 pt-12 pb-3">
-              <div className="flex items-center gap-2">
-                <h1 className="text-2xl font-bold tracking-tight">Messages</h1>
-                {isAdmin && (
-                  <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-semibold">
-                    <Shield size={10} />
-                    Admin
-                  </span>
-                )}
-              </div>
-              <p className="text-sm text-muted-foreground mt-0.5">
-                {conversations.length > 0
-                  ? `${conversations.length} conversation${conversations.length > 1 ? "s" : ""}${isAdmin ? " (toutes)" : ""}`
-                  : "Commencez une conversation"}
-              </p>
-            </div>
-
-            {conversations.length > 0 && (
-              <div className="px-3 space-y-1">
-                {conversations.map((conv: Conversation) => {
-                  const isGroup = conv.type === "group";
-                  const otherMember = !isGroup && conv.otherMemberId
-                    ? getMemberById(conv.otherMemberId)
-                    : null;
-
-                  return (
-                    <button
-                      key={conv.id}
-                      onClick={() => { setActiveConversationId(conv.id); haptics.light(); }}
-                      className="w-full flex items-center gap-3 p-3 rounded-2xl bg-card/30 border border-border/50 hover:bg-card/50 transition-all text-left"
-                    >
-                      <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                        {isGroup ? (
-                          <Users size={20} className="text-primary" />
-                        ) : (
-                          <AvatarImg avatar={otherMember?.avatar || "👤"} size="text-xl" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between">
-                          <span className="font-semibold text-sm truncate">
-                            {isGroup ? "Chat du groupe" : otherMember?.name || "Conversation"}
-                            {!isGroup && isAdmin && (
-                              <span className="ml-1.5 text-[9px] font-medium text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded-full align-middle">Privé</span>
-                            )}
-                          </span>
-                          {conv.lastMessageAt && (
-                            <span className="text-xs text-muted-foreground flex-shrink-0 ml-2">
-                              {formatTime(conv.lastMessageAt)}
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex items-center justify-between mt-0.5">
-                          <p className="text-xs text-muted-foreground truncate max-w-[200px]">
-                            {lastMessagePreview(conv)}
-                          </p>
-                          {(conv.unreadCount || 0) > 0 && (
-                            <span className="ml-2 w-5 h-5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center flex-shrink-0">
-                              {conv.unreadCount}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-
-            <div className="px-4 mt-4">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-                Nouvelle conversation
-              </p>
-              <button
-                onClick={handleSelectGroupChat}
-                className="w-full flex items-center gap-3 p-3 rounded-2xl bg-primary/5 border border-primary/20 hover:bg-primary/10 transition-all mb-3"
-              >
-                <div className="w-11 h-11 rounded-full bg-primary/15 flex items-center justify-center">
-                  <Users size={18} className="text-primary" />
-                </div>
-                <div className="text-left">
-                  <span className="font-semibold text-sm block">Chat du groupe</span>
-                  <span className="text-xs text-muted-foreground">Parlez avec tout le groupe</span>
-                </div>
-              </button>
-
-              <div className="relative mb-3">
-                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                <input
-                  type="text"
-                  placeholder="Rechercher un membre..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-card/30 border border-border/50 text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/50 transition-colors"
-                />
-                {searchQuery && (
-                  <button onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2">
-                    <X size={14} className="text-muted-foreground" />
-                  </button>
-                )}
-              </div>
-
-              <div className="space-y-1">
-                {filteredMembers.map((member) => (
-                  <button
-                    key={member.id}
-                    onClick={() => handleStartDirectConversation(member.id)}
-                    className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-card/30 transition-all text-left"
-                  >
-                    <AvatarImg avatar={member.avatar} size="text-xl" />
-                    <div>
-                      <span className="font-medium text-sm">{member.name}</span>
-                      <span className="text-xs text-muted-foreground ml-2 capitalize">{member.role || "membre"}</span>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {conversations.length === 0 && (
-              <div className="flex-1 flex items-center justify-center px-6">
-                <EmptyState icon={MessageCircle} title="Aucune conversation" description="Sélectionnez un membre ou le groupe pour commencer à discuter" />
-              </div>
-            )}
+          <div className="flex flex-col items-center justify-center h-full px-6">
+            <MessageCircle size={40} className="text-muted-foreground/30 mb-3" />
+            <p className="text-sm text-muted-foreground">Sélectionnez un membre ou le groupe pour commencer à discuter</p>
           </div>
         ) : (
           /* ── Chat View ── */
@@ -674,58 +591,6 @@ export const MessagesTab = memo(function MessagesTab({
           </div>
         )}
       </div>
-
-      {/* ── Vertical Profile Rail (Right Side) ── */}
-      <div className="w-16 border-l border-border/30 flex flex-col items-center py-12 gap-2 overflow-y-auto scrollbar-hidden bg-card/10">
-        <button
-          onClick={handleSelectGroupChat}
-          className={`relative w-11 h-11 rounded-full flex items-center justify-center transition-all ${
-            activeConversation?.type === "group"
-              ? "bg-primary/20 ring-2 ring-primary"
-              : "bg-primary/10 hover:bg-primary/20"
-          } group`}
-          title="Chat du groupe"
-        >
-          <Users size={16} className="text-primary" />
-          {(conversations.find((c: Conversation) => c.type === "group")?.unreadCount || 0) > 0 && (
-            <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-primary text-primary-foreground text-[8px] font-bold flex items-center justify-center">
-              {conversations.find((c: Conversation) => c.type === "group")?.unreadCount}
-            </span>
-          )}
-          <span className="absolute left-full ml-2 px-2 py-0.5 rounded-lg bg-card/90 border border-border text-[10px] font-medium whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-lg z-10">
-            Groupe
-          </span>
-        </button>
-
-        <div className="w-8 h-px bg-border/50 my-1" />
-
-        {otherMembers.map((member) => {
-          const memberConv = conversations.find(
-            (c: Conversation) => c.type === "direct" && c.otherMemberId === member.id
-          );
-          const isActive = activeConversationId && memberConv && activeConversationId === memberConv.id;
-
-          return (
-            <button
-              key={member.id}
-              onClick={() => handleStartDirectConversation(member.id)}
-              className={`relative w-11 h-11 rounded-full overflow-hidden transition-all group ${
-                isActive ? "ring-2 ring-primary" : "hover:ring-1 hover:ring-border"
-              }`}
-            >
-              <AvatarImg avatar={member.avatar} size="text-lg" />
-              {(memberConv?.unreadCount || 0) > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-primary text-primary-foreground text-[8px] font-bold flex items-center justify-center">
-                  {memberConv?.unreadCount}
-                </span>
-              )}
-              <span className="absolute left-full ml-2 px-2 py-0.5 rounded-lg bg-card/90 border border-border text-[10px] font-medium whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-lg z-10">
-                {member.name}
-              </span>
-            </button>
-          );
-        })}
-      </div>
     </div>
   );
 });
@@ -792,7 +657,6 @@ const AudioMessage = memo(function AudioMessage({ dataUrl, isMe }: { dataUrl: st
   );
 });
 
-function formatTimeShort(dateStr: string) {
-  const d = new Date(dateStr);
-  return d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
-}
+MessagesTab.displayName = "MessagesTab";
+
+/* ── Inline Audio Player ── */
