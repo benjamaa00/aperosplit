@@ -1,7 +1,7 @@
 import { memo, useState, useRef, useEffect, useCallback, useMemo } from "react";
 import {
   ArrowLeft, Send, Users, X, MessageCircle,
-  Mic, MicOff, Play, Pause, Paperclip, Trash2, X as XIcon,
+  Mic, MicOff, Play, Pause, Paperclip, Trash2, X as XIcon, ChevronLeft,
 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
@@ -52,6 +52,7 @@ export const MessagesTab = memo(function MessagesTab({
   const [recordingTime, setRecordingTime] = useState(0);
   const [swipeCancel, setSwipeCancel] = useState(false);
   const [lightbox, setLightbox] = useState<string | null>(null);
+  const [railOpen, setRailOpen] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -84,6 +85,7 @@ export const MessagesTab = memo(function MessagesTab({
   const sendMessageMutation = trpc.equilibra.sendMessage.useMutation();
   const createDirectConversationMutation = trpc.equilibra.createDirectConversation.useMutation();
   const markReadMutation = trpc.equilibra.markConversationRead.useMutation();
+  const deleteMessageMutation = trpc.equilibra.deleteMessage.useMutation();
 
   const conversations = conversationsQuery.data || [];
   const messages = messagesQuery.data || [];
@@ -221,6 +223,19 @@ export const MessagesTab = memo(function MessagesTab({
       toast.error("Erreur lors du traitement de la vidéo");
     }
   }, []);
+
+  const handleDeleteMessage = useCallback(async (messageId: string) => {
+    if (!confirm("Supprimer ce message ?")) return;
+    haptics.heavy();
+    try {
+      await deleteMessageMutation.mutateAsync({ messageId, memberId: currentMemberId });
+      messagesQuery.refetch();
+      conversationsQuery.refetch();
+      toast.success("Message supprimé");
+    } catch {
+      toast.error("Erreur lors de la suppression");
+    }
+  }, [currentMemberId, deleteMessageMutation, messagesQuery, conversationsQuery]);
 
   const startRecording = useCallback(async () => {
     try {
@@ -409,11 +424,19 @@ export const MessagesTab = memo(function MessagesTab({
       )}
 
       {/* ── Vertical Profile Rail (Left Side) ── */}
-      <div className="w-16 border-r border-border/30 flex flex-col items-center pt-14 pb-6 gap-3 overflow-y-auto scrollbar-hidden bg-card/10 flex-shrink-0">
-        <div className="relative group">
+      <div className={`${railOpen ? "w-16" : "w-0"} border-r border-border/30 flex flex-col items-center pt-14 pb-6 gap-3 overflow-hidden bg-card/10 flex-shrink-0 transition-all duration-300 relative`}>
+        {/* Toggle button */}
+        <button
+          onClick={() => setRailOpen(v => !v)}
+          className="absolute -right-3 top-14 z-20 w-6 h-8 rounded-r-xl bg-card border border-border/30 border-l-0 flex items-center justify-center hover:bg-card/80 transition-colors"
+        >
+          <ChevronLeft size={14} className={`text-muted-foreground transition-transform duration-300 ${railOpen ? "" : "rotate-180"}`} />
+        </button>
+
+        <div className="relative group flex flex-col items-center gap-3">
           <button
             onClick={handleSelectGroupChat}
-            className={`relative w-11 h-11 flex items-center justify-center transition-all rounded-xl ${
+            className={`relative w-11 h-11 flex items-center justify-center transition-all rounded-xl flex-shrink-0 ${
               activeConversation?.type === "group"
                 ? "bg-primary/20 ring-2 ring-primary"
                 : "bg-primary/10 hover:bg-primary/20"
@@ -431,7 +454,7 @@ export const MessagesTab = memo(function MessagesTab({
           </span>
         </div>
 
-        <div className="w-8 h-px bg-border/50" />
+        <div className="w-8 h-px bg-border/50 flex-shrink-0" />
 
         {otherMembers.map((member) => {
           const memberConv = conversations.find(
@@ -440,10 +463,10 @@ export const MessagesTab = memo(function MessagesTab({
           const isActive = activeConversationId && memberConv && activeConversationId === memberConv.id;
 
           return (
-            <div key={member.id} className="relative group">
+            <div key={member.id} className="relative group flex flex-col items-center">
               <button
                 onClick={() => handleStartDirectConversation(member.id)}
-                className={`relative w-11 h-11 overflow-hidden transition-all rounded-xl ${
+                className={`relative w-11 h-11 overflow-hidden transition-all rounded-xl flex-shrink-0 ${
                   isActive ? "ring-2 ring-primary" : "hover:ring-1 hover:ring-border"
                 }`}
               >
@@ -510,7 +533,16 @@ export const MessagesTab = memo(function MessagesTab({
                 const isAudio = msg.type === "audio" || msg.content?.startsWith("data:audio");
                 const isVideo = msg.type === "video" || msg.content?.startsWith("data:video");
                 return (
-                  <div key={msg.id} className={`flex ${isMe ? "justify-end" : "justify-start"}`}>
+                  <div key={msg.id} className={`flex ${isMe ? "justify-end" : "justify-start"} group/message relative`}>
+                    {isMe && (
+                      <button
+                        onClick={() => handleDeleteMessage(msg.id)}
+                        className="absolute -left-8 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-destructive/10 border border-destructive/20 flex items-center justify-center opacity-0 group-hover/message:opacity-100 transition-opacity hover:bg-destructive/20"
+                        aria-label="Supprimer"
+                      >
+                        <Trash2 size={12} className="text-destructive" />
+                      </button>
+                    )}
                     <div
                       className={`max-w-[80%] ${
                         isMe

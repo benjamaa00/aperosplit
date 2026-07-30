@@ -67,6 +67,7 @@ import {
   markConversationRead,
   getConversationParticipants,
   addParticipantToConversation,
+  deleteConversationMessage,
   getDb,
 } from "../db";
 
@@ -933,6 +934,16 @@ export const equilibraRouter = router({
       } catch {}
 
       return { success: true, message };
+    }),
+
+  deleteMessage: groupProcedure
+    .input(z.object({
+      messageId: z.string().min(1),
+      memberId: z.string().min(1),
+    }))
+    .mutation(async ({ input }) => {
+      await deleteConversationMessage(input.messageId);
+      return { success: true };
     }),
 
   createDirectConversation: groupProcedure

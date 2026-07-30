@@ -1343,6 +1343,13 @@ export async function sendPushToMember(memberId: string, title: string, body: st
   return sent;
 }
 
+export async function deleteConversationMessage(messageId: string) {
+  const db = await ready();
+  if (!db) return false;
+  await db.query(`DELETE FROM conversation_messages WHERE id = $1`, [messageId]);
+  return true;
+}
+
 // ═══════════════════════════════════════════════════════════════
 // Messaging
 // ═══════════════════════════════════════════════════════════════
