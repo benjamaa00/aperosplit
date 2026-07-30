@@ -1,7 +1,7 @@
 import { memo, useState, useRef, useEffect, useCallback, useMemo } from "react";
 import {
   ArrowLeft, Send, Users, X, MessageCircle,
-  Mic, MicOff, Play, Pause, Camera, X as XIcon,
+  Mic, MicOff, Play, Pause, Camera, Video, Trash2, X as XIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
@@ -47,16 +47,21 @@ export const MessagesTab = memo(function MessagesTab({
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [newMessage, setNewMessage] = useState("");
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [videoPreview, setVideoPreview] = useState<string | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
+  const [swipeCancel, setSwipeCancel] = useState(false);
   const [lightbox, setLightbox] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const recordingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
+  const recordStartXRef = useRef(0);
+  const recordBarRef = useRef<HTMLDivElement>(null);
 
   // tRPC queries
   const regularConversationsQuery = trpc.equilibra.getConversations.useQuery(
@@ -109,7 +114,7 @@ export const MessagesTab = memo(function MessagesTab({
     };
   }, []);
 
-  const doSend = useCallback(async (content: string, type: "text" | "image" | "audio" = "text") => {
+  const doSend = useCallback(async (content: string, type: "text" | "image" | "audio" | "video" = "text") => {
     if (!activeConversationId) return;
     haptics.light();
     try {
@@ -133,11 +138,17 @@ export const MessagesTab = memo(function MessagesTab({
       await doSend(img, "image");
       return;
     }
+    if (videoPreview) {
+      const vid = videoPreview;
+      setVideoPreview(null);
+      await doSend(vid, "video");
+      return;
+    }
     if (!newMessage.trim()) return;
     const content = newMessage.trim();
     setNewMessage("");
     await doSend(content, "text");
-  }, [newMessage, imagePreview, doSend]);
+  }, [newMessage, imagePreview, videoPreview, doSend]);
 
   const handlePaste = useCallback(async (e: React.ClipboardEvent) => {
     const items = e.clipboardData?.items;
@@ -178,15 +189,38 @@ export const MessagesTab = memo(function MessagesTab({
     }
   }, []);
 
+  const handleVideoSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    if (!file.type.startsWith("video/")) {
+      toast.error("Seules les vidéos sont acceptées");
+      return;
+    }
+    if (file.size > 100 * 1024 * 1024) {
+      toast.error("Vidéo trop volumineuse (max 100 Mo)");
+      return;
+    }
+    try {
+      const reader = new FileReader();
+      reader.onload = () => setVideoPreview(reader.result as string);
+      reader.readAsDataURL(file);
+    } catch {
+      toast.error("Erreur lors du traitement de la vidéo");
+    }
+  }, []);
+
   const startRecording = useCallback(async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const audioMime = ["audio/webm;codecs=opus", "audio/mp4", "audio/aac", "audio/ogg;codecs=opus"].find(t => MediaRecorder.isTypeSupported(t)) || "";
       const mr = new MediaRecorder(stream, audioMime ? { mimeType: audioMime } : undefined);
       audioChunksRef.current = [];
+      let cancelled = false;
       mr.ondataavailable = (e) => { if (e.data.size > 0) audioChunksRef.current.push(e.data); };
       mr.onstop = async () => {
         stream.getTracks().forEach(t => t.stop());
+        if (cancelled || audioChunksRef.current.length === 0) return;
         const blobType = audioMime || "audio/webm";
         const blob = new Blob(audioChunksRef.current, { type: blobType });
         if (blob.size < 1000) return;
@@ -197,7 +231,9 @@ export const MessagesTab = memo(function MessagesTab({
       mr.start();
       mediaRecorderRef.current = mr;
       setIsRecording(true);
+      setSwipeCancel(false);
       setRecordingTime(0);
+      recordStartXRef.current = 0;
       recordingIntervalRef.current = setInterval(() => setRecordingTime(t => t + 1), 1000);
       haptics.light();
     } catch {
@@ -210,6 +246,7 @@ export const MessagesTab = memo(function MessagesTab({
       mediaRecorderRef.current.stop();
     }
     setIsRecording(false);
+    setSwipeCancel(false);
     if (recordingIntervalRef.current) {
       clearInterval(recordingIntervalRef.current);
       recordingIntervalRef.current = null;
@@ -223,11 +260,33 @@ export const MessagesTab = memo(function MessagesTab({
     }
     audioChunksRef.current = [];
     setIsRecording(false);
+    setSwipeCancel(false);
     if (recordingIntervalRef.current) {
       clearInterval(recordingIntervalRef.current);
       recordingIntervalRef.current = null;
     }
   }, []);
+
+  const handleRecordPointerDown = useCallback((e: React.PointerEvent) => {
+    e.preventDefault();
+    recordStartXRef.current = e.clientX;
+    startRecording();
+  }, [startRecording]);
+
+  const handleRecordPointerMove = useCallback((e: React.PointerEvent) => {
+    if (!isRecording) return;
+    const dx = e.clientX - recordStartXRef.current;
+    setSwipeCancel(dx > 80);
+  }, [isRecording]);
+
+  const handleRecordPointerUp = useCallback(() => {
+    if (!isRecording) return;
+    if (swipeCancel) {
+      cancelRecording();
+    } else {
+      stopRecording();
+    }
+  }, [isRecording, swipeCancel, cancelRecording, stopRecording]);
 
   const handleStartDirectConversation = useCallback(async (targetMemberId: string) => {
     if (targetMemberId === currentMemberId) return;
@@ -426,6 +485,7 @@ export const MessagesTab = memo(function MessagesTab({
                 const author = getMemberById(msg.memberId);
                 const isImage = msg.type === "image" || msg.content?.startsWith("data:image");
                 const isAudio = msg.type === "audio" || msg.content?.startsWith("data:audio");
+                const isVideo = msg.type === "video" || msg.content?.startsWith("data:video");
                 return (
                   <div key={msg.id} className={`flex ${isMe ? "justify-end" : "justify-start"}`}>
                     <div
@@ -433,9 +493,9 @@ export const MessagesTab = memo(function MessagesTab({
                         isMe
                           ? "bg-primary text-primary-foreground rounded-2xl rounded-br-md"
                           : "bg-card/60 border border-border/50 rounded-2xl rounded-bl-md"
-                      } ${isImage ? "p-1 overflow-hidden" : "px-4 py-2.5"}`}
+                      } ${isImage || isVideo ? "p-1 overflow-hidden" : "px-4 py-2.5"}`}
                     >
-                      {!isMe && author && !isImage && (
+                      {!isMe && author && !isImage && !isVideo && (
                         <div className="flex items-center gap-2 mb-1.5 -ml-1">
                           <div className="w-6 h-6 rounded-full overflow-hidden ring-1 ring-border/50 flex-shrink-0">
                             <AvatarImg avatar={author.avatar} size="text-xs" />
@@ -446,7 +506,7 @@ export const MessagesTab = memo(function MessagesTab({
                           )}
                         </div>
                       )}
-                      {!isMe && author && isImage && (
+                      {!isMe && author && (isImage || isVideo) && (
                         <div className="flex items-center gap-2 mb-1 px-2 pt-1">
                           <div className="w-5 h-5 rounded-full overflow-hidden ring-1 ring-border/50 flex-shrink-0">
                             <AvatarImg avatar={author.avatar} size="text-xs" />
@@ -458,7 +518,15 @@ export const MessagesTab = memo(function MessagesTab({
                         </div>
                       )}
 
-                      {isImage ? (
+                      {isVideo ? (
+                        <video
+                          src={msg.content}
+                          controls
+                          className="max-w-full rounded-xl"
+                          style={{ maxHeight: 280 }}
+                          preload="metadata"
+                        />
+                      ) : isImage ? (
                         <img
                           src={msg.content}
                           alt="Image"
@@ -473,12 +541,12 @@ export const MessagesTab = memo(function MessagesTab({
                         <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{msg.content}</p>
                       )}
 
-                      {!isImage && (
+                      {!isImage && !isVideo && (
                         <p className={`text-[10px] mt-1 ${isMe ? "text-primary-foreground/60" : "text-muted-foreground"}`}>
                           {formatTime(msg.createdAt)}
                         </p>
                       )}
-                      {isImage && (
+                      {(isImage || isVideo) && (
                         <p className={`text-[10px] mt-1 px-2 pb-1 ${isMe ? "text-primary-foreground/60" : "text-muted-foreground"}`}>
                           {formatTime(msg.createdAt)}
                         </p>
@@ -491,7 +559,7 @@ export const MessagesTab = memo(function MessagesTab({
             </div>
 
             {/* Image Preview Bar */}
-            {imagePreview && (
+            {imagePreview && !videoPreview && (
               <div className="px-3 pt-2 pb-1 border-t border-border/30 flex items-center gap-3">
                 <div className="relative">
                   <img src={imagePreview} alt="Aperçu" className="h-20 rounded-xl object-cover" />
@@ -506,25 +574,35 @@ export const MessagesTab = memo(function MessagesTab({
               </div>
             )}
 
-            {/* Recording Bar */}
+            {/* Video Preview Bar */}
+            {videoPreview && !imagePreview && (
+              <div className="px-3 pt-2 pb-1 border-t border-border/30 flex items-center gap-3">
+                <div className="relative">
+                  <video src={videoPreview} className="h-20 rounded-xl object-cover" />
+                  <button
+                    onClick={() => setVideoPreview(null)}
+                    className="absolute -top-1.5 -right-1.5 w-6 h-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center"
+                  >
+                    <XIcon size={12} />
+                  </button>
+                </div>
+                <span className="text-xs text-muted-foreground">Vidéo prête à envoyer</span>
+              </div>
+            )}
+
+            {/* Recording Bar - hold-to-record with swipe-to-cancel */}
             {isRecording && (
-              <div className="px-3 pt-2 pb-1 border-t border-red-500/30 bg-red-500/5 flex items-center gap-3">
-                <div className="flex items-center gap-2 flex-1">
+              <div ref={recordBarRef} className="px-3 py-2 border-t border-red-500/30 bg-red-500/5 flex items-center gap-3 select-none" style={{ touchAction: "none" }}>
+                <div className={`flex items-center gap-2 flex-1 transition-all ${swipeCancel ? "opacity-40" : ""}`}>
                   <div className="w-3 h-3 rounded-full bg-red-500 animate-pulse" />
                   <span className="text-sm font-mono text-red-400">{formatRecordingTime(recordingTime)}</span>
                 </div>
-                <button
-                  onClick={cancelRecording}
-                  className="px-3 py-1.5 rounded-xl bg-card/30 border border-border/50 text-xs font-medium"
-                >
-                  Annuler
-                </button>
-                <button
-                  onClick={stopRecording}
-                  className="px-3 py-1.5 rounded-xl bg-red-500 text-white text-xs font-medium"
-                >
-                  Envoyer
-                </button>
+                <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                  swipeCancel ? "bg-destructive/20 text-destructive" : "bg-card/30 text-muted-foreground"
+                }`}>
+                  <Trash2 size={14} />
+                  <span>Glisser → annuler</span>
+                </div>
               </div>
             )}
 
@@ -548,6 +626,23 @@ export const MessagesTab = memo(function MessagesTab({
                   className="hidden"
                 />
 
+                {/* Video button */}
+                <button
+                  onClick={() => videoInputRef.current?.click()}
+                  className="w-10 h-10 rounded-xl bg-card/30 border border-border/50 flex items-center justify-center flex-shrink-0 hover:bg-card/50 transition-colors"
+                  aria-label="Joindre une vidéo"
+                >
+                  <Video size={18} className="text-muted-foreground" />
+                </button>
+                <input
+                  ref={videoInputRef}
+                  type="file"
+                  accept="video/*"
+                  capture="environment"
+                  onChange={handleVideoSelect}
+                  className="hidden"
+                />
+
                 {/* Text input */}
                 <input
                   ref={inputRef}
@@ -561,12 +656,12 @@ export const MessagesTab = memo(function MessagesTab({
                       handleSendMessage();
                     }
                   }}
-                  placeholder={imagePreview ? "Légende (optionnel)..." : "Écrire un message..."}
+                  placeholder={imagePreview || videoPreview ? "Légende (optionnel)..." : "Écrire un message..."}
                   className="flex-1 px-4 py-2.5 rounded-xl bg-card/30 border border-border/50 text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/50 transition-colors min-h-[42px]"
                 />
 
                 {/* Mic / Send button */}
-                {newMessage.trim() || imagePreview ? (
+                {newMessage.trim() || imagePreview || videoPreview ? (
                   <button
                     onClick={handleSendMessage}
                     className="w-10 h-10 rounded-xl bg-primary text-primary-foreground flex items-center justify-center flex-shrink-0 active:scale-90 transition-transform"
@@ -575,13 +670,19 @@ export const MessagesTab = memo(function MessagesTab({
                   </button>
                 ) : (
                   <button
-                    onMouseDown={(e) => { e.preventDefault(); isRecording ? stopRecording() : startRecording(); }}
-                    className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 active:scale-90 transition-all ${
+                    onPointerDown={handleRecordPointerDown}
+                    onPointerMove={handleRecordPointerMove}
+                    onPointerUp={handleRecordPointerUp}
+                    onPointerLeave={handleRecordPointerUp}
+                    className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 active:scale-90 transition-all select-none ${
                       isRecording
-                        ? "bg-red-500 text-white animate-pulse"
+                        ? swipeCancel
+                          ? "bg-destructive/20 text-destructive"
+                          : "bg-red-500 text-white animate-pulse"
                         : "bg-card/30 border border-border/50 text-muted-foreground hover:bg-card/50"
                     }`}
-                    aria-label={isRecording ? "Arrêter l'enregistrement" : "Enregistrer un audio"}
+                    aria-label={isRecording ? "Relâcher pour envoyer" : "Maintenir pour enregistrer"}
+                    style={{ touchAction: "none" }}
                   >
                     {isRecording ? <MicOff size={18} /> : <Mic size={18} />}
                   </button>

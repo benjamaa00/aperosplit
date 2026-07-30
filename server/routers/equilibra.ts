@@ -912,7 +912,7 @@ export const equilibraRouter = router({
       conversationId: z.string().min(1).max(128),
       memberId: z.string().min(1).max(128),
       content: z.string().trim().min(1).max(512000),
-      type: z.enum(["text", "image", "audio"]).optional().default("text"),
+      type: z.enum(["text", "image", "audio", "video"]).optional().default("text"),
     }))
     .mutation(async ({ input }) => {
       const message = await sendConversationMessage(input.conversationId, input.memberId, input.content, input.type);
@@ -924,12 +924,7 @@ export const equilibraRouter = router({
         const senderName = sender?.name || "Un membre";
         const pushBody = input.type === "text"
           ? (input.content.length > 100 ? input.content.slice(0, 100) + "..." : input.content)
-          : input.type === "image" ? "📷 Image" : "🎤 Audio";
-
-        for (const p of participants) {
-          if (p.memberId === input.memberId) continue;
-          try { await sendPushToMember(p.memberId, `Nouveau message de ${senderName}`, pushBody, "/"); } catch {}
-        }
+          : input.type === "image" ? "📷 Image" : input.type === "video" ? "🎥 Vidéo" : "🎤 Audio";
 
         for (const p of participants) {
           if (p.memberId === input.memberId) continue;

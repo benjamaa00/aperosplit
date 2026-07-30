@@ -1,5 +1,5 @@
-import { memo, useState } from "react";
-import { Fingerprint, Moon, Sun, Sparkles, Copy, Share2, X, DollarSign, Bell, BarChart3, Users, Settings, Shield, Trash2, Clock, Loader2, QrCode, ChevronRight, Pencil, Tag, Smartphone, HelpCircle, Play } from "lucide-react";
+import { memo, useState, useEffect } from "react";
+import { Fingerprint, Moon, Sun, Sparkles, Copy, Share2, X, DollarSign, Bell, BarChart3, Users, Settings, Shield, Trash2, Clock, Loader2, QrCode, ChevronRight, Pencil, Tag, Smartphone, HelpCircle, Play, Camera, Check } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useThemeContext } from "../contexts/ThemeContext";
 import { trpc } from "../lib/trpc";
@@ -12,6 +12,21 @@ import { Toggle } from "../components/Toggle";
 import { areHapticsEnabled, setHapticsEnabled } from "../utils/haptics";
 import { isTutorialCompleted, getTutorialStep } from "../utils/tutorialStorage";
 import { MAIN_TUTORIAL_ID } from "../constants";
+
+const COVER_GRADIENTS = [
+  { label: "Violet", value: "from-violet-500/40 via-violet-500/20 to-violet-500/5" },
+  { label: "Bleu", value: "from-blue-500/40 via-blue-500/20 to-blue-500/5" },
+  { label: "Vert", value: "from-emerald-500/40 via-emerald-500/20 to-emerald-500/5" },
+  { label: "Rose", value: "from-pink-500/40 via-pink-500/20 to-pink-500/5" },
+  { label: "Orange", value: "from-orange-500/40 via-orange-500/20 to-orange-500/5" },
+  { label: "Rouge", value: "from-red-500/40 via-red-500/20 to-red-500/5" },
+  { label: "Ambre", value: "from-amber-500/40 via-amber-500/20 to-amber-500/5" },
+  { label: "Teal", value: "from-teal-500/40 via-teal-500/20 to-teal-500/5" },
+  { label: "Indigo", value: "from-indigo-500/40 via-indigo-500/20 to-indigo-500/5" },
+  { label: "Pourpre", value: "from-purple-500/40 via-purple-500/20 to-purple-500/5" },
+];
+
+const COVER_STORAGE_KEY = "equilibra_cover_gradient";
 
 function SettingRow({ icon, iconBg, title, subtitle, children }: {
  icon: React.ReactNode;
@@ -103,17 +118,22 @@ export const ProfileTab = memo(function ProfileTab({
  onOpenCategories?: () => void;
  onReplayTutorial?: (id: string) => void;
 }) {
- const { theme, toggleTheme } = useThemeContext();
- const shareUrl = window.location.origin;
- const haptic = useHaptic();
- const [inviteTokenValue, setInviteTokenValue] = useState<string | null>(null);
- const [inviteLoading, setInviteLoading] = useState(false);
- const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
- const [showResetConfirm, setShowResetConfirm] = useState(false);
- const [showBudgetInput, setShowBudgetInput] = useState(false);
- const [budgetInput, setBudgetInput] = useState(monthlyBudget.toString());
- const [hapticsOn, setHapticsOn] = useState(areHapticsEnabled());
- const generateInviteMutation = trpc.equilibra.generateInvite.useMutation();
+  const { theme, toggleTheme } = useThemeContext();
+  const shareUrl = window.location.origin;
+  const haptic = useHaptic();
+  const [inviteTokenValue, setInviteTokenValue] = useState<string | null>(null);
+  const [inviteLoading, setInviteLoading] = useState(false);
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [showBudgetInput, setShowBudgetInput] = useState(false);
+  const [budgetInput, setBudgetInput] = useState(monthlyBudget.toString());
+  const [hapticsOn, setHapticsOn] = useState(areHapticsEnabled());
+  const [showCoverPicker, setShowCoverPicker] = useState(false);
+  const [coverGradient, setCoverGradient] = useState(() => {
+    try { return localStorage.getItem(COVER_STORAGE_KEY) || COVER_GRADIENTS[0].value; }
+    catch { return COVER_GRADIENTS[0].value; }
+  });
+  const generateInviteMutation = trpc.equilibra.generateInvite.useMutation();
 
  const handleGenerateInvite = async () => {
  setInviteLoading(true);
@@ -163,14 +183,26 @@ export const ProfileTab = memo(function ProfileTab({
     <div className="max-w-md mx-auto px-5 pt-12 space-y-6">
       {/* Cover Photo + Profile Picture */}
       <div className="relative -mx-5">
-        <div className="h-36 bg-gradient-to-br from-primary/40 via-primary/20 to-primary/5 rounded-b-2xl" />
+        <button
+          onClick={() => { haptic("light"); setShowCoverPicker(true); }}
+          className="relative w-full block group text-left"
+        >
+          <div className={`h-36 bg-gradient-to-br ${coverGradient} rounded-b-2xl transition-all duration-500`} />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent rounded-b-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
+          <div className="absolute top-3 right-3 w-9 h-9 rounded-full bg-background/60 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-lg border border-border/30">
+            <Camera size={16} className="text-foreground" />
+          </div>
+        </button>
         <button
           onClick={() => { haptic("light"); onOpenEditProfile?.(); }}
-          className="absolute -bottom-12 left-5 z-10"
+          className="absolute -bottom-12 left-5 z-10 group"
         >
           <div className="relative">
-            <div className="w-24 h-24 rounded-2xl border-4 border-background shadow-xl overflow-hidden bg-card">
+            <div className="w-24 h-24 rounded-2xl border-4 border-background shadow-xl overflow-hidden bg-card transition-all duration-300 group-hover:shadow-2xl group-hover:shadow-primary/20">
               <AvatarImg avatar={currentMember.avatar} size="text-6xl" />
+            </div>
+            <div className="absolute inset-0 rounded-2xl bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+              <Camera size={22} className="text-white" />
             </div>
             {currentMember.role === "admin" && (
               <div className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg shadow-primary/30 border-2 border-background">
@@ -185,17 +217,63 @@ export const ProfileTab = memo(function ProfileTab({
       <div className="pt-14">
         <div className="flex items-center gap-2">
           <h1 className="text-2xl font-bold tracking-tight">{currentMember.name}</h1>
-          <button onClick={() => { haptic("light"); onOpenEditProfile?.(); }}>
-            <Pencil size={14} className="text-muted-foreground hover:text-foreground transition-colors" />
+          <button
+            onClick={() => { haptic("light"); onOpenEditProfile?.(); }}
+            className="w-8 h-8 rounded-xl bg-card/50 border border-border/50 flex items-center justify-center hover:bg-card/80 transition-all"
+          >
+            <Pencil size={13} className="text-muted-foreground" />
           </button>
         </div>
-        <div className="flex items-center gap-2 mt-1">
+        <div className="flex items-center gap-2 mt-1.5">
           <span className="text-sm text-muted-foreground">Membre du groupe</span>
-          <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold border ${currentMember.role === "admin" ? "bg-primary/10 text-primary border-primary/20" : "bg-secondary text-muted-foreground border-border"}`}>{currentMember.role === "admin" ? "Admin" : "Membre"}</span>
+          <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-semibold border ${currentMember.role === "admin" ? "bg-primary/10 text-primary border-primary/20" : "bg-secondary text-muted-foreground border-border"}`}>{currentMember.role === "admin" ? "Admin" : "Membre"}</span>
         </div>
       </div>
 
- {/* ─── PARAMÈTRES ────────────────────────────────── */}
+  {/* ── Cover Gradient Picker ── */}
+  {showCoverPicker && (
+    <div className="fixed inset-0 z-[9999] bg-black/50 flex items-end sm:items-center justify-center p-4" onClick={() => setShowCoverPicker(false)}>
+      <div
+        className="w-full max-w-sm bg-card border border-border rounded-3xl overflow-hidden shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="p-5 border-b border-border/50">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-bold">Couleur de couverture</h2>
+            <button onClick={() => setShowCoverPicker(false)} className="w-8 h-8 rounded-xl bg-muted/30 flex items-center justify-center">
+              <X size={16} />
+            </button>
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">Choisissez un dégradé pour votre profil</p>
+        </div>
+        <div className="p-5 grid grid-cols-5 gap-3">
+          {COVER_GRADIENTS.map((g) => (
+            <button
+              key={g.value}
+              onClick={() => {
+                haptic("light");
+                setCoverGradient(g.value);
+                try { localStorage.setItem(COVER_STORAGE_KEY, g.value); } catch {}
+                setShowCoverPicker(false);
+              }}
+              className={`aspect-[3/2] rounded-2xl bg-gradient-to-br ${g.value} border-2 transition-all ${
+                coverGradient === g.value ? "border-primary shadow-lg shadow-primary/20 scale-110" : "border-transparent hover:border-border/50"
+              }`}
+              title={g.label}
+            >
+              {coverGradient === g.value && (
+                <div className="w-full h-full flex items-center justify-center">
+                  <Check size={16} className="text-white drop-shadow-lg" />
+                </div>
+              )}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  )}
+
+  {/* ─── PARAMÈTRES ────────────────────────────────── */}
  <div
  
  
@@ -407,27 +485,31 @@ export const ProfileTab = memo(function ProfileTab({
  </div>
  <ChevronRight size={16} className="text-muted-foreground/50" />
  </button>
- )}
- {onOpenCategories && currentMember.role === "admin" && (
- <button
- data-tutorial="profile-categories"
- onClick={() => { haptic("light"); onOpenCategories(); }}
- className="w-full p-4 flex items-center justify-between bg-card/50 border border-border rounded-2xl"
- >
- <div className="flex items-center gap-3">
- <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20">
- <Tag size={20} className="text-primary" />
- </div>
- <div>
- <p className="text-sm font-semibold">Catégories</p>
- <p className="text-xs text-muted-foreground">Gérer les catégories de dépenses</p>
- </div>
- </div>
- <ChevronRight size={16} className="text-muted-foreground/50" />
- </button>
- )}
- </div>
- </div>
+  )}
+  </div>
+
+  {/* Catégories */}
+  {onOpenCategories && currentMember.role === "admin" && (
+  <div className="glass-card-enhanced rounded-2xl overflow-hidden">
+  <button
+  data-tutorial="profile-categories"
+  onClick={() => { haptic("light"); onOpenCategories(); }}
+  className="w-full p-4 flex items-center justify-between hover:bg-card/60 transition-colors"
+  >
+  <div className="flex items-center gap-3">
+  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20">
+  <Tag size={20} className="text-primary" />
+  </div>
+  <div>
+  <p className="text-sm font-semibold">Catégories</p>
+  <p className="text-xs text-muted-foreground">Gérer les catégories de dépenses</p>
+  </div>
+  </div>
+  <ChevronRight size={16} className="text-muted-foreground/50" />
+  </button>
+  </div>
+  )}
+  </div>
 
  {/* Quick Actions */}
  <div className="grid grid-cols-2 gap-3">

@@ -175,13 +175,13 @@ export const HomeTab = memo(function HomeTab({
  </div>
  </div>
 
- {/* Detailed Breakdown */}
- {(breakdown.owesTo.length > 0 || breakdown.owedBy.length > 0) && (
- <div
- 
- 
- 
-  className="glass-card-enhanced rounded-2xl p-5"
+  {/* Detailed Breakdown */}
+  {(breakdown.owesTo.length > 0 || breakdown.owedBy.length > 0) && (
+  <div
+
+
+
+   className="glass-card-enhanced rounded-2xl p-5 mb-3"
   >
   <h3 className="text-sm font-semibold mb-3">Détail des comptes</h3>
  
@@ -241,9 +241,12 @@ export const HomeTab = memo(function HomeTab({
  </div>
  )}
  </div>
- )}
+  )}
 
- {/* Stats Row */}
+  {/* Separator */}
+  <div className="h-px bg-gradient-to-r from-transparent via-border/40 to-transparent" />
+
+  {/* Stats Row */}
  <div className="grid grid-cols-2 gap-3">
  <div
  
