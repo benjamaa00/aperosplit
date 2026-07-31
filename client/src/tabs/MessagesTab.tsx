@@ -2,6 +2,7 @@ import { memo, useState, useRef, useEffect, useCallback, useMemo } from "react";
 import {
   ArrowLeft, Send, Users, X, MessageCircle,
   Mic, MicOff, Play, Pause, Paperclip, Trash2, X as XIcon, ChevronLeft,
+  MoreHorizontal, ImageIcon, Camera, Video,
 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
@@ -52,7 +53,11 @@ export const MessagesTab = memo(function MessagesTab({
   const [recordingTime, setRecordingTime] = useState(0);
   const [swipeCancel, setSwipeCancel] = useState(false);
   const [lightbox, setLightbox] = useState<string | null>(null);
-  const [railOpen, setRailOpen] = useState(true);
+  const [railOpen, setRailOpen] = useState(() => {
+    try { return localStorage.getItem("aperosplit:conversation-rail-open") !== "false"; }
+    catch { return true; }
+  });
+  const [showAttachmentSheet, setShowAttachmentSheet] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -63,6 +68,7 @@ export const MessagesTab = memo(function MessagesTab({
   const recordStartXRef = useRef(0);
   const swipeCancelRef = useRef(false);
   const recordBarRef = useRef<HTMLDivElement>(null);
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // tRPC queries
   const regularConversationsQuery = trpc.equilibra.getConversations.useQuery(
@@ -225,7 +231,6 @@ export const MessagesTab = memo(function MessagesTab({
   }, []);
 
   const handleDeleteMessage = useCallback(async (messageId: string) => {
-    if (!confirm("Supprimer ce message ?")) return;
     haptics.heavy();
     try {
       await deleteMessageMutation.mutateAsync({ messageId, memberId: currentMemberId });
@@ -236,6 +241,16 @@ export const MessagesTab = memo(function MessagesTab({
       toast.error("Erreur lors de la suppression");
     }
   }, [currentMemberId, deleteMessageMutation, messagesQuery, conversationsQuery]);
+
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+
+  const toggleRail = useCallback(() => {
+    setRailOpen(v => {
+      const next = !v;
+      try { localStorage.setItem("aperosplit:conversation-rail-open", String(next)); } catch {}
+      return next;
+    });
+  }, []);
 
   const startRecording = useCallback(async () => {
     try {
@@ -398,9 +413,33 @@ export const MessagesTab = memo(function MessagesTab({
     return `${m}:${sec.toString().padStart(2, "0")}`;
   }, []);
 
+  const handleMessagePointerDown = useCallback((msgId: string) => {
+    longPressTimerRef.current = setTimeout(() => {
+      setDeleteConfirmId(msgId);
+      haptics.medium();
+    }, 600);
+  }, []);
+
+  const handleMessagePointerUp = useCallback(() => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  }, []);
+
+  const handleMessagePointerLeave = useCallback(() => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  }, []);
+
+  const RAIL_WIDTH_OPEN = 88;
+  const RAIL_WIDTH_CLOSED = 0;
+
   // ─── RENDER ───
   return (
-    <div className="flex h-full">
+    <div className="h-full flex relative" style={{ paddingBottom: "calc(84px + env(safe-area-inset-bottom, 10px))" }}>
       {/* ── Lightbox ── */}
       {lightbox && (
         <div
@@ -423,38 +462,67 @@ export const MessagesTab = memo(function MessagesTab({
         </div>
       )}
 
-      {/* ── Vertical Profile Rail (Left Side) ── */}
-      <div className={`${railOpen ? "w-16" : "w-0"} border-r border-border/30 flex flex-col items-center pt-14 pb-6 gap-3 overflow-hidden bg-card/10 flex-shrink-0 transition-all duration-300 relative`}>
-        {/* Toggle button */}
+      {/* ── Delete Confirm ── */}
+      {deleteConfirmId && (
+        <div className="fixed inset-0 z-[9999] bg-black/50 flex items-center justify-center p-4" onClick={() => setDeleteConfirmId(null)}>
+          <div className="bg-card border border-border rounded-3xl p-6 w-full max-w-xs shadow-2xl" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-bold mb-2">Supprimer ce message ?</h3>
+            <p className="text-sm text-muted-foreground mb-6">Cette action est irréversible.</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setDeleteConfirmId(null)}
+                className="flex-1 py-3 rounded-2xl bg-card/50 border border-border text-sm font-semibold"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={() => { const id = deleteConfirmId; setDeleteConfirmId(null); handleDeleteMessage(id); }}
+                className="flex-1 py-3 rounded-2xl bg-destructive text-destructive-foreground text-sm font-semibold"
+              >
+                Supprimer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Conversation Rail ── */}
+      <aside
+        className="flex-shrink-0 relative border-r border-border/20 bg-card/10 transition-all duration-300 flex flex-col items-center pt-16 pb-4 gap-3 overflow-y-auto scrollbar-hidden"
+        style={{ width: railOpen ? RAIL_WIDTH_OPEN : RAIL_WIDTH_CLOSED, minWidth: 0 }}
+      >
+        {/* Rail Toggle Button - always accessible */}
         <button
-          onClick={() => setRailOpen(v => !v)}
-          className="absolute -right-3 top-14 z-20 w-6 h-8 rounded-r-xl bg-card border border-border/30 border-l-0 flex items-center justify-center hover:bg-card/80 transition-colors"
+          onClick={toggleRail}
+          className="absolute top-14 z-20 w-7 h-10 rounded-r-xl bg-card border border-border/30 border-l-0 flex items-center justify-center hover:bg-card/80 transition-all"
+          style={{ right: railOpen ? -14 : -14, left: railOpen ? 'auto' : -7 }}
+          aria-label={railOpen ? "Fermer la liste" : "Ouvrir la liste"}
+          aria-expanded={railOpen}
         >
-          <ChevronLeft size={14} className={`text-muted-foreground transition-transform duration-300 ${railOpen ? "" : "rotate-180"}`} />
+          <ChevronLeft size={15} className={`text-muted-foreground transition-transform duration-300 ${railOpen ? "" : "rotate-180"}`} />
         </button>
 
-        <div className="relative group flex flex-col items-center gap-3">
+        {/* Rail Content */}
+        <div className="flex flex-col items-center gap-3 flex-shrink-0">
           <button
             onClick={handleSelectGroupChat}
-            className={`relative w-11 h-11 flex items-center justify-center transition-all rounded-xl flex-shrink-0 ${
+            className={`relative w-11 h-11 flex items-center justify-center transition-all rounded-2xl ${
               activeConversation?.type === "group"
-                ? "bg-primary/20 ring-2 ring-primary"
+                ? "bg-primary/20 ring-2 ring-primary shadow-sm shadow-primary/20"
                 : "bg-primary/10 hover:bg-primary/20"
             }`}
+            aria-label="Chat du groupe"
           >
-            <Users size={16} className="text-primary" />
+            <Users size={17} className="text-primary" />
             {(conversations.find((c: Conversation) => c.type === "group")?.unreadCount || 0) > 0 && (
-              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-primary text-primary-foreground text-[8px] font-bold flex items-center justify-center">
+              <span className="absolute -top-1 -right-1 w-4.5 h-4.5 rounded-full bg-primary text-primary-foreground text-[8px] font-bold flex items-center justify-center shadow-sm">
                 {conversations.find((c: Conversation) => c.type === "group")?.unreadCount}
               </span>
             )}
           </button>
-          <span className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2.5 py-1 rounded-lg bg-popover border border-border text-xs font-semibold whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-lg z-[1100]">
-            Groupe
-          </span>
         </div>
 
-        <div className="w-8 h-px bg-border/50 flex-shrink-0" />
+        <div className="w-8 h-px bg-border/40 flex-shrink-0" />
 
         {otherMembers.map((member) => {
           const memberConv = conversations.find(
@@ -463,274 +531,379 @@ export const MessagesTab = memo(function MessagesTab({
           const isActive = activeConversationId && memberConv && activeConversationId === memberConv.id;
 
           return (
-            <div key={member.id} className="relative group flex flex-col items-center">
+            <div key={member.id} className="flex flex-col items-center flex-shrink-0">
               <button
                 onClick={() => handleStartDirectConversation(member.id)}
-                className={`relative w-11 h-11 overflow-hidden transition-all rounded-xl flex-shrink-0 ${
-                  isActive ? "ring-2 ring-primary" : "hover:ring-1 hover:ring-border"
+                className={`relative w-11 h-11 overflow-hidden transition-all rounded-2xl ${
+                  isActive ? "ring-2 ring-primary shadow-sm" : "hover:ring-1 hover:ring-border/60"
                 }`}
+                aria-label={member.name}
               >
                 <AvatarImg avatar={member.avatar} size="text-lg" />
                 {(memberConv?.unreadCount || 0) > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-primary text-primary-foreground text-[8px] font-bold flex items-center justify-center">
+                  <span className="absolute -top-0.5 -right-0.5 w-4.5 h-4.5 rounded-full bg-primary text-primary-foreground text-[8px] font-bold flex items-center justify-center shadow-sm">
                     {memberConv?.unreadCount}
                   </span>
                 )}
               </button>
-              <span className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2.5 py-1 rounded-lg bg-popover border border-border text-xs font-semibold whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-lg z-[1100]">
-                {member.name}
-              </span>
             </div>
           );
         })}
-      </div>
+      </aside>
 
-      {/* ── Main Content Area ── */}
-      <div className="flex-1 flex flex-col min-w-0">
+      {/* ── Chat Shell ── */}
+      <section className="flex-1 flex flex-col min-w-0">
         {!activeConversationId ? (
-          <div className="flex flex-col items-center justify-center h-full px-6">
-            <MessageCircle size={40} className="text-muted-foreground/30 mb-3" />
-            <p className="text-sm text-muted-foreground">Sélectionnez un membre ou le groupe pour commencer à discuter</p>
+          <div className="flex flex-col items-center justify-center h-full px-8 text-center">
+            <MessageCircle size={48} className="text-muted-foreground/20 mb-4" />
+            <p className="text-sm text-muted-foreground max-w-[260px]">
+              Sélectionnez un membre ou le groupe pour commencer à discuter
+            </p>
           </div>
         ) : (
-          /* ── Chat View ── */
           <div className="flex flex-col h-full">
-            {/* Chat Header */}
-            <div className="flex items-center gap-3 px-3 pt-12 pb-3 border-b border-border/30 flex-shrink-0">
+            {/* ── Chat Header ── */}
+            <header className="flex-shrink-0 flex items-center gap-2 px-4 pt-12 pb-3 border-b border-border/20 bg-gradient-to-b from-card/5 to-transparent"
+              style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))", backdropFilter: "blur(18px) saturate(150%)", WebkitBackdropFilter: "blur(18px) saturate(150%)" }}
+            >
               <button
                 onClick={handleBack}
-                className="w-10 h-10 rounded-2xl bg-card/30 border border-border/50 flex items-center justify-center flex-shrink-0"
+                className="w-10 h-10 rounded-2xl bg-card/30 border border-border/40 flex items-center justify-center flex-shrink-0 active:scale-90 transition-transform"
+                aria-label="Retour"
               >
                 <ArrowLeft size={18} />
               </button>
-              <div className="flex-1 min-w-0">
-                <h2 className="font-bold text-sm truncate">
-                  {activeConversation?.type === "group"
-                    ? "Chat du groupe"
-                    : activeConversation?.otherMemberId
-                      ? getMemberById(activeConversation.otherMemberId)?.name || "Conversation privée"
+              <div className="flex items-center gap-3 flex-1 min-w-0 ml-1">
+                <div className="w-9 h-9 rounded-full overflow-hidden ring-1 ring-border/30 flex-shrink-0">
+                  <AvatarImg
+                    avatar={
+                      activeConversation?.type === "group"
+                        ? ""
+                        : getMemberById(activeConversation?.otherMemberId || "")?.avatar || ""
+                    }
+                    size="text-base"
+                  />
+                </div>
+                <div className="min-w-0">
+                  <h2 className="font-bold text-sm truncate">
+                    {activeConversation?.type === "group"
+                      ? "Chat du groupe"
+                      : getMemberById(activeConversation?.otherMemberId || "")?.name || "Conversation"}
+                  </h2>
+                  <p className="text-[11px] text-muted-foreground truncate">
+                    {activeConversation?.type === "group"
+                      ? `${members.length} membre${members.length > 1 ? "s" : ""}`
                       : "Conversation privée"}
-                </h2>
-                <p className="text-xs text-muted-foreground">
-                  {activeConversation?.type === "group"
-                    ? `${members.length} membre${members.length > 1 ? "s" : ""}`
-                    : "Conversation privée"}
-                </p>
+                  </p>
+                </div>
+              </div>
+              <button className="w-10 h-10 rounded-2xl bg-card/30 border border-border/40 flex items-center justify-center flex-shrink-0 active:scale-90 transition-transform" aria-label="Options">
+                <MoreHorizontal size={18} className="text-muted-foreground" />
+              </button>
+            </header>
+
+            {/* ── Message Viewport ── */}
+            <div
+              ref={chatContainerRef}
+              className="flex-1 overflow-y-auto overscroll-behavior-y-contain scroll-smooth"
+              style={{ WebkitOverflowScrolling: "touch" }}
+            >
+              <div className="w-full min-h-full flex flex-col justify-end px-4 sm:px-6" style={{ maxWidth: 820, marginInline: "auto" }}>
+                <div className="flex flex-col gap-2 py-4">
+                  {messages.length === 0 && (
+                    <div className="flex items-center justify-center h-32">
+                      <p className="text-sm text-muted-foreground/60">Aucun message. Envoyez le premier !</p>
+                    </div>
+                  )}
+                  {messages.map((msg: ConversationMessage) => {
+                    const isMe = msg.memberId === currentMemberId;
+                    const author = getMemberById(msg.memberId);
+                    const isImage = msg.type === "image" || msg.content?.startsWith("data:image");
+                    const isAudio = msg.type === "audio" || msg.content?.startsWith("data:audio");
+                    const isVideo = msg.type === "video" || msg.content?.startsWith("data:video");
+                    return (
+                      <div
+                        key={msg.id}
+                        className={`flex ${isMe ? "justify-end" : "justify-start"} select-none`}
+                        onPointerDown={() => isMe && handleMessagePointerDown(msg.id)}
+                        onPointerUp={handleMessagePointerUp}
+                        onPointerLeave={handleMessagePointerLeave}
+                        onPointerCancel={handleMessagePointerUp}
+                        onContextMenu={(e) => { if (isMe) { e.preventDefault(); setDeleteConfirmId(msg.id); } }}
+                      >
+                        <div
+                          className={`
+                            ${isImage || isVideo ? "p-1 overflow-hidden" : "px-4 py-2.5"}
+                            ${isMe
+                              ? "bg-primary text-primary-foreground rounded-[22px] rounded-br-[6px]"
+                              : "bg-card/70 border border-border/40 rounded-[22px] rounded-bl-[6px]"
+                            }
+                          `}
+                          style={{
+                            maxWidth: "min(72%, 520px)",
+                            ...(isImage || isVideo ? { maxWidth: "min(68%, 380px)" } : {}),
+                          }}
+                        >
+                          {/* Author header for received messages */}
+                          {!isMe && author && (
+                            <div className={`flex items-center gap-2 mb-1.5 ${isImage || isVideo ? "px-2 pt-1" : "-ml-1"}`}>
+                              <div className="w-5 h-5 rounded-full overflow-hidden ring-1 ring-border/30 flex-shrink-0">
+                                <AvatarImg avatar={author.avatar} size="text-xs" />
+                              </div>
+                              <span className="text-[11px] font-bold tracking-tight text-foreground/70">{author.name}</span>
+                              {author.role === "admin" && (
+                                <span className="text-[8px] font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded-full">Admin</span>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Video */}
+                          {isVideo ? (
+                            <video
+                              src={msg.content}
+                              controls
+                              className="w-full rounded-[16px]"
+                              style={{ maxHeight: 400, aspectRatio: "16/9" }}
+                              preload="metadata"
+                            />
+                          ) : isImage ? (
+                            <img
+                              src={msg.content}
+                              alt="Image"
+                              className="w-full rounded-[16px] cursor-pointer object-cover"
+                              style={{ maxHeight: 400, aspectRatio: "auto" }}
+                              onClick={() => setLightbox(msg.content)}
+                              loading="lazy"
+                            />
+                          ) : isAudio ? (
+                            <AudioMessage dataUrl={msg.content} isMe={isMe} />
+                          ) : (
+                            <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{msg.content}</p>
+                          )}
+
+                          {/* Timestamp */}
+                          <div className={`flex items-center justify-end gap-1 ${isImage || isVideo ? "px-1 pt-1 pb-0.5" : "mt-1"}`}>
+                            <span className={`text-[10px] ${isMe ? "text-primary-foreground/55" : "text-muted-foreground"}`}>
+                              {formatTime(msg.createdAt)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <div ref={messagesEndRef} />
+                </div>
               </div>
             </div>
 
-            {/* Messages */}
-            <div ref={chatContainerRef} className="flex-1 overflow-y-auto px-4 py-3 space-y-3" style={{ WebkitOverflowScrolling: "touch" }}>
-              {messages.length === 0 && (
-                <div className="flex items-center justify-center h-full">
-                  <p className="text-sm text-muted-foreground">Aucun message. Envoyez le premier !</p>
-                </div>
-              )}
-              {messages.map((msg: ConversationMessage) => {
-                const isMe = msg.memberId === currentMemberId;
-                const author = getMemberById(msg.memberId);
-                const isImage = msg.type === "image" || msg.content?.startsWith("data:image");
-                const isAudio = msg.type === "audio" || msg.content?.startsWith("data:audio");
-                const isVideo = msg.type === "video" || msg.content?.startsWith("data:video");
-                return (
-                  <div key={msg.id} className={`flex ${isMe ? "justify-end" : "justify-start"} relative`}>
-                    {isMe && (
-                      <button
-                        onClick={() => handleDeleteMessage(msg.id)}
-                        className="absolute -left-8 bottom-0 z-10 w-6 h-6 rounded-full bg-destructive/15 border border-destructive/25 flex items-center justify-center hover:bg-destructive/30 transition-all active:scale-90"
-                        aria-label="Supprimer le message"
-                      >
-                        <Trash2 size={10} className="text-destructive" />
-                      </button>
-                    )}
-                    <div
-                      className={`max-w-[80%] ${
-                        isMe
-                          ? "bg-primary text-primary-foreground rounded-2xl rounded-br-md"
-                          : "bg-card/60 border border-border/50 rounded-2xl rounded-bl-md"
-                      } ${isImage || isVideo ? "p-1 overflow-hidden" : "px-4 py-2.5"}`}
+            {/* ── Media Preview Bars ── */}
+            {imagePreview && !videoPreview && !isRecording && (
+              <div className="flex-shrink-0 border-t border-border/20 bg-card/20" style={{ backdropFilter: "blur(8px)" }}>
+                <div className="flex items-center gap-3 px-4 py-2" style={{ maxWidth: 820, marginInline: "auto" }}>
+                  <div className="relative">
+                    <img src={imagePreview} alt="Aperçu" className="h-16 w-16 rounded-xl object-cover" />
+                    <button
+                      onClick={() => setImagePreview(null)}
+                      className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center shadow-sm"
                     >
-                      {!isMe && author && !isImage && !isVideo && (
-                        <div className="flex items-center gap-2 mb-1.5 -ml-1">
-                          <div className="w-6 h-6 rounded-full overflow-hidden ring-1 ring-border/50 flex-shrink-0">
-                            <AvatarImg avatar={author.avatar} size="text-xs" />
-                          </div>
-                          <span className="text-[11px] font-bold tracking-tight text-foreground/80">{author.name}</span>
-                          {author.role === "admin" && (
-                            <span className="text-[8px] font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded-full">Admin</span>
-                          )}
-                        </div>
-                      )}
-                      {!isMe && author && (isImage || isVideo) && (
-                        <div className="flex items-center gap-2 mb-1 px-2 pt-1">
-                          <div className="w-5 h-5 rounded-full overflow-hidden ring-1 ring-border/50 flex-shrink-0">
-                            <AvatarImg avatar={author.avatar} size="text-xs" />
-                          </div>
-                          <span className="text-[10px] font-bold tracking-tight text-foreground/80">{author.name}</span>
-                          {author.role === "admin" && (
-                            <span className="text-[8px] font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded-full">Admin</span>
-                          )}
-                        </div>
-                      )}
+                      <XIcon size={10} />
+                    </button>
+                  </div>
+                  <span className="text-xs text-muted-foreground">Image prête à envoyer</span>
+                </div>
+              </div>
+            )}
 
-                      {isVideo ? (
-                        <video
-                          src={msg.content}
-                          controls
-                          className="max-w-full rounded-xl"
-                          style={{ maxHeight: 280 }}
-                          preload="metadata"
-                        />
-                      ) : isImage ? (
-                        <img
-                          src={msg.content}
-                          alt="Image"
-                          className="max-w-full rounded-xl cursor-pointer"
-                          style={{ maxHeight: 280 }}
-                          onClick={() => setLightbox(msg.content)}
-                          loading="lazy"
-                        />
-                      ) : isAudio ? (
-                        <AudioMessage dataUrl={msg.content} isMe={isMe} />
-                      ) : (
-                        <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{msg.content}</p>
-                      )}
+            {videoPreview && !imagePreview && !isRecording && (
+              <div className="flex-shrink-0 border-t border-border/20 bg-card/20" style={{ backdropFilter: "blur(8px)" }}>
+                <div className="flex items-center gap-3 px-4 py-2" style={{ maxWidth: 820, marginInline: "auto" }}>
+                  <div className="relative">
+                    <video src={videoPreview} className="h-16 w-16 rounded-xl object-cover" />
+                    <button
+                      onClick={() => setVideoPreview(null)}
+                      className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center shadow-sm"
+                    >
+                      <XIcon size={10} />
+                    </button>
+                  </div>
+                  <span className="text-xs text-muted-foreground">Vidéo prête à envoyer</span>
+                </div>
+              </div>
+            )}
 
-                      {!isImage && !isVideo && (
-                        <p className={`text-[10px] mt-1 ${isMe ? "text-primary-foreground/60" : "text-muted-foreground"}`}>
-                          {formatTime(msg.createdAt)}
-                        </p>
-                      )}
-                      {(isImage || isVideo) && (
-                        <p className={`text-[10px] mt-1 px-2 pb-1 ${isMe ? "text-primary-foreground/60" : "text-muted-foreground"}`}>
-                          {formatTime(msg.createdAt)}
-                        </p>
-                      )}
+            {/* ── Recording UI (replaces composer during recording) ── */}
+            {isRecording && (
+              <div className="flex-shrink-0 border-t border-red-500/25 bg-red-500/5" style={{ backdropFilter: "blur(10px)" }}>
+                <div
+                  ref={recordBarRef}
+                  className="flex items-center gap-3 px-4 py-3 select-none"
+                  style={{ maxWidth: 820, marginInline: "auto", touchAction: "none" }}
+                >
+                  <button
+                    onClick={cancelRecording}
+                    className="w-10 h-10 rounded-full bg-card/40 border border-border/40 flex items-center justify-center flex-shrink-0 active:scale-90 transition-transform"
+                    aria-label="Annuler"
+                  >
+                    <X size={16} className="text-muted-foreground" />
+                  </button>
+                  <div className="flex items-center gap-3 flex-1">
+                    <div className={`w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse ${swipeCancel ? "opacity-30" : ""}`} />
+                    <span className="text-sm font-mono text-red-400 tabular-nums">{formatRecordingTime(recordingTime)}</span>
+                    <div className={`ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
+                      swipeCancel ? "bg-destructive/15 text-destructive" : "bg-card/30 text-muted-foreground"
+                    }`}>
+                      <Trash2 size={13} />
+                      <span>Glisser → annuler</span>
                     </div>
                   </div>
-                );
-              })}
-              <div ref={messagesEndRef} />
-            </div>
-
-            {/* Image Preview Bar */}
-            {imagePreview && !videoPreview && (
-              <div className="px-3 pt-2 pb-1 border-t border-border/30 flex items-center gap-3">
-                <div className="relative">
-                  <img src={imagePreview} alt="Aperçu" className="h-20 rounded-xl object-cover" />
                   <button
-                    onClick={() => setImagePreview(null)}
-                    className="absolute -top-1.5 -right-1.5 w-6 h-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center"
-                  >
-                    <XIcon size={12} />
-                  </button>
-                </div>
-                <span className="text-xs text-muted-foreground">Image prête à envoyer</span>
-              </div>
-            )}
-
-            {/* Video Preview Bar */}
-            {videoPreview && !imagePreview && (
-              <div className="px-3 pt-2 pb-1 border-t border-border/30 flex items-center gap-3">
-                <div className="relative">
-                  <video src={videoPreview} className="h-20 rounded-xl object-cover" />
-                  <button
-                    onClick={() => setVideoPreview(null)}
-                    className="absolute -top-1.5 -right-1.5 w-6 h-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center"
-                  >
-                    <XIcon size={12} />
-                  </button>
-                </div>
-                <span className="text-xs text-muted-foreground">Vidéo prête à envoyer</span>
-              </div>
-            )}
-
-            {/* Recording Bar - hold-to-record with swipe-to-cancel */}
-            {isRecording && (
-              <div ref={recordBarRef} className="px-3 py-2 border-t border-red-500/30 bg-red-500/5 flex items-center gap-3 select-none" style={{ touchAction: "none" }}>
-                <div className={`flex items-center gap-2 flex-1 transition-all ${swipeCancel ? "opacity-40" : ""}`}>
-                  <div className="w-3 h-3 rounded-full bg-red-500 animate-pulse" />
-                  <span className="text-sm font-mono text-red-400">{formatRecordingTime(recordingTime)}</span>
-                </div>
-                <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
-                  swipeCancel ? "bg-destructive/20 text-destructive" : "bg-card/30 text-muted-foreground"
-                }`}>
-                  <Trash2 size={14} />
-                  <span>Glisser → annuler</span>
-                </div>
-              </div>
-            )}
-
-            {/* Message Input */}
-            <div className="px-2 py-2.5 border-t border-border/30 flex-shrink-0" style={{ paddingBottom: "calc(10px + env(safe-area-inset-bottom, 0px))" }}>
-              <div className="flex items-end gap-1.5">
-                {/* Attach button (image + video) */}
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="w-9 h-9 rounded-xl bg-card/30 border border-border/50 flex items-center justify-center flex-shrink-0 hover:bg-card/50 transition-colors"
-                  aria-label="Joindre un fichier"
-                >
-                  <Paperclip size={16} className="text-muted-foreground" />
-                </button>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*,video/*"
-                  capture="environment"
-                  onChange={handleFileSelect}
-                  className="hidden"
-                />
-
-                {/* Text input */}
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  onPaste={handlePaste}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSendMessage();
-                    }
-                  }}
-                  placeholder={imagePreview || videoPreview ? "Légende (optionnel)..." : "Écrire un message..."}
-                  className="flex-1 px-3.5 py-2 rounded-xl bg-card/30 border border-border/50 text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/50 transition-colors min-h-[36px]"
-                />
-
-                {/* Mic / Send button */}
-                {newMessage.trim() || imagePreview || videoPreview ? (
-                  <button
-                    onClick={handleSendMessage}
-                    className="w-9 h-9 rounded-xl bg-primary text-primary-foreground flex items-center justify-center flex-shrink-0 active:scale-90 transition-transform"
+                    onClick={stopRecording}
+                    className="w-10 h-10 rounded-full bg-red-500 text-white flex items-center justify-center flex-shrink-0 active:scale-90 transition-transform shadow-lg shadow-red-500/30"
+                    aria-label="Envoyer l'audio"
                   >
                     <Send size={15} />
                   </button>
-                ) : (
-                  <button
-                    onPointerDown={handleRecordPointerDown}
-                    onPointerMove={handleRecordPointerMove}
-                    onPointerUp={handleRecordPointerUp}
-                    onPointerLeave={handleRecordPointerUp}
-                    onPointerCancel={handleRecordPointerUp}
-                    className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 active:scale-90 transition-all select-none ${
-                      isRecording
-                        ? swipeCancel
-                          ? "bg-destructive/20 text-destructive"
-                          : "bg-red-500 text-white animate-pulse"
-                        : "bg-card/30 border border-border/50 text-muted-foreground hover:bg-card/50"
-                    }`}
-                    aria-label={isRecording ? "Relâcher pour envoyer" : "Maintenir pour enregistrer"}
-                    style={{ touchAction: "none" }}
-                  >
-                    {isRecording ? <MicOff size={15} /> : <Mic size={15} />}
-                  </button>
-                )}
+                </div>
               </div>
-            </div>
+            )}
+
+            {/* ── Message Composer ── */}
+            {!isRecording && (
+              <div className="flex-shrink-0 border-t border-border/20" style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01))", backdropFilter: "blur(16px) saturate(150%)", WebkitBackdropFilter: "blur(16px) saturate(150%)" }}>
+                <div className="px-3 py-3" style={{ maxWidth: 820, marginInline: "auto" }}>
+                  <div className="flex items-end gap-2">
+                    {/* Attachment button */}
+                    <button
+                      onClick={() => setShowAttachmentSheet(true)}
+                      className="w-[44px] h-[44px] rounded-full bg-card/30 border border-border/40 flex items-center justify-center flex-shrink-0 hover:bg-card/50 active:scale-90 transition-all"
+                      aria-label="Ajouter un média"
+                    >
+                      <Paperclip size={17} className="text-muted-foreground" />
+                    </button>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*,video/*"
+                      capture="environment"
+                      onChange={handleFileSelect}
+                      className="hidden"
+                    />
+
+                    {/* Text input */}
+                    <div className="flex-1 min-w-0 relative">
+                      <textarea
+                        ref={inputRef as any}
+                        value={newMessage}
+                        onChange={(e) => setNewMessage(e.target.value)}
+                        onPaste={handlePaste}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && !e.shiftKey) {
+                            e.preventDefault();
+                            handleSendMessage();
+                          }
+                        }}
+                        placeholder={imagePreview || videoPreview ? "Ajouter une légende..." : "Message"}
+                        rows={1}
+                        className="w-full px-4 py-2.5 rounded-2xl bg-card/30 border border-border/40 text-sm placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/40 transition-colors resize-none overflow-hidden"
+                        style={{ minHeight: 44, maxHeight: 120 }}
+                        aria-label="Saisir un message"
+                      />
+                    </div>
+
+                    {/* Dynamic send/mic button */}
+                    {newMessage.trim() || imagePreview || videoPreview ? (
+                      <button
+                        onClick={handleSendMessage}
+                        className="w-[44px] h-[44px] rounded-full bg-primary text-primary-foreground flex items-center justify-center flex-shrink-0 active:scale-90 transition-transform shadow-sm shadow-primary/20"
+                        aria-label="Envoyer"
+                      >
+                        <Send size={16} />
+                      </button>
+                    ) : (
+                      <button
+                        onPointerDown={handleRecordPointerDown}
+                        onPointerMove={handleRecordPointerMove}
+                        onPointerUp={handleRecordPointerUp}
+                        onPointerLeave={handleRecordPointerUp}
+                        onPointerCancel={handleRecordPointerUp}
+                        className={`w-[44px] h-[44px] rounded-full flex items-center justify-center flex-shrink-0 active:scale-90 transition-all select-none ${
+                          isRecording
+                            ? swipeCancel
+                              ? "bg-destructive/15 text-destructive"
+                              : "bg-red-500 text-white animate-pulse shadow-sm shadow-red-500/30"
+                            : "bg-card/30 border border-border/40 text-muted-foreground hover:bg-card/50"
+                        }`}
+                        aria-label="Enregistrer un message vocal"
+                        aria-pressed={isRecording}
+                        style={{ touchAction: "none" }}
+                      >
+                        {isRecording ? <MicOff size={17} /> : <Mic size={17} />}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
-      </div>
+      </section>
+
+      {/* ── Attachment Sheet ── */}
+      {showAttachmentSheet && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" onClick={() => setShowAttachmentSheet(false)}>
+          <div className="absolute inset-0 bg-black/40" />
+          <div
+            className="relative w-full max-w-sm bg-card border border-border/50 rounded-t-3xl sm:rounded-3xl p-5 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+            style={{ paddingBottom: "calc(20px + env(safe-area-inset-bottom, 10px))" }}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-base">Ajouter un média</h3>
+              <button onClick={() => setShowAttachmentSheet(false)} className="w-8 h-8 rounded-xl bg-muted/30 flex items-center justify-center">
+                <XIcon size={15} />
+              </button>
+            </div>
+            <div className="grid grid-cols-4 gap-4">
+              <button
+                onClick={() => { setShowAttachmentSheet(false); fileInputRef.current?.click(); }}
+                className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-card/50 border border-border/30 hover:bg-card/80 active:scale-95 transition-all"
+              >
+                <div className="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
+                  <ImageIcon size={22} className="text-blue-400" />
+                </div>
+                <span className="text-[11px] font-medium text-muted-foreground">Photo</span>
+              </button>
+              <button
+                onClick={() => { setShowAttachmentSheet(false); fileInputRef.current?.click(); }}
+                className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-card/50 border border-border/30 hover:bg-card/80 active:scale-95 transition-all"
+              >
+                <div className="w-12 h-12 rounded-2xl bg-purple-500/10 flex items-center justify-center border border-purple-500/20">
+                  <Video size={22} className="text-purple-400" />
+                </div>
+                <span className="text-[11px] font-medium text-muted-foreground">Vidéo</span>
+              </button>
+              <button
+                onClick={() => { setShowAttachmentSheet(false); /* camera not directly supported */ toast.error("Caméra non disponible"); }}
+                className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-card/50 border border-border/30 hover:bg-card/80 active:scale-95 transition-all"
+              >
+                <div className="w-12 h-12 rounded-2xl bg-green-500/10 flex items-center justify-center border border-green-500/20">
+                  <Camera size={22} className="text-green-400" />
+                </div>
+                <span className="text-[11px] font-medium text-muted-foreground">Caméra</span>
+              </button>
+              <button
+                onClick={() => { setShowAttachmentSheet(false); fileInputRef.current?.click(); }}
+                className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-card/50 border border-border/30 hover:bg-card/80 active:scale-95 transition-all"
+              >
+                <div className="w-12 h-12 rounded-2xl bg-orange-500/10 flex items-center justify-center border border-orange-500/20">
+                  <Paperclip size={22} className="text-orange-400" />
+                </div>
+                <span className="text-[11px] font-medium text-muted-foreground">Fichier</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 });
