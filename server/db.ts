@@ -1343,9 +1343,11 @@ export async function sendPushToMember(memberId: string, title: string, body: st
   return sent;
 }
 
-export async function deleteConversationMessage(messageId: string) {
+export async function deleteConversationMessage(messageId: string, memberId: string) {
   const db = await ready();
   if (!db) return false;
+  const msg = await db.query(`SELECT member_id FROM conversation_messages WHERE id = $1`, [messageId]);
+  if (!msg.rows[0] || msg.rows[0].member_id !== memberId) return false;
   await db.query(`DELETE FROM conversation_messages WHERE id = $1`, [messageId]);
   return true;
 }

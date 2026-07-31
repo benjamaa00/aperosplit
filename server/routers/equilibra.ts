@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { NOT_ADMIN_ERR_MSG } from '@shared/const';
 import { groupProcedure, groupAdminProcedure, publicProcedure, router } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { storagePut } from "../storage";
@@ -610,9 +611,17 @@ export const equilibraRouter = router({
       return { success: true, memberId: newMemberId, accessPin: ENV.groupAccessPin || undefined };
     }),
 
-  getGroupAccessPin: groupAdminProcedure
+  getGroupAccessPin: groupProcedure
     .input(z.object({ memberId: z.string().min(1).max(128) }))
-    .query(async () => {
+    .mutation(async ({ input }) => {
+      const { getDb } = await import("../db");
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "SERVICE_UNAVAILABLE" });
+      const result = await db.query(`SELECT role FROM group_members WHERE id = $1`, [input.memberId]);
+      const member = result.rows[0];
+      if (!member || member.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: NOT_ADMIN_ERR_MSG });
+      }
       return { pin: ENV.groupAccessPin || "" };
     }),
 
@@ -942,7 +951,8 @@ export const equilibraRouter = router({
       memberId: z.string().min(1),
     }))
     .mutation(async ({ input }) => {
-      await deleteConversationMessage(input.messageId);
+      const ok = await deleteConversationMessage(input.messageId, input.memberId);
+      if (!ok) throw new TRPCError({ code: "FORBIDDEN", message: "Vous ne pouvez supprimer que vos propres messages" });
       return { success: true };
     }),
 
