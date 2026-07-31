@@ -358,6 +358,11 @@ export function initializeDatabase(): Promise<void> {
           CREATE INDEX IF NOT EXISTS idx_conv_messages_member ON conversation_messages(member_id);
         `);
       } catch {}
+      try {
+        await dbPool.query(
+          `ALTER TABLE conversation_messages ADD COLUMN IF NOT EXISTS reactions JSONB DEFAULT '{}'::jsonb`
+        );
+      } catch {}
     } catch (error) {
       console.error("[DB] Database initialization failed:", error);
       pool = undefined;

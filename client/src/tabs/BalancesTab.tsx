@@ -114,7 +114,7 @@ export const BalancesTab = memo(function BalancesTab({
  return (
  <div
  
- className="max-w-md mx-auto px-5 pt-16 space-y-5"
+ className="max-w-md mx-auto px-5 safe-top space-y-5"
  >
  <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">Soldes <HelpIcon variant="question" title="Soldes du groupe" description="Visualisez qui doit rembourser qui. Un montant positif (vert) signifie qu'on vous doit. Un montant négatif (rouge) signifie que vous devez." /></h1>
 

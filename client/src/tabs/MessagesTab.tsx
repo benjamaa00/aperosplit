@@ -118,6 +118,18 @@ export const MessagesTab = memo(function MessagesTab({
     { enabled: !!activeConversationId, refetchInterval: 3000, staleTime: 2000 }
   );
 
+  useEffect(() => {
+    if (conversationsQuery.isError) {
+      console.error("Conversations query error:", conversationsQuery.error);
+    }
+  }, [conversationsQuery.isError, conversationsQuery.error]);
+
+  useEffect(() => {
+    if (messagesQuery.isError) {
+      console.error("Messages query error:", messagesQuery.error);
+    }
+  }, [messagesQuery.isError, messagesQuery.error]);
+
   const sendMessageMutation = trpc.equilibra.sendMessage.useMutation();
   const createDirectConversationMutation = trpc.equilibra.createDirectConversation.useMutation();
   const markReadMutation = trpc.equilibra.markConversationRead.useMutation();
@@ -517,7 +529,13 @@ export const MessagesTab = memo(function MessagesTab({
 
   // ─── RENDER ───
   return (
-    <div className="max-w-md mx-auto w-full h-full flex relative overflow-hidden">
+    <div
+      className="max-w-md mx-auto w-full flex relative overflow-hidden"
+      style={{
+        height: "calc(100dvh - 86px - env(safe-area-inset-bottom, 10px))",
+        paddingTop: "env(safe-area-inset-top, 0px)",
+      }}
+    >
       {/* ── Lightbox ── */}
       {lightbox && (
         <div
@@ -572,13 +590,27 @@ export const MessagesTab = memo(function MessagesTab({
         `}
       >
         {/* List Header */}
-        <div className="flex-shrink-0 px-5 pt-16 pb-3 border-b border-border/10">
+        <div className="flex-shrink-0 px-5 pt-4 pb-3 border-b border-border/10">
           <h1 className="text-xl font-bold">Messages</h1>
         </div>
 
         {/* Scrollable conversation list */}
         <div className="flex-1 overflow-y-auto scrollbar-hidden">
-          {conversationList.length === 0 && (
+          {conversationsQuery.isError && (
+            <div className="flex flex-col items-center justify-center h-full px-8 text-center gap-3">
+              <MessageCircle size={40} className="text-muted-foreground/20 mb-1" />
+              <p className="text-sm text-muted-foreground/80 font-medium">Erreur de connexion au serveur</p>
+              <p className="text-xs text-muted-foreground/50">Les messages nécessitent une connexion au serveur.</p>
+              <button
+                onClick={() => conversationsQuery.refetch()}
+                className="px-4 py-2 rounded-xl bg-primary/15 text-primary text-xs font-semibold active:scale-95 transition-transform"
+              >
+                Réessayer
+              </button>
+            </div>
+          )}
+
+          {!conversationsQuery.isError && conversationList.length === 0 && (
             <div className="flex flex-col items-center justify-center h-full px-8 text-center">
               <MessageCircle size={40} className="text-muted-foreground/20 mb-3" />
               <p className="text-sm text-muted-foreground/60">Aucune conversation</p>
@@ -663,7 +695,7 @@ export const MessagesTab = memo(function MessagesTab({
         ) : (
           <div className="flex flex-col h-full">
             {/* ── Chat Header ── */}
-            <header className="flex-shrink-0 flex items-center gap-2 px-5 pt-16 pb-3 border-b border-border/20"
+            <header className="flex-shrink-0 flex items-center gap-2 px-5 pt-4 pb-3 border-b border-border/20"
               style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))", backdropFilter: "blur(18px) saturate(150%)", WebkitBackdropFilter: "blur(18px) saturate(150%)" }}
             >
               <button
@@ -712,7 +744,20 @@ export const MessagesTab = memo(function MessagesTab({
             >
               <div className="w-full flex flex-col justify-end px-4 py-4">
                 <div className="flex flex-col gap-1.5" style={{ maxWidth: "100%", marginInline: "auto" }}>
-                  {messages.length === 0 && (
+                  {messagesQuery.isError && (
+                    <div className="flex flex-col items-center justify-center h-40 gap-2 text-center px-6">
+                      <p className="text-sm text-muted-foreground/80 font-medium">Erreur de connexion au serveur</p>
+                      <p className="text-xs text-muted-foreground/50">Impossible de charger les messages.</p>
+                      <button
+                        onClick={() => messagesQuery.refetch()}
+                        className="px-4 py-2 rounded-xl bg-primary/15 text-primary text-xs font-semibold active:scale-95 transition-transform"
+                      >
+                        Réessayer
+                      </button>
+                    </div>
+                  )}
+
+                  {!messagesQuery.isError && messages.length === 0 && (
                     <div className="flex items-center justify-center h-32">
                       <p className="text-sm text-muted-foreground/60">Aucun message. Envoyez le premier !</p>
                     </div>
@@ -952,7 +997,7 @@ export const MessagesTab = memo(function MessagesTab({
 
             {/* ── Composer ── */}
             {!isRecording && (
-              <div className="flex-shrink-0 border-t border-border/20" style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01))", backdropFilter: "blur(16px) saturate(150%)", WebkitBackdropFilter: "blur(16px) saturate(150%)", paddingBottom: "calc(12px + env(safe-area-inset-bottom, 8px))" }}>
+              <div className="flex-shrink-0 border-t border-border/20" style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01))", backdropFilter: "blur(16px) saturate(150%)", WebkitBackdropFilter: "blur(16px) saturate(150%)" }}>
                 <div className="px-3 py-3" style={{ maxWidth: "100%", marginInline: "auto" }}>
                   <div className="flex items-end gap-2">
                   <div className="flex items-end gap-1">

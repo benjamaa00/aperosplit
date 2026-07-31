@@ -219,7 +219,7 @@ export const ExpensesTab = memo(function ExpensesTab({
  <>
  <div
  
- className="max-w-md mx-auto px-5 pt-16 space-y-5 overflow-y-auto pb-32 scrollbar-hidden"
+ className="max-w-md mx-auto px-5 safe-top space-y-5 overflow-y-auto pb-32 scrollbar-hidden"
  >
  <div className="flex items-center justify-between">
  <h1 className="text-2xl font-bold tracking-tight">Dépenses</h1>

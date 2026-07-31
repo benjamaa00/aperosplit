@@ -224,7 +224,7 @@ export const ProfileTab = memo(function ProfileTab({
  { code: "USD", symbol: "$", label: "Dollar américain" },
  ];
   return (
-    <div className="max-w-md mx-auto px-5 pt-12 space-y-6">
+    <div className="max-w-md mx-auto px-5 safe-top space-y-6">
       {/* Cover Photo + Profile Picture */}
       <div className="relative -mx-5">
         <button

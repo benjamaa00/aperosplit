@@ -127,7 +127,7 @@ export const StatsTab = memo(function StatsTab({ expenses, members, currentMembe
  const pendingCount = pendingPayments.filter(p => p.status === "pending").length;
 
  return (
- <div  className="max-w-md mx-auto px-5 pt-16 pb-24 space-y-5 scrollbar-hidden">
+ <div  className="max-w-md mx-auto px-5 safe-top pb-24 space-y-5 scrollbar-hidden">
  <header className="glass-card-enhanced relative overflow-hidden rounded-[1.25rem] p-6">
  <div className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-white/60 to-transparent" />
  <div className="relative flex items-start justify-between gap-4">

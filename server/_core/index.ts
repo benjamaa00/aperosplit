@@ -46,11 +46,10 @@ async function startServer() {
     limit: 200,
     standardHeaders: "draft-8",
     legacyHeaders: false,
-    keyGenerator: (req) => req.ip || req.socket.remoteAddress || "unknown",
   }));
   // Configure body parser with larger size limit for file uploads
-  app.use(express.json({ limit: "8mb" }));
-  app.use(express.urlencoded({ limit: "8mb", extended: true }));
+  app.use(express.json({ limit: "200mb" }));
+  app.use(express.urlencoded({ limit: "200mb", extended: true }));
   app.get("/health", (_req, res) => res.status(200).json({ ok: true }));
   app.get("/access", (req, res) => {
     const requestedNext = typeof req.query.next === "string" ? req.query.next : "/";
@@ -97,6 +96,7 @@ body:before,body:after{content:"";position:fixed;width:320px;height:320px;border
     createExpressMiddleware({
       router: appRouter,
       createContext,
+      maxBodySize: 200 * 1024 * 1024,
     })
   );
   // development mode uses Vite, production mode uses static files

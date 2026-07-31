@@ -245,7 +245,7 @@ const AppShell = memo(({ children, activeTab, onTabChange, onAddExpense, message
             style={{
               WebkitOverflowScrolling: "touch",
               overscrollBehaviorY: "contain",
-              paddingBottom: "calc(110px + env(safe-area-inset-bottom, 10px))",
+              paddingBottom: "calc(92px + env(safe-area-inset-bottom, 10px))",
             }}
           >
             {children}

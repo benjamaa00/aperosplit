@@ -1310,6 +1310,11 @@ html.dark .bottom-nav {
   animation: tabContentIn 350ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
+/* Safe-area aware top padding (browser: small, PWA standalone: clears notch) */
+.safe-top {
+  padding-top: calc(1.25rem + env(safe-area-inset-top, 0px));
+}
+
 /* ═══ Background ambient glow per tab ═══ */
 @keyframes ambientDrift {
   0%, 100% { transform: translate(0, 0) scale(1); }

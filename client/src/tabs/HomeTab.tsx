@@ -84,7 +84,7 @@ export const HomeTab = memo(function HomeTab({
 
  return (
  <>
- <div data-tutorial="welcome" className="max-w-md mx-auto px-5 pt-16 space-y-5">
+ <div data-tutorial="welcome" className="max-w-md mx-auto px-5 safe-top space-y-5">
  {/* Greeting */}
  <div>
  <p className="text-muted-foreground text-sm font-medium">Bonjour,</p>
