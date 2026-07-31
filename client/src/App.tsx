@@ -151,8 +151,21 @@ export default function App() {
  staleTime: 30000,
  gcTime: 300000,
  });
- const getNotificationsQuery = trpc.equilibra.getNotifications.useQuery({ memberId: currentMemberId }, { enabled: !!currentMemberId && !isNetlify, refetchInterval: 5000, staleTime: 5000 });
- const getCategoriesQuery = trpc.equilibra.getCategories.useQuery(undefined, { enabled: !isNetlify, staleTime: 60000, gcTime: 600000 });
+  const getNotificationsQuery = trpc.equilibra.getNotifications.useQuery({ memberId: currentMemberId }, { enabled: !!currentMemberId && !isNetlify, refetchInterval: 5000, staleTime: 5000 });
+  const getCategoriesQuery = trpc.equilibra.getCategories.useQuery(undefined, { enabled: !isNetlify, staleTime: 60000, gcTime: 600000 });
+  const getConversationsQuery = trpc.equilibra.getConversations.useQuery(
+    { memberId: currentMemberId },
+    { enabled: !!currentMemberId && !isNetlify, refetchInterval: 5000, staleTime: 3000 }
+  );
+  const getAllConversationsQuery = trpc.equilibra.getAllConversations.useQuery(
+    { memberId: currentMemberId },
+    { enabled: !!currentMemberId && currentMember?.role === "admin" && !isNetlify, refetchInterval: 5000, staleTime: 3000 }
+  );
+
+  const messagesUnreadCount = useMemo(() => {
+    const convs = currentMember?.role === "admin" ? (getAllConversationsQuery.data || []) : (getConversationsQuery.data || []);
+    return convs.reduce((sum: number, c: any) => sum + (c.unreadCount || 0), 0);
+  }, [getConversationsQuery.data, getAllConversationsQuery.data, currentMember?.role]);
 
  // ─── Effects ───────────────────────────────────────────────
   // Keep Render server awake by pinging API every 60 seconds
@@ -919,7 +932,7 @@ export default function App() {
  const myBalance = balances[currentMemberId] || 0;
 
  content = (
-   <AppShell activeTab={activeTab} onTabChange={setActiveTab} onAddExpense={() => setShowAddExpense(true)}>
+    <AppShell activeTab={activeTab} onTabChange={setActiveTab} onAddExpense={() => setShowAddExpense(true)} messagesUnreadCount={messagesUnreadCount}>
   <div key={`tab-anim-${activeTab}`} className="tab-content-animate h-full">
   {activeTab === "home" && <HomeTab key="home" currentMember={currentMember} balance={myBalance} totalSpent={totalSpent} expenseCount={expenses.length} recentExpenses={recentExpenses} members={members} pendingPayments={myPendingPayments} completedPayments={myCompletedPayments} onConfirmPayment={confirmPayment} onRefusePayment={refusePayment} onResentPayment={resentPayment} onConfirmReceipt={confirmReceipt} onReportNotReceived={reportNotReceived} onMarkAsPaid={markAsPaid} onCancelPaymentRequest={cancelPaymentRequest} expenses={expenses} monthlyBudget={monthlyBudget} currency={currency} onUpdateBudget={updateBudget} />}
   {activeTab === "expenses" && <ExpensesTab key="expenses" expenses={expenses} members={members} currentMemberId={currentMemberId} onDelete={deleteExpense} onAdd={() => { setDuplicateFrom(null); setShowAddExpense(true); }} onDuplicate={(exp) => { setDuplicateFrom(exp); setShowAddExpense(true); }} onRequestPayment={requestPayment} onRequestGroupPayment={requestGroupPayment} currency={currency} pendingPayments={pendingPayments} completedPayments={completedPayments} categories={getCategoriesQuery.data?.categories || []} />}

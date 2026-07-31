@@ -108,26 +108,26 @@ export const ExpensesTab = memo(function ExpensesTab({
 
  const close = () => setModal({ type: null });
 
- const handleDeleteWithUndo = useCallback((expenseId: string) => {
- const timer = setTimeout(() => {
- onDelete(expenseId);
- pendingDeletes.current.delete(expenseId);
- }, 5000);
- pendingDeletes.current.set(expenseId, timer);
+  const handleDeleteWithUndo = useCallback((expenseId: string, expenseName?: string) => {
+    const timer = setTimeout(() => {
+      onDelete(expenseId);
+      pendingDeletes.current.delete(expenseId);
+    }, 5000);
+    pendingDeletes.current.set(expenseId, timer);
 
- toast("Depense supprimee", {
- description: "Appuyez sur Annuler pour restaurer",
- action: {
- label: "Annuler",
- onClick: () => {
- const t = pendingDeletes.current.get(expenseId);
- if (t) { clearTimeout(t); pendingDeletes.current.delete(expenseId); }
- toast.success("Depense restauree");
- },
- },
- duration: 5000,
- });
- }, [onDelete]);
+    toast("Dépense supprimée", {
+      description: expenseName ? `"${expenseName}" — appuyez sur Annuler pour restaurer` : "Appuyez sur Annuler pour restaurer",
+      action: {
+        label: "Annuler",
+        onClick: () => {
+          const t = pendingDeletes.current.get(expenseId);
+          if (t) { clearTimeout(t); pendingDeletes.current.delete(expenseId); }
+          toast.success("Dépense restaurée");
+        },
+      },
+      duration: 5000,
+    });
+  }, [onDelete]);
 
  const openGroupModal = (exp: Expense) => {
  const otherIds = exp.participants.filter(
@@ -366,7 +366,7 @@ export const ExpensesTab = memo(function ExpensesTab({
  <button
  onClick={() => {
  setOpenMenuId(null);
- handleDeleteWithUndo(exp.id);
+  handleDeleteWithUndo(exp.id, exp.description);
  }}
  className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-red-400 hover:bg-red-500/10 transition-colors"
  >

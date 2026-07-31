@@ -23,12 +23,13 @@ interface AppShellProps {
   activeTab?: Tab;
   onTabChange?: (tab: Tab) => void;
   onAddExpense?: () => void;
+  messagesUnreadCount?: number;
 }
 
 function clamp(v: number, min: number, max: number) { return v < min ? min : v > max ? max : v; }
 function lerp(a: number, b: number, t: number) { return a + (b - a) * t; }
 
-const AppShell = memo(({ children, activeTab, onTabChange, onAddExpense }: AppShellProps) => {
+const AppShell = memo(({ children, activeTab, onTabChange, onAddExpense, messagesUnreadCount }: AppShellProps) => {
   const tabRefs = useRef<Map<Tab, HTMLDivElement>>(new Map());
   const barRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -301,6 +302,7 @@ const AppShell = memo(({ children, activeTab, onTabChange, onAddExpense }: AppSh
                     onSwitch={switchTab}
                     tabRefs={tabRefs}
                     highlight={dragUI.active && dragUI.hoverTab === tab}
+                    unreadCount={tab === "messages" ? messagesUnreadCount : undefined}
                   />
                 ))}
               </div>
@@ -338,12 +340,13 @@ const AppShell = memo(({ children, activeTab, onTabChange, onAddExpense }: AppSh
 AppShell.displayName = "AppShell";
 
 const GridTab = memo(({
-  id, label, col, activeTab, onSwitch, tabRefs, highlight,
+  id, label, col, activeTab, onSwitch, tabRefs, highlight, unreadCount,
 }: {
   id: Tab; label: string; col: number;
   activeTab: Tab; onSwitch: (tab: Tab) => void;
   tabRefs: React.MutableRefObject<Map<Tab, HTMLDivElement>>;
   highlight?: boolean;
+  unreadCount?: number;
 }) => {
   const isActive = activeTab === id;
   const Icon = TAB_ICONS[id];
@@ -358,18 +361,25 @@ const GridTab = memo(({
       <button
         onClick={() => onSwitch(id)}
         aria-label={label}
-        className="flex flex-col items-center justify-center gap-1 min-w-[50px] px-1 py-1 cursor-pointer select-none"
+        className="flex flex-col items-center justify-center gap-1 min-w-[50px] px-1 py-1 cursor-pointer select-none relative"
         style={{ WebkitTapHighlightColor: "transparent" }}
       >
-        <Icon
-          size={22}
-          strokeWidth={lit ? 2 : 1.5}
-          className="transition-all duration-[200ms]"
-          style={{
-            color: lit ? "var(--nav-icon-active, rgba(255,255,255,1))" : "var(--nav-icon-inactive, rgba(255,255,255,0.40))",
-            filter: lit ? "drop-shadow(0 0 6px rgba(128,80,240,0.45))" : "none",
-          }}
-        />
+        <div className="relative flex items-center justify-center">
+          <Icon
+            size={22}
+            strokeWidth={lit ? 2 : 1.5}
+            className="transition-all duration-[200ms]"
+            style={{
+              color: lit ? "var(--nav-icon-active, rgba(255,255,255,1))" : "var(--nav-icon-inactive, rgba(255,255,255,0.40))",
+              filter: lit ? "drop-shadow(0 0 6px rgba(128,80,240,0.45))" : "none",
+            }}
+          />
+          {unreadCount && unreadCount > 0 && (
+            <span className="absolute -top-1.5 -right-2 w-4 h-4 rounded-full bg-primary text-primary-foreground text-[8px] font-bold flex items-center justify-center min-w-[16px] leading-none">
+              {unreadCount > 99 ? "99+" : unreadCount}
+            </span>
+          )}
+        </div>
         <span
           className="text-[11px] font-medium tracking-wide leading-none transition-opacity duration-[200ms]"
           style={{

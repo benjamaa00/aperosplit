@@ -53,6 +53,17 @@ function formatLastMessagePreview(msg: ConversationMessage | undefined): string 
   return msg.content || "";
 }
 
+function formatMessageDate(dateStr: string): string {
+  const d = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  if (diffDays === 0) return "Aujourd'hui";
+  if (diffDays === 1) return "Hier";
+  if (diffDays < 7) return d.toLocaleDateString("fr-FR", { weekday: "long" });
+  return d.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+}
+
 export const MessagesTab = memo(function MessagesTab({
   currentMemberId,
   members,
@@ -73,6 +84,7 @@ export const MessagesTab = memo(function MessagesTab({
   const [swipeCancel, setSwipeCancel] = useState(false);
   const [lightbox, setLightbox] = useState<string | null>(null);
   const [showAttachmentSheet, setShowAttachmentSheet] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showList, setShowList] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -578,22 +590,32 @@ export const MessagesTab = memo(function MessagesTab({
                     <AvatarImg avatar={member?.avatar || ""} size="text-xl" />
                   )}
                 </div>
-                <div className="flex-1 min-w-0 text-left">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm font-semibold truncate">{displayName}</span>
-                    {time && (
-                      <span className="text-[10px] text-muted-foreground/60 flex-shrink-0">{time}</span>
-                    )}
-                  </div>
-                  <div className="flex items-center justify-between gap-2 mt-0.5">
-                    <span className={`text-xs truncate ${preview ? "text-muted-foreground/70" : "text-muted-foreground/40"}`}>
-                      {preview || "Aucun message"}
-                    </span>
-                    {(conv.unreadCount || 0) > 0 && (
-                      <span className="w-5 h-5 rounded-full bg-primary text-primary-foreground text-[9px] font-bold flex items-center justify-center flex-shrink-0">
-                        {conv.unreadCount}
-                      </span>
-                    )}
+             <div className="flex-1 min-w-0 text-left">
+                   <div className="flex items-center justify-between gap-2">
+                     <span className={`text-sm truncate ${
+                       (conv.unreadCount || 0) > 0 ? "font-bold" : "font-semibold"
+                     }`}>{displayName}</span>
+                     {time && (
+                       <span className={`text-[10px] flex-shrink-0 ${
+                         (conv.unreadCount || 0) > 0
+                           ? "text-foreground/90 font-medium"
+                           : "text-muted-foreground/60"
+                       }`}>{time}</span>
+                     )}
+                   </div>
+                   <div className="flex items-center justify-between gap-2 mt-0.5">
+                     <span className={`text-xs truncate ${
+                       (conv.unreadCount || 0) > 0
+                         ? "text-foreground/60 font-medium"
+                         : preview ? "text-muted-foreground/70" : "text-muted-foreground/40"
+                     }`}>
+                       {preview || "Aucun message"}
+                     </span>
+                     {(conv.unreadCount || 0) > 0 && (
+                       <span className="w-5 h-5 rounded-full bg-primary text-primary-foreground text-[9px] font-bold flex items-center justify-center flex-shrink-0">
+                         {conv.unreadCount}
+                       </span>
+                     )}
                   </div>
                 </div>
               </button>
@@ -668,15 +690,24 @@ export const MessagesTab = memo(function MessagesTab({
                       <p className="text-sm text-muted-foreground/60">Aucun message. Envoyez le premier !</p>
                     </div>
                   )}
-                  {messages.map((msg: ConversationMessage) => {
+                  {messages.map((msg: ConversationMessage, idx: number) => {
                     const isMe = msg.memberId === currentMemberId;
                     const author = getMemberById(msg.memberId);
                     const isImage = msg.type === "image" || msg.content?.startsWith("data:image");
                     const isAudio = msg.type === "audio" || msg.content?.startsWith("data:audio");
                     const isVideo = msg.type === "video" || msg.content?.startsWith("data:video");
+                    const showDateDivider = idx === 0 || formatMessageDate(messages[idx - 1]?.createdAt || "") !== formatMessageDate(msg.createdAt);
+                    const dateLabel = showDateDivider ? formatMessageDate(msg.createdAt) : "";
                     return (
-                      <div
-                        key={msg.id}
+                      <div key={msg.id}>
+                        {showDateDivider && (
+                          <div className="flex justify-center my-3">
+                            <span className="text-[10px] font-medium text-muted-foreground/60 px-3 py-1 rounded-full bg-muted/20">
+                              {dateLabel}
+                            </span>
+                          </div>
+                        )}
+                        <div
                         className={`flex ${isMe ? "justify-end" : "justify-start"} select-none`}
                         onPointerDown={() => isMe && handleMessagePointerDown(msg.id)}
                         onPointerUp={handleMessagePointerUp}
@@ -737,6 +768,7 @@ export const MessagesTab = memo(function MessagesTab({
                               {formatTime(msg.createdAt)}
                             </span>
                           </div>
+                         </div>
                         </div>
                       </div>
                     );
@@ -822,12 +854,20 @@ export const MessagesTab = memo(function MessagesTab({
               <div className="flex-shrink-0 border-t border-border/20" style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01))", backdropFilter: "blur(16px) saturate(150%)", WebkitBackdropFilter: "blur(16px) saturate(150%)", paddingBottom: "calc(12px + env(safe-area-inset-bottom, 8px))" }}>
                 <div className="px-3 py-3" style={{ maxWidth: "100%", marginInline: "auto" }}>
                   <div className="flex items-end gap-2">
+                  <div className="flex items-end gap-1">
+                    <button
+                      onClick={() => { setShowEmojiPicker(!showEmojiPicker); haptics.light(); }}
+                      className="w-[36px] h-[36px] rounded-full bg-card/30 border border-border/40 flex items-center justify-center flex-shrink-0 hover:bg-card/50 active:scale-90 transition-all"
+                      aria-label="Emoji"
+                    >
+                      <span className="text-lg">😊</span>
+                    </button>
                     <button
                       onClick={() => setShowAttachmentSheet(true)}
-                      className="w-[44px] h-[44px] rounded-full bg-card/30 border border-border/40 flex items-center justify-center flex-shrink-0 hover:bg-card/50 active:scale-90 transition-all"
+                      className="w-[36px] h-[36px] rounded-full bg-card/30 border border-border/40 flex items-center justify-center flex-shrink-0 hover:bg-card/50 active:scale-90 transition-all"
                       aria-label="Ajouter un média"
                     >
-                      <Paperclip size={17} className="text-muted-foreground" />
+                      <Paperclip size={15} className="text-muted-foreground" />
                     </button>
                     <input
                       ref={fileInputRef}
@@ -844,6 +884,7 @@ export const MessagesTab = memo(function MessagesTab({
                       onChange={handleVideoSelect}
                       className="hidden"
                     />
+                  </div>
 
                     <div className="flex-1 min-w-0 relative">
                       <textarea
@@ -900,7 +941,56 @@ export const MessagesTab = memo(function MessagesTab({
             )}
           </div>
         )}
-      </section>
+             </section>
+
+      {/* ── Emoji Picker ── */}
+      {showEmojiPicker && (
+        <div
+          className="fixed inset-x-0 bottom-0 z-30 bg-card border-t border-border/50"
+          style={{
+            paddingBottom: "calc(12px + env(safe-area-inset-bottom, 8px))",
+            maxHeight: "40vh",
+            backdropFilter: "blur(20px) saturate(180%)",
+            WebkitBackdropFilter: "blur(20px) saturate(180%)",
+          }}
+        >
+          <div className="px-3 pt-2 pb-1 flex items-center justify-between">
+            <div className="w-10 h-1 rounded-full bg-muted/30 mx-auto mb-1" />
+            <div className="flex-1 flex justify-center">
+              <span className="text-xs text-muted-foreground">Emoji</span>
+            </div>
+            <button
+              onClick={() => setShowEmojiPicker(false)}
+              className="w-7 h-7 rounded-full bg-muted/30 flex items-center justify-center"
+            >
+              <XIcon size={12} />
+            </button>
+          </div>
+          <div className="grid grid-cols-6 gap-1 px-3 overflow-y-auto" style={{ maxHeight: "calc(40vh - 50px)" }}>
+            {["😀","😂","🥰","😍","🤔","😅","😎","🤗","😊","🙂","😘","👍","❤️","🔥","🎉","🤝","💯","🙏","👏","🎁","🍕","🍔","🍰","☕","🍷","🍺","📚","✈️","🚗","🏠","💰","⏰","✅","❌","⚠️","❓","❗","💡","⭐","🌟"].map((e) => (
+              <button
+                key={e}
+                onClick={() => {
+                  const textarea = inputRef.current;
+                  if (textarea && 'value' in textarea) {
+                    const ta = textarea as any;
+                    const start = ta.selectionStart || 0;
+                    const end = ta.selectionEnd || 0;
+                    setNewMessage(newMessage.slice(0, start) + e + newMessage.slice(end));
+                  } else {
+                    setNewMessage(newMessage + e);
+                  }
+                  setShowEmojiPicker(false);
+                  haptics.light();
+                }}
+                className="text-2xl hover:bg-muted/30 rounded-xl active:scale-110 transition-transform flex items-center justify-center"
+              >
+                {e}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ── Attachment Sheet ── */}
       {showAttachmentSheet && (
@@ -937,7 +1027,7 @@ export const MessagesTab = memo(function MessagesTab({
                 <span className="text-[11px] font-medium text-muted-foreground">Vidéo</span>
               </button>
               <button
-                onClick={() => { setShowAttachmentSheet(false); toast.error("Caméra non disponible"); }}
+                onClick={() => { setShowAttachmentSheet(false); fileInputRef.current?.click(); }}
                 className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-card/50 border border-border/30 hover:bg-card/80 active:scale-95 transition-all"
               >
                 <div className="w-12 h-12 rounded-2xl bg-green-500/10 flex items-center justify-center border border-green-500/20">
@@ -996,19 +1086,27 @@ const AudioMessage = memo(function AudioMessage({ dataUrl, isMe }: { dataUrl: st
     return `${m}:${sec.toString().padStart(2, "0")}`;
   }, []);
 
-  return (
-    <div className="flex items-center gap-2.5 px-2 py-1.5 min-w-[180px]" onClick={(e) => e.stopPropagation()}>
+   return (
+    <div className="flex items-center gap-2.5 px-1 py-1 min-w-[180px] max-w-[200px]" onClick={(e) => e.stopPropagation()}>
       <audio ref={audioRef} src={dataUrl} preload="metadata" />
       <button
         onClick={togglePlay}
-        className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${
-          isMe ? "bg-white/20" : "bg-primary/15"
+        className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 transition-transform active:scale-90 ${
+          isMe ? "bg-white/20 hover:bg-white/30" : "bg-primary/15 hover:bg-primary/25"
         }`}
       >
         {playing ? <Pause size={14} className={isMe ? "text-white" : "text-primary"} /> : <Play size={14} className={`ml-0.5 ${isMe ? "text-white" : "text-primary"}`} />}
       </button>
-      <div className="flex-1 min-w-0">
-        <div className={`h-1.5 rounded-full overflow-hidden ${isMe ? "bg-white/20" : "bg-primary/10"}`}>
+      <div className="flex-1 min-w-0 cursor-pointer" onClick={(e) => {
+        e.stopPropagation();
+        const a = audioRef.current;
+        if (!a || !a.duration) return;
+        const rect = e.currentTarget.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const pct = Math.max(0, Math.min(1, x / rect.width));
+        a.currentTime = pct * a.duration;
+      }}>
+        <div className={`h-1.5 rounded-full overflow-hidden ${isMe ? "bg-white/20" : "bg-primary/10"} transition-colors`}>
           <div
             className={`h-full rounded-full transition-all duration-100 ${isMe ? "bg-white/70" : "bg-primary/60"}`}
             style={{ width: `${progress * 100}%` }}
@@ -1018,6 +1116,11 @@ const AudioMessage = memo(function AudioMessage({ dataUrl, isMe }: { dataUrl: st
           <span className={`text-[9px] ${isMe ? "text-white/50" : "text-muted-foreground"}`}>
             {playing ? fmt(audioRef.current?.currentTime || 0) : duration ? fmt(duration) : "0:00"}
           </span>
+          {duration > 0 && (
+            <span className={`text-[9px] ${isMe ? "text-white/50" : "text-muted-foreground"}`}>
+              {fmt(duration)}
+            </span>
+          )}
         </div>
       </div>
     </div>
