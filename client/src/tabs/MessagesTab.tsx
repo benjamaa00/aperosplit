@@ -77,6 +77,7 @@ export const MessagesTab = memo(function MessagesTab({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const videoFileInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const recordingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -831,9 +832,16 @@ export const MessagesTab = memo(function MessagesTab({
                     <input
                       ref={fileInputRef}
                       type="file"
-                      accept="image/*,video/*"
+                      accept="image/*"
                       capture="environment"
                       onChange={handleFileSelect}
+                      className="hidden"
+                    />
+                    <input
+                      ref={videoFileInputRef}
+                      type="file"
+                      accept="video/*"
+                      onChange={handleVideoSelect}
                       className="hidden"
                     />
 
@@ -920,7 +928,7 @@ export const MessagesTab = memo(function MessagesTab({
                 <span className="text-[11px] font-medium text-muted-foreground">Photo</span>
               </button>
               <button
-                onClick={() => { setShowAttachmentSheet(false); fileInputRef.current?.click(); }}
+                onClick={() => { setShowAttachmentSheet(false); videoFileInputRef.current?.click(); }}
                 className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-card/50 border border-border/30 hover:bg-card/80 active:scale-95 transition-all"
               >
                 <div className="w-12 h-12 rounded-2xl bg-purple-500/10 flex items-center justify-center border border-purple-500/20">
