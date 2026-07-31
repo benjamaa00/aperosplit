@@ -56,10 +56,10 @@ export const HomeTab = memo(function HomeTab({
  }
 
  const [showBudgetPrompt, setShowBudgetPrompt] = useState(false);
- const breakdown = useMemo(() => 
- calculateMemberBreakdown(currentMember.id, expenses, members),
- [currentMember.id, expenses, members]
- );
+  const breakdown = useMemo(() => 
+  calculateMemberBreakdown(currentMember.id, expenses, members, completedPayments),
+  [currentMember.id, expenses, members, completedPayments]
+  );
 
  // Calculate current month spending
  const currentMonthSpending = useMemo(() => {

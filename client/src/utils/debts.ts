@@ -1,11 +1,22 @@
-import type { Expense, Member } from "../types";
+import type { Expense, Member, PendingPayment } from "../types";
 import { formatCurrency, formatDate } from "./currency";
 
-export function simplifyDebts(balances: Record<string, number>): Array<{ from: string; to: string; amount: number; explanation: string }> {
+export function simplifyDebts(
+  balances: Record<string, number>,
+  pendingPayments: PendingPayment[] = []
+): Array<{ from: string; to: string; amount: number; explanation: string }> {
+  const adjusted = { ...balances };
+
+  pendingPayments.forEach((p) => {
+    if (p.status !== "pending" && p.status !== "late" && p.status !== "accepted") return;
+    if (adjusted[p.fromId] !== undefined) adjusted[p.fromId] += p.amount;
+    if (adjusted[p.toId] !== undefined) adjusted[p.toId] -= p.amount;
+  });
+
   const debtors: Array<{ id: string; amount: number }> = [];
   const creditors: Array<{ id: string; amount: number }> = [];
 
-  Object.entries(balances).forEach(([id, balance]) => {
+  Object.entries(adjusted).forEach(([id, balance]) => {
     if (balance < -0.001) debtors.push({ id, amount: -balance });
     else if (balance > 0.001) creditors.push({ id, amount: balance });
   });
@@ -38,7 +49,8 @@ export function simplifyDebts(balances: Record<string, number>): Array<{ from: s
 export function calculateMemberBreakdown(
   memberId: string,
   expenses: Expense[],
-  members: Member[]
+  members: Member[],
+  completedPayments: PendingPayment[] = []
 ): {
   totalPaid: number;
   totalShare: number;
@@ -48,6 +60,7 @@ export function calculateMemberBreakdown(
 } {
   let totalPaid = 0;
   let totalShare = 0;
+  let paymentAdjustment = 0;
   const owesTo: Array<{ to: string; amount: number; reason: string }> = [];
   const owedBy: Array<{ from: string; amount: number; reason: string }> = [];
 
@@ -85,7 +98,13 @@ export function calculateMemberBreakdown(
     }
   });
 
-  const balance = totalPaid - totalShare;
+  completedPayments.forEach((p) => {
+    if (p.status !== "completed" && p.status !== "paid") return;
+    if (p.fromId === memberId) paymentAdjustment -= p.amount;
+    if (p.toId === memberId) paymentAdjustment += p.amount;
+  });
+
+  const balance = totalPaid - totalShare + paymentAdjustment;
 
   return {
     totalPaid,

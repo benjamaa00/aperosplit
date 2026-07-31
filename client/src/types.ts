@@ -24,8 +24,10 @@ export interface Expense {
 
 export interface PendingPayment {
   id: string;
+  /** Personne qui demande le paiement (créancier / celui à qui on doit) */
   fromId: string;
   fromName: string;
+  /** Personne qui doit payer (débiteur / celui qui reçoit la demande) */
   toId: string;
   toName: string;
   amount: number;

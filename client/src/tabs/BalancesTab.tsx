@@ -1,7 +1,7 @@
 import { memo, useState, useMemo } from "react";
 import { ChevronRight, ChevronDown, ArrowUpRight, X, Sparkles, Send, MessageSquare, Scale } from "lucide-react";
 import { EmptyState } from "../components/EmptyState";
-import type { Member, Expense } from "../types";
+import type { Member, Expense, PendingPayment } from "../types";
 import { formatCurrency } from "../utils/currency";
 import { calculateMemberBreakdown } from "../utils/debts";
 import { AvatarImg } from "../components/AvatarImg";
@@ -82,16 +82,18 @@ export const BalancesTab = memo(function BalancesTab({
  suggestedTransactions,
  currentMemberId,
  onRequestPayment,
- expenses,
- currency,
+  expenses,
+  currency,
+  completedPayments = [],
 }: {
- members: Member[];
- balances: Record<string, number>;
- suggestedTransactions: Array<{ from: string; to: string; amount: number; explanation: string }>;
- currentMemberId: string;
- onRequestPayment: (toId: string, amount: number, note?: string) => void;
- expenses: Expense[];
- currency: string;
+  members: Member[];
+  balances: Record<string, number>;
+  suggestedTransactions: Array<{ from: string; to: string; amount: number; explanation: string }>;
+  currentMemberId: string;
+  onRequestPayment: (toId: string, amount: number, note?: string) => void;
+  expenses: Expense[];
+  currency: string;
+  completedPayments?: PendingPayment[];
 }) {
  const [selectedMember, setSelectedMember] = useState<string | null>(null);
  const [requestSheet, setRequestSheet] = useState<{
@@ -99,13 +101,13 @@ export const BalancesTab = memo(function BalancesTab({
  amount: number;
  } | null>(null);
 
- const selectedBreakdown = useMemo(
- () =>
- selectedMember
- ? calculateMemberBreakdown(selectedMember, expenses, members)
- : null,
- [selectedMember, expenses, members]
- );
+  const selectedBreakdown = useMemo(
+    () =>
+      selectedMember
+        ? calculateMemberBreakdown(selectedMember, expenses, members, completedPayments)
+        : null,
+    [selectedMember, expenses, members, completedPayments]
+  );
 
  const currentMemberBalance = balances[currentMemberId] ?? 0;
 
