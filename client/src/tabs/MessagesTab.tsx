@@ -1,8 +1,8 @@
 import { memo, useState, useRef, useEffect, useCallback, useMemo } from "react";
 import {
   ArrowLeft, Send, Users, X, MessageCircle,
-  Mic, MicOff, Play, Pause, Paperclip, Trash2, X as XIcon, ChevronLeft,
-  MoreHorizontal, ImageIcon, Camera, Video,
+  Mic, MicOff, Play, Pause, Paperclip, Trash2, X as XIcon,
+  MoreHorizontal, ImageIcon, Camera, Video, Check, CheckCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
@@ -34,6 +34,25 @@ function compressImage(file: File, maxW = 1200, quality = 0.75): Promise<string>
   });
 }
 
+function formatConversationTime(dateStr: string): string {
+  const d = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  if (diffDays === 0) return d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  if (diffDays === 1) return "Hier";
+  if (diffDays < 7) return d.toLocaleDateString("fr-FR", { weekday: "short" });
+  return d.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+}
+
+function formatLastMessagePreview(msg: ConversationMessage | undefined): string {
+  if (!msg) return "";
+  if (msg.type === "image" || msg.content?.startsWith("data:image")) return "📷 Photo";
+  if (msg.type === "video" || msg.content?.startsWith("data:video")) return "🎬 Vidéo";
+  if (msg.type === "audio" || msg.content?.startsWith("data:audio")) return "🎵 Message vocal";
+  return msg.content || "";
+}
+
 export const MessagesTab = memo(function MessagesTab({
   currentMemberId,
   members,
@@ -53,11 +72,8 @@ export const MessagesTab = memo(function MessagesTab({
   const [recordingTime, setRecordingTime] = useState(0);
   const [swipeCancel, setSwipeCancel] = useState(false);
   const [lightbox, setLightbox] = useState<string | null>(null);
-  const [railOpen, setRailOpen] = useState(() => {
-    try { return localStorage.getItem("aperosplit:conversation-rail-open") !== "false"; }
-    catch { return true; }
-  });
   const [showAttachmentSheet, setShowAttachmentSheet] = useState(false);
+  const [showList, setShowList] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -70,7 +86,6 @@ export const MessagesTab = memo(function MessagesTab({
   const recordBarRef = useRef<HTMLDivElement>(null);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // tRPC queries
   const regularConversationsQuery = trpc.equilibra.getConversations.useQuery(
     { memberId: currentMemberId },
     { enabled: !!currentMemberId && !isAdmin, refetchInterval: 5000, staleTime: 3000 }
@@ -244,14 +259,6 @@ export const MessagesTab = memo(function MessagesTab({
 
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
-  const toggleRail = useCallback(() => {
-    setRailOpen(v => {
-      const next = !v;
-      try { localStorage.setItem("aperosplit:conversation-rail-open", String(next)); } catch {}
-      return next;
-    });
-  }, []);
-
   const startRecording = useCallback(async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -351,6 +358,7 @@ export const MessagesTab = memo(function MessagesTab({
       });
       if (result?.conversationId) {
         setActiveConversationId(result.conversationId);
+        setShowList(false);
         await conversationsQuery.refetch();
       } else {
         toast.error("Impossible de créer la conversation");
@@ -365,13 +373,14 @@ export const MessagesTab = memo(function MessagesTab({
     const groupConv = conversations.find((c: Conversation) => c.type === "group");
     if (groupConv) {
       setActiveConversationId(groupConv.id);
+      setShowList(false);
       return;
     }
-    // Try refetch in case it wasn't loaded yet
     const result = await conversationsQuery.refetch();
     const gConv = (Array.isArray(result.data) ? result.data : []).find((c: Conversation) => c.type === "group");
     if (gConv) {
       setActiveConversationId(gConv.id);
+      setShowList(false);
     } else {
       toast.error("Impossible d'ouvrir le chat du groupe");
     }
@@ -379,6 +388,7 @@ export const MessagesTab = memo(function MessagesTab({
 
   const handleBack = useCallback(() => {
     setActiveConversationId(null);
+    setShowList(true);
     haptics.light();
   }, []);
 
@@ -397,13 +407,9 @@ export const MessagesTab = memo(function MessagesTab({
     const now = new Date();
     const diffMs = now.getTime() - d.getTime();
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-    if (diffDays === 0) {
-      return d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
-    } else if (diffDays === 1) {
-      return "Hier";
-    } else if (diffDays < 7) {
-      return d.toLocaleDateString("fr-FR", { weekday: "short" });
-    }
+    if (diffDays === 0) return d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+    if (diffDays === 1) return "Hier";
+    if (diffDays < 7) return d.toLocaleDateString("fr-FR", { weekday: "short" });
     return d.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
   }, []);
 
@@ -434,8 +440,40 @@ export const MessagesTab = memo(function MessagesTab({
     }
   }, []);
 
-  const RAIL_WIDTH_OPEN = 88;
-  const RAIL_WIDTH_CLOSED = 0;
+  const conversationList = useMemo(() => {
+    const items: Array<{ key: string; type: "group" | "direct"; conversation: Conversation; member?: Member }> = [];
+    const groupConv = conversations.find((c: Conversation) => c.type === "group");
+    if (groupConv) {
+      items.push({ key: "group", type: "group", conversation: groupConv });
+    }
+    for (const m of otherMembers) {
+      const memberConv = conversations.find(
+        (c: Conversation) => c.type === "direct" && c.otherMemberId === m.id
+      );
+      const conv = memberConv || {
+        id: "",
+        type: "direct" as const,
+        otherMemberId: m.id,
+        unreadCount: 0,
+        lastMessage: undefined,
+        lastMessageAt: undefined,
+      } as Conversation;
+      items.push({ key: m.id, type: "direct", conversation: conv, member: m });
+    }
+    items.sort((a, b) => {
+      const aTime = a.conversation.lastMessageAt ? new Date(a.conversation.lastMessageAt).getTime() : 0;
+      const bTime = b.conversation.lastMessageAt ? new Date(b.conversation.lastMessageAt).getTime() : 0;
+      return bTime - aTime;
+    });
+    return items;
+  }, [conversations, otherMembers]);
+
+  const isDesktop = useMemo(() => {
+    if (typeof window === "undefined") return false;
+    return window.innerWidth >= 768;
+  }, []);
+
+  const showChat = activeConversationId && (!showList || isDesktop);
 
   // ─── RENDER ───
   return (
@@ -486,103 +524,116 @@ export const MessagesTab = memo(function MessagesTab({
         </div>
       )}
 
-      {/* ── Conversation Rail ── */}
+      {/* ── Conversation List Panel ── */}
       <aside
-        className="flex-shrink-0 relative border-r border-border/20 bg-card/10 transition-all duration-300 flex flex-col items-center pt-16 pb-4 gap-3 overflow-y-auto scrollbar-hidden"
-        style={{ width: railOpen ? RAIL_WIDTH_OPEN : RAIL_WIDTH_CLOSED, minWidth: 0 }}
+        className={`${
+          isDesktop ? "w-80 flex-shrink-0" : showChat ? "hidden" : "w-full"
+        } border-r border-border/20 bg-card/5 flex flex-col h-full overflow-hidden`}
       >
-        {/* Rail Toggle Button - always accessible */}
-        <button
-          onClick={toggleRail}
-          className="absolute top-14 z-20 w-7 h-10 rounded-r-xl bg-card border border-border/30 border-l-0 flex items-center justify-center hover:bg-card/80 transition-all"
-          style={{ right: railOpen ? -14 : -14, left: railOpen ? 'auto' : -7 }}
-          aria-label={railOpen ? "Fermer la liste" : "Ouvrir la liste"}
-          aria-expanded={railOpen}
-        >
-          <ChevronLeft size={15} className={`text-muted-foreground transition-transform duration-300 ${railOpen ? "" : "rotate-180"}`} />
-        </button>
-
-        {/* Rail Content */}
-        <div className="flex flex-col items-center gap-3 flex-shrink-0">
-          <button
-            onClick={handleSelectGroupChat}
-            className={`relative w-11 h-11 flex items-center justify-center transition-all rounded-2xl ${
-              activeConversation?.type === "group"
-                ? "bg-primary/20 ring-2 ring-primary shadow-sm shadow-primary/20"
-                : "bg-primary/10 hover:bg-primary/20"
-            }`}
-            aria-label="Chat du groupe"
-          >
-            <Users size={17} className="text-primary" />
-            {(conversations.find((c: Conversation) => c.type === "group")?.unreadCount || 0) > 0 && (
-              <span className="absolute -top-1 -right-1 w-4.5 h-4.5 rounded-full bg-primary text-primary-foreground text-[8px] font-bold flex items-center justify-center shadow-sm">
-                {conversations.find((c: Conversation) => c.type === "group")?.unreadCount}
-              </span>
-            )}
-          </button>
+        {/* List Header */}
+        <div className="flex-shrink-0 px-4 pt-14 pb-3 border-b border-border/10">
+          <h1 className="text-xl font-bold">Messages</h1>
         </div>
 
-        <div className="w-8 h-px bg-border/40 flex-shrink-0" />
-
-        {otherMembers.map((member) => {
-          const memberConv = conversations.find(
-            (c: Conversation) => c.type === "direct" && c.otherMemberId === member.id
-          );
-          const isActive = activeConversationId && memberConv && activeConversationId === memberConv.id;
-
-          return (
-            <div key={member.id} className="flex flex-col items-center flex-shrink-0">
-              <button
-                onClick={() => handleStartDirectConversation(member.id)}
-                className={`relative w-11 h-11 overflow-hidden transition-all rounded-2xl ${
-                  isActive ? "ring-2 ring-primary shadow-sm" : "hover:ring-1 hover:ring-border/60"
-                }`}
-                aria-label={member.name}
-              >
-                <AvatarImg avatar={member.avatar} size="text-lg" />
-                {(memberConv?.unreadCount || 0) > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 w-4.5 h-4.5 rounded-full bg-primary text-primary-foreground text-[8px] font-bold flex items-center justify-center shadow-sm">
-                    {memberConv?.unreadCount}
-                  </span>
-                )}
-              </button>
+        {/* Scrollable conversation list */}
+        <div className="flex-1 overflow-y-auto scrollbar-hidden">
+          {conversationList.length === 0 && (
+            <div className="flex flex-col items-center justify-center h-full px-8 text-center">
+              <MessageCircle size={40} className="text-muted-foreground/20 mb-3" />
+              <p className="text-sm text-muted-foreground/60">Aucune conversation</p>
             </div>
-          );
-        })}
+          )}
+
+          {conversationList.map((item) => {
+            const isGroup = item.type === "group";
+            const conv = item.conversation;
+            const member = item.member;
+            const isActive = activeConversationId === conv.id && conv.id !== "";
+            const displayName = isGroup ? "Chat du groupe" : (member?.name || "Inconnu");
+            const lastMsg = conv.lastMessage as ConversationMessage | undefined;
+            const preview = formatLastMessagePreview(lastMsg);
+            const time = conv.lastMessageAt ? formatConversationTime(conv.lastMessageAt) : "";
+
+            return (
+              <button
+                key={item.key}
+                onClick={() => {
+                  if (isGroup) handleSelectGroupChat();
+                  else if (member) handleStartDirectConversation(member.id);
+                }}
+                className={`w-full flex items-center gap-3 px-4 py-3.5 transition-all active:scale-[0.98] ${
+                  isActive
+                    ? "bg-primary/10"
+                    : "hover:bg-card/60"
+                }`}
+              >
+                <div className="w-12 h-12 rounded-full overflow-hidden ring-1 ring-border/20 flex-shrink-0">
+                  {isGroup ? (
+                    <div className="w-full h-full bg-primary/15 flex items-center justify-center">
+                      <Users size={18} className="text-primary" />
+                    </div>
+                  ) : (
+                    <AvatarImg avatar={member?.avatar || ""} size="text-xl" />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0 text-left">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-semibold truncate">{displayName}</span>
+                    {time && (
+                      <span className="text-[10px] text-muted-foreground/60 flex-shrink-0">{time}</span>
+                    )}
+                  </div>
+                  <div className="flex items-center justify-between gap-2 mt-0.5">
+                    <span className={`text-xs truncate ${preview ? "text-muted-foreground/70" : "text-muted-foreground/40"}`}>
+                      {preview || "Aucun message"}
+                    </span>
+                    {(conv.unreadCount || 0) > 0 && (
+                      <span className="w-5 h-5 rounded-full bg-primary text-primary-foreground text-[9px] font-bold flex items-center justify-center flex-shrink-0">
+                        {conv.unreadCount}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
       </aside>
 
       {/* ── Chat Shell ── */}
-      <section className="flex-1 flex flex-col min-w-0">
+      <section className={`flex-1 flex flex-col min-w-0 ${showChat ? "flex" : "hidden md:flex"}`}>
         {!activeConversationId ? (
-          <div className="flex flex-col items-center justify-center h-full px-8 text-center">
+          <div className="hidden md:flex flex-col items-center justify-center h-full px-8 text-center">
             <MessageCircle size={48} className="text-muted-foreground/20 mb-4" />
             <p className="text-sm text-muted-foreground max-w-[260px]">
-              Sélectionnez un membre ou le groupe pour commencer à discuter
+              Sélectionnez une conversation pour commencer à discuter
             </p>
           </div>
         ) : (
           <div className="flex flex-col h-full">
             {/* ── Chat Header ── */}
-            <header className="flex-shrink-0 flex items-center gap-2 px-4 pt-12 pb-3 border-b border-border/20 bg-gradient-to-b from-card/5 to-transparent"
+            <header className="flex-shrink-0 flex items-center gap-2 px-4 pt-12 pb-3 border-b border-border/20"
               style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))", backdropFilter: "blur(18px) saturate(150%)", WebkitBackdropFilter: "blur(18px) saturate(150%)" }}
             >
               <button
                 onClick={handleBack}
-                className="w-10 h-10 rounded-2xl bg-card/30 border border-border/40 flex items-center justify-center flex-shrink-0 active:scale-90 transition-transform"
+                className="md:hidden w-10 h-10 rounded-2xl bg-card/30 border border-border/40 flex items-center justify-center flex-shrink-0 active:scale-90 transition-transform"
                 aria-label="Retour"
               >
                 <ArrowLeft size={18} />
               </button>
               <div className="flex items-center gap-3 flex-1 min-w-0 ml-1">
                 <div className="w-9 h-9 rounded-full overflow-hidden ring-1 ring-border/30 flex-shrink-0">
-                  <AvatarImg
-                    avatar={
-                      activeConversation?.type === "group"
-                        ? ""
-                        : getMemberById(activeConversation?.otherMemberId || "")?.avatar || ""
-                    }
-                    size="text-base"
-                  />
+                  {activeConversation?.type === "group" ? (
+                    <div className="w-full h-full bg-primary/15 flex items-center justify-center">
+                      <Users size={15} className="text-primary" />
+                    </div>
+                  ) : (
+                    <AvatarImg
+                      avatar={getMemberById(activeConversation?.otherMemberId || "")?.avatar || ""}
+                      size="text-base"
+                    />
+                  )}
                 </div>
                 <div className="min-w-0">
                   <h2 className="font-bold text-sm truncate">
@@ -644,7 +695,6 @@ export const MessagesTab = memo(function MessagesTab({
                             ...(isImage || isVideo ? { maxWidth: "min(68%, 380px)" } : {}),
                           }}
                         >
-                          {/* Author header for received messages */}
                           {!isMe && author && (
                             <div className={`flex items-center gap-2 mb-1.5 ${isImage || isVideo ? "px-2 pt-1" : "-ml-1"}`}>
                               <div className="w-5 h-5 rounded-full overflow-hidden ring-1 ring-border/30 flex-shrink-0">
@@ -657,7 +707,6 @@ export const MessagesTab = memo(function MessagesTab({
                             </div>
                           )}
 
-                          {/* Video */}
                           {isVideo ? (
                             <video
                               src={msg.content}
@@ -681,7 +730,6 @@ export const MessagesTab = memo(function MessagesTab({
                             <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{msg.content}</p>
                           )}
 
-                          {/* Timestamp */}
                           <div className={`flex items-center justify-end gap-1 ${isImage || isVideo ? "px-1 pt-1 pb-0.5" : "mt-1"}`}>
                             <span className={`text-[10px] ${isMe ? "text-primary-foreground/55" : "text-muted-foreground"}`}>
                               {formatTime(msg.createdAt)}
@@ -731,7 +779,7 @@ export const MessagesTab = memo(function MessagesTab({
               </div>
             )}
 
-            {/* ── Recording UI (replaces composer during recording) ── */}
+            {/* ── Recording UI ── */}
             {isRecording && (
               <div className="flex-shrink-0 border-t border-red-500/25 bg-red-500/5" style={{ backdropFilter: "blur(10px)" }}>
                 <div
@@ -767,12 +815,11 @@ export const MessagesTab = memo(function MessagesTab({
               </div>
             )}
 
-            {/* ── Message Composer ── */}
+            {/* ── Composer ── */}
             {!isRecording && (
               <div className="flex-shrink-0 border-t border-border/20" style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01))", backdropFilter: "blur(16px) saturate(150%)", WebkitBackdropFilter: "blur(16px) saturate(150%)" }}>
                 <div className="px-3 py-3" style={{ maxWidth: 820, marginInline: "auto" }}>
                   <div className="flex items-end gap-2">
-                    {/* Attachment button */}
                     <button
                       onClick={() => setShowAttachmentSheet(true)}
                       className="w-[44px] h-[44px] rounded-full bg-card/30 border border-border/40 flex items-center justify-center flex-shrink-0 hover:bg-card/50 active:scale-90 transition-all"
@@ -789,7 +836,6 @@ export const MessagesTab = memo(function MessagesTab({
                       className="hidden"
                     />
 
-                    {/* Text input */}
                     <div className="flex-1 min-w-0 relative">
                       <textarea
                         ref={inputRef as any}
@@ -810,7 +856,6 @@ export const MessagesTab = memo(function MessagesTab({
                       />
                     </div>
 
-                    {/* Dynamic send/mic button */}
                     {newMessage.trim() || imagePreview || videoPreview ? (
                       <button
                         onClick={handleSendMessage}
@@ -883,7 +928,7 @@ export const MessagesTab = memo(function MessagesTab({
                 <span className="text-[11px] font-medium text-muted-foreground">Vidéo</span>
               </button>
               <button
-                onClick={() => { setShowAttachmentSheet(false); /* camera not directly supported */ toast.error("Caméra non disponible"); }}
+                onClick={() => { setShowAttachmentSheet(false); toast.error("Caméra non disponible"); }}
                 className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-card/50 border border-border/30 hover:bg-card/80 active:scale-95 transition-all"
               >
                 <div className="w-12 h-12 rounded-2xl bg-green-500/10 flex items-center justify-center border border-green-500/20">
