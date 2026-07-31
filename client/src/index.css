@@ -1315,6 +1315,13 @@ html.dark .bottom-nav {
   padding-top: calc(1.25rem + env(safe-area-inset-top, 0px));
 }
 
+/* React affordance: never render on touch devices (it would reserve 28px of space) */
+@media (hover: none) {
+  .react-affordance {
+    display: none !important;
+  }
+}
+
 /* ═══ Background ambient glow per tab ═══ */
 @keyframes ambientDrift {
   0%, 100% { transform: translate(0, 0) scale(1); }
@@ -1392,7 +1399,6 @@ input:focus, textarea:focus {
 }
 
 /* Safe area utilities */
-.safe-top { padding-top: env(safe-area-inset-top, 0px); }
 .safe-bottom { padding-bottom: env(safe-area-inset-bottom, 0px); }
 .safe-left { padding-left: env(safe-area-inset-left, 0px); }
 .safe-right { padding-right: env(safe-area-inset-right, 0px); }

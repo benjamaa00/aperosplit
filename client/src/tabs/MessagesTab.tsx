@@ -782,7 +782,7 @@ export const MessagesTab = memo(function MessagesTab({
                           </div>
                         )}
                         <div
-                          className={`flex ${isMe ? "justify-end" : "justify-start"} select-none group`}
+                          className={`flex ${isMe ? "justify-end" : "justify-start"} select-none group relative`}
                           onPointerDown={() => isMe && handleMessagePointerDown(msg.id)}
                         onPointerUp={handleMessagePointerUp}
                         onPointerLeave={handleMessagePointerLeave}
@@ -873,7 +873,7 @@ export const MessagesTab = memo(function MessagesTab({
                               e.stopPropagation();
                               setReactionPickerMsgId(reactionPickerMsgId === msg.id ? null : msg.id);
                             }}
-                            className="ml-2 w-5 h-5 rounded-full bg-card/30 border border-border/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity active:scale-90"
+                            className="react-affordance absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-card/30 border border-border/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity active:scale-90"
                             aria-label="Réagir"
                           >
                             <span className="text-xs">➕</span>
