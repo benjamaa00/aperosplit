@@ -2,7 +2,7 @@ import { memo, useState, useRef, useEffect, useCallback, useMemo } from "react";
 import {
   ArrowLeft, Send, Users, X, MessageCircle,
   Mic, MicOff, Play, Pause, Paperclip, Trash2, X as XIcon,
-  MoreHorizontal, ImageIcon, Camera, Video, Check, CheckCheck,
+  MoreHorizontal, ImageIcon, Camera, Video, Check, CheckCheck, Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
@@ -79,6 +79,7 @@ export const MessagesTab = memo(function MessagesTab({
   const [newMessage, setNewMessage] = useState("");
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [videoPreview, setVideoPreview] = useState<string | null>(null);
+  const [videoProcessing, setVideoProcessing] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [swipeCancel, setSwipeCancel] = useState(false);
@@ -86,6 +87,7 @@ export const MessagesTab = memo(function MessagesTab({
   const [showAttachmentSheet, setShowAttachmentSheet] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showList, setShowList] = useState(true);
+  const [reactionPickerMsgId, setReactionPickerMsgId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -119,6 +121,7 @@ export const MessagesTab = memo(function MessagesTab({
   const sendMessageMutation = trpc.equilibra.sendMessage.useMutation();
   const createDirectConversationMutation = trpc.equilibra.createDirectConversation.useMutation();
   const markReadMutation = trpc.equilibra.markConversationRead.useMutation();
+  const addReactionMutation = trpc.equilibra.addReaction.useMutation();
   const deleteMessageMutation = trpc.equilibra.deleteMessage.useMutation();
 
   const conversations = conversationsQuery.data || [];
@@ -162,12 +165,16 @@ export const MessagesTab = memo(function MessagesTab({
       });
       conversationsQuery.refetch();
       messagesQuery.refetch();
-    } catch {
-      if (type === "text") toast.error("Erreur lors de l'envoi");
+    } catch (err) {
+      toast.error("Erreur lors de l'envoi du message");
     }
   }, [activeConversationId, currentMemberId, sendMessageMutation, conversationsQuery, messagesQuery]);
 
   const handleSendMessage = useCallback(async () => {
+    if (videoProcessing) {
+      toast.error("Veuillez attendre que la vidéo soit prête");
+      return;
+    }
     if (imagePreview) {
       const img = imagePreview;
       setImagePreview(null);
@@ -249,12 +256,21 @@ export const MessagesTab = memo(function MessagesTab({
       toast.error("Vidéo trop volumineuse (max 100 Mo)");
       return;
     }
+    setVideoProcessing(true);
     try {
       const reader = new FileReader();
-      reader.onload = () => setVideoPreview(reader.result as string);
+      reader.onload = () => {
+        setVideoPreview(reader.result as string);
+        setVideoProcessing(false);
+      };
+      reader.onerror = () => {
+        toast.error("Erreur lors du traitement de la vidéo");
+        setVideoProcessing(false);
+      };
       reader.readAsDataURL(file);
     } catch {
       toast.error("Erreur lors du traitement de la vidéo");
+      setVideoProcessing(false);
     }
   }, []);
 
@@ -269,6 +285,17 @@ export const MessagesTab = memo(function MessagesTab({
       toast.error("Erreur lors de la suppression");
     }
   }, [currentMemberId, deleteMessageMutation, messagesQuery, conversationsQuery]);
+
+  const handleAddReaction = useCallback(async (messageId: string, emoji: string) => {
+    haptics.light();
+    try {
+      await addReactionMutation.mutateAsync({ messageId, memberId: currentMemberId, emoji });
+      messagesQuery.refetch();
+      conversationsQuery.refetch();
+    } catch {
+      toast.error("Erreur lors de l'ajout de la réaction");
+    }
+  }, [currentMemberId, addReactionMutation, messagesQuery, conversationsQuery]);
 
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
@@ -683,8 +710,8 @@ export const MessagesTab = memo(function MessagesTab({
               className="flex-1 overflow-y-auto overscroll-behavior-y-contain scroll-smooth"
               style={{ WebkitOverflowScrolling: "touch" }}
             >
-              <div className="w-full min-h-full flex flex-col justify-end px-4 py-4">
-                <div className="flex flex-col gap-2" style={{ maxWidth: "100%", marginInline: "auto" }}>
+              <div className="w-full flex flex-col justify-end px-4 py-4">
+                <div className="flex flex-col gap-1.5" style={{ maxWidth: "100%", marginInline: "auto" }}>
                   {messages.length === 0 && (
                     <div className="flex items-center justify-center h-32">
                       <p className="text-sm text-muted-foreground/60">Aucun message. Envoyez le premier !</p>
@@ -698,6 +725,8 @@ export const MessagesTab = memo(function MessagesTab({
                     const isVideo = msg.type === "video" || msg.content?.startsWith("data:video");
                     const showDateDivider = idx === 0 || formatMessageDate(messages[idx - 1]?.createdAt || "") !== formatMessageDate(msg.createdAt);
                     const dateLabel = showDateDivider ? formatMessageDate(msg.createdAt) : "";
+                    const hasReactions = msg.reactions && Object.keys(msg.reactions).length > 0;
+                    const REACTION_EMOJIS = ["❤️","👍","😂","😮","😢","👎","🎉","🔥","🤗","💯"];
                     return (
                       <div key={msg.id}>
                         {showDateDivider && (
@@ -708,8 +737,8 @@ export const MessagesTab = memo(function MessagesTab({
                           </div>
                         )}
                         <div
-                        className={`flex ${isMe ? "justify-end" : "justify-start"} select-none`}
-                        onPointerDown={() => isMe && handleMessagePointerDown(msg.id)}
+                          className={`flex ${isMe ? "justify-end" : "justify-start"} select-none group`}
+                          onPointerDown={() => isMe && handleMessagePointerDown(msg.id)}
                         onPointerUp={handleMessagePointerUp}
                         onPointerLeave={handleMessagePointerLeave}
                         onPointerCancel={handleMessagePointerUp}
@@ -768,9 +797,70 @@ export const MessagesTab = memo(function MessagesTab({
                               {formatTime(msg.createdAt)}
                             </span>
                           </div>
-                         </div>
+
+                          {hasReactions && (
+                            <div className={`flex flex-wrap gap-1 mt-1 ${isImage || isVideo ? "px-1 pb-1" : "px-1 pb-1"}`}>
+                              {Object.entries(msg.reactions!).map(([emoji, memberIds]) => (
+                                <button
+                                  key={emoji}
+                                  onClick={() => handleAddReaction(msg.id, emoji)}
+                                  className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs transition-all active:scale-110 ${
+                                    isMe
+                                      ? "bg-white/15 hover:bg-white/25"
+                                      : "bg-muted/30 hover:bg-muted/50"
+                                  }`}
+                                >
+                                  <span className="text-xs">{emoji}</span>
+                                  <span className={`text-[9px] font-medium ${
+                                    isMe ? "text-white/70" : "text-muted-foreground/70"
+                                  }`}>
+                                    {memberIds.length}
+                                  </span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
                         </div>
+
+                        {isMe && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setReactionPickerMsgId(reactionPickerMsgId === msg.id ? null : msg.id);
+                            }}
+                            className="ml-2 w-5 h-5 rounded-full bg-card/30 border border-border/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity active:scale-90"
+                            aria-label="Réagir"
+                          >
+                            <span className="text-xs">➕</span>
+                          </button>
+                        )}
                       </div>
+
+                      {reactionPickerMsgId === msg.id && (
+                        <div
+                          className="fixed z-[100] flex gap-1 p-1.5 rounded-2xl bg-card border border-border shadow-xl"
+                          style={{
+                            top: "auto",
+                            bottom: "120px",
+                            left: isMe ? "auto" : "60px",
+                            right: isMe ? "60px" : "auto",
+                          }}
+                        >
+                          {REACTION_EMOJIS.map((e) => (
+                            <button
+                              key={e}
+                              onClick={() => {
+                                handleAddReaction(msg.id, e);
+                                setReactionPickerMsgId(null);
+                              }}
+                              className="text-xl hover:bg-muted/30 rounded-xl active:scale-125 transition-transform w-8 h-8 flex items-center justify-center"
+                            >
+                              {e}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                     );
                   })}
                   <div ref={messagesEndRef} />
@@ -792,6 +882,17 @@ export const MessagesTab = memo(function MessagesTab({
                     </button>
                   </div>
                   <span className="text-xs text-muted-foreground">Image prête à envoyer</span>
+                </div>
+              </div>
+            )}
+
+            {videoProcessing && !videoPreview && !isRecording && !imagePreview && (
+              <div className="flex-shrink-0 border-t border-border/20 bg-card/20" style={{ backdropFilter: "blur(8px)" }}>
+                <div className="flex items-center gap-3 px-4 py-2" style={{ maxWidth: "100%", marginInline: "auto" }}>
+                  <div className="w-16 h-16 rounded-xl bg-muted/30 flex items-center justify-center">
+                    <Loader2 size={20} className="text-muted-foreground animate-spin" />
+                  </div>
+                  <span className="text-xs text-muted-foreground">Traitement de la vidéo...</span>
                 </div>
               </div>
             )}

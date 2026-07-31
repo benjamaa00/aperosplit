@@ -63,13 +63,14 @@ import {
   findOrCreateDirectConversation,
   getConversationsForMember,
   getAllGroupConversations,
-  getConversationMessages,
-  sendConversationMessage,
-  markConversationRead,
-  getConversationParticipants,
-  addParticipantToConversation,
-  deleteConversationMessage,
-  getDb,
+   getConversationMessages,
+   sendConversationMessage,
+   markConversationRead,
+   getConversationParticipants,
+   addParticipantToConversation,
+   deleteConversationMessage,
+   addConversationReaction,
+   getDb,
 } from "../db";
 
 const GROUP_ID = "equilibra-fixed-group";
@@ -921,7 +922,7 @@ export const equilibraRouter = router({
     .input(z.object({
       conversationId: z.string().min(1).max(128),
       memberId: z.string().min(1).max(128),
-      content: z.string().trim().min(1).max(512000),
+       content: z.string().trim().min(1).max(157286400),
       type: z.enum(["text", "image", "audio", "video"]).optional().default("text"),
     }))
     .mutation(async ({ input }) => {
@@ -954,6 +955,17 @@ export const equilibraRouter = router({
       const ok = await deleteConversationMessage(input.messageId, input.memberId);
       if (!ok) throw new TRPCError({ code: "FORBIDDEN", message: "Vous ne pouvez supprimer que vos propres messages" });
       return { success: true };
+    }),
+
+  addReaction: groupProcedure
+    .input(z.object({
+      messageId: z.string().min(1),
+      memberId: z.string().min(1),
+      emoji: z.string().min(1).max(8),
+    }))
+    .mutation(async ({ input }) => {
+      const reactions = await addConversationReaction(input.messageId, input.memberId, input.emoji);
+      return { success: reactions !== null, reactions };
     }),
 
   createDirectConversation: groupProcedure

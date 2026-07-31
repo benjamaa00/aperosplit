@@ -109,6 +109,7 @@ export interface ConversationMessage {
   content: string;
   type: string;
   edited: boolean;
+  reactions?: Record<string, string[]>;
   createdAt: string;
 }
 

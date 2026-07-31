@@ -351,6 +351,7 @@ export function initializeDatabase(): Promise<void> {
             content TEXT NOT NULL,
             type VARCHAR(20) NOT NULL DEFAULT 'text',
             edited BOOLEAN NOT NULL DEFAULT FALSE,
+            reactions JSONB DEFAULT '{}'::jsonb,
             created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
           );
           CREATE INDEX IF NOT EXISTS idx_conv_messages_conv ON conversation_messages(conversation_id, created_at ASC);
@@ -1448,7 +1449,7 @@ export async function getAllGroupConversations(groupId: string, viewerMemberId: 
 export async function getConversationMessages(conversationId: string, limit = 100, before?: string) {
   const db = await ready();
   if (!db) return [];
-  let query = `SELECT id, conversation_id AS "conversationId", member_id AS "memberId", content, type, edited, created_at AS "createdAt"
+  let query = `SELECT id, conversation_id AS "conversationId", member_id AS "memberId", content, type, edited, reactions, created_at AS "createdAt"
     FROM conversation_messages WHERE conversation_id = $1`;
   const params: any[] = [conversationId];
   if (before) {
@@ -1472,7 +1473,37 @@ export async function sendConversationMessage(conversationId: string, memberId: 
     `UPDATE conversations SET last_message_at = NOW() WHERE id = $1`,
     [conversationId]
   );
-  return { id, conversationId, memberId, content, type, edited: false, createdAt: new Date().toISOString() };
+  return { id, conversationId, memberId, content, type, edited: false, reactions: {}, createdAt: new Date().toISOString() };
+}
+
+export async function addConversationReaction(messageId: string, memberId: string, emoji: string) {
+  const db = await ready();
+  if (!db) return null;
+  const result = await db.query(
+    `WITH current AS (
+       SELECT reactions FROM conversation_messages WHERE id = $1
+     ),
+     updated AS (
+       SELECT
+         CASE
+           WHEN (current.reactions->$2)::jsonb IS NULL THEN
+             current.reactions || jsonb_build_object($2, jsonb_build_array($3))
+           WHEN (current.reactions->$2)::jsonb ? $3::text THEN
+             current.reactions || jsonb_build_object($2, (current.reactions->$2)::jsonb - $3::text)
+           ELSE
+             current.reactions || jsonb_build_object($2, (current.reactions->$2)::jsonb || $3::text)
+         END AS new_reactions
+       FROM current
+     )
+     UPDATE conversation_messages
+     SET reactions = updated.new_reactions
+     FROM updated
+     WHERE conversation_messages.id = $1
+     RETURNING reactions`,
+    [messageId, emoji, memberId]
+  );
+  if (result.rowCount === 0) return null;
+  return result.rows[0].reactions;
 }
 
 export async function markConversationRead(conversationId: string, memberId: string) {
