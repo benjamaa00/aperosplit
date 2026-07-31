@@ -400,34 +400,83 @@ function AddExpenseSheet({
  </div>
  ),
  },
- {
- title: "Qui participe ?",
- content: (
- <div className="space-y-2">
- {members.map((member) => (
- <button
- key={member.id}
- onClick={() => toggleParticipant(member.id)}
- className={`w-full p-4 rounded-2xl flex items-center gap-4 transition-all ${
- participants.includes(member.id)
- ? "bg-primary text-primary-foreground shadow-lg shadow-primary/30"
- : "bg-card/50 border border-border hover:bg-card/80 opacity-50"
- }`}
- >
- <AvatarImg avatar={member.avatar} size="text-3xl" />
- <span className="font-semibold flex-1 text-left">{member.name}</span>
- {participants.includes(member.id) && <Check size={20} />}
- </button>
- ))}
- <button
- onClick={() => setParticipants(members.map((m) => m.id))}
- className="w-full p-3 rounded-xl bg-secondary/50 text-sm font-semibold text-center"
- >
- Tout sélectionner
- </button>
- </div>
- ),
- },
+  {
+  title: "Qui participe ?",
+  content: (
+  <div className="space-y-2">
+    {members.map((member) => {
+      const included = participants.includes(member.id);
+      const total = parseFloat(amount) || 0;
+      const share = included ? total / (participants.length || 1) : 0;
+      return (
+        <button
+          key={member.id}
+          onClick={() => toggleParticipant(member.id)}
+          className={`w-full p-4 rounded-2xl flex items-center gap-4 transition-all ${
+            included
+              ? "bg-primary text-primary-foreground shadow-lg shadow-primary/30"
+              : "bg-card/50 border border-border hover:bg-card/80"
+          }`}
+        >
+          <AvatarImg avatar={member.avatar} size="text-3xl" />
+          <div className="flex-1 text-left min-w-0">
+            <span className="font-semibold block truncate">{member.name}</span>
+            {included && (
+              <span className="text-xs opacity-80">
+                {formatCurrency(share, displayCurrency)} {total > 0 ? `× ${participants.length} participants` : ""}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            {included && (
+              <span className="text-sm font-bold tabular-nums">{formatCurrency(share, displayCurrency)}</span>
+            )}
+            <div className={`w-7 h-7 rounded-full flex items-center justify-center transition-all ${
+              included ? "bg-white/25" : "bg-muted/30"
+            }`}>
+              {included ? <Check size={14} className="text-white" /> : <span className="text-xs text-muted-foreground/50">+</span>}
+            </div>
+          </div>
+        </button>
+      );
+    })}
+    <div className="flex gap-2 pt-1">
+      <button
+        onClick={() => setParticipants(members.map((m) => m.id))}
+        className="flex-1 p-3 rounded-xl bg-secondary/50 text-sm font-semibold text-center"
+      >
+        Tout sélectionner
+      </button>
+      {participants.length < members.length && (
+        <button
+          onClick={() => setParticipants([])}
+          className="p-3 rounded-xl bg-secondary/50 text-sm font-semibold text-center px-5"
+        >
+          Aucun
+        </button>
+      )}
+      {participants.length === members.length && (
+        <button
+          onClick={() => setParticipants([])}
+          className="p-3 rounded-xl bg-secondary/50 text-sm font-semibold text-center px-5"
+        >
+          Tout désélectionner
+        </button>
+      )}
+    </div>
+    {participants.length > 0 && parseFloat(amount) > 0 && (
+      <div className="flex items-center justify-between px-2 py-3 mt-1 bg-primary/5 rounded-xl border border-primary/10">
+        <span className="text-xs text-muted-foreground">
+          {participants.length} participant{participants.length > 1 ? "s" : ""}
+        </span>
+        <span className="text-sm font-bold text-primary">
+          {formatCurrency(parseFloat(amount) / participants.length, displayCurrency)} chacun
+        </span>
+      </div>
+    )}
+  </div>
+  ),
+  },
  {
  title: "Dépense récurrente ?",
  content: (
