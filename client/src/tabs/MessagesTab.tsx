@@ -477,7 +477,7 @@ export const MessagesTab = memo(function MessagesTab({
 
   // ─── RENDER ───
   return (
-    <div className="h-full flex relative" style={{ paddingBottom: "calc(84px + env(safe-area-inset-bottom, 10px))" }}>
+    <div className="max-w-md mx-auto w-full h-full flex relative overflow-hidden">
       {/* ── Lightbox ── */}
       {lightbox && (
         <div
@@ -526,12 +526,13 @@ export const MessagesTab = memo(function MessagesTab({
 
       {/* ── Conversation List Panel ── */}
       <aside
-        className={`${
-          isDesktop ? "w-80 flex-shrink-0" : showChat ? "hidden" : "w-full"
-        } border-r border-border/20 bg-card/5 flex flex-col h-full overflow-hidden`}
+        className={`
+          ${isDesktop ? "w-72 flex-shrink-0" : showChat ? "hidden" : "w-full"}
+          border-r border-border/20 bg-card/5 flex flex-col h-full overflow-hidden
+        `}
       >
         {/* List Header */}
-        <div className="flex-shrink-0 px-4 pt-14 pb-3 border-b border-border/10">
+        <div className="flex-shrink-0 px-5 pt-16 pb-3 border-b border-border/10">
           <h1 className="text-xl font-bold">Messages</h1>
         </div>
 
@@ -612,7 +613,7 @@ export const MessagesTab = memo(function MessagesTab({
         ) : (
           <div className="flex flex-col h-full">
             {/* ── Chat Header ── */}
-            <header className="flex-shrink-0 flex items-center gap-2 px-4 pt-12 pb-3 border-b border-border/20"
+            <header className="flex-shrink-0 flex items-center gap-2 px-5 pt-16 pb-3 border-b border-border/20"
               style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))", backdropFilter: "blur(18px) saturate(150%)", WebkitBackdropFilter: "blur(18px) saturate(150%)" }}
             >
               <button
@@ -659,8 +660,8 @@ export const MessagesTab = memo(function MessagesTab({
               className="flex-1 overflow-y-auto overscroll-behavior-y-contain scroll-smooth"
               style={{ WebkitOverflowScrolling: "touch" }}
             >
-              <div className="w-full min-h-full flex flex-col justify-end px-4 sm:px-6" style={{ maxWidth: 820, marginInline: "auto" }}>
-                <div className="flex flex-col gap-2 py-4">
+              <div className="w-full min-h-full flex flex-col justify-end px-4 py-4">
+                <div className="flex flex-col gap-2" style={{ maxWidth: "100%", marginInline: "auto" }}>
                   {messages.length === 0 && (
                     <div className="flex items-center justify-center h-32">
                       <p className="text-sm text-muted-foreground/60">Aucun message. Envoyez le premier !</p>
@@ -747,7 +748,7 @@ export const MessagesTab = memo(function MessagesTab({
             {/* ── Media Preview Bars ── */}
             {imagePreview && !videoPreview && !isRecording && (
               <div className="flex-shrink-0 border-t border-border/20 bg-card/20" style={{ backdropFilter: "blur(8px)" }}>
-                <div className="flex items-center gap-3 px-4 py-2" style={{ maxWidth: 820, marginInline: "auto" }}>
+                <div className="flex items-center gap-3 px-4 py-2" style={{ maxWidth: "100%", marginInline: "auto" }}>
                   <div className="relative">
                     <img src={imagePreview} alt="Aperçu" className="h-16 w-16 rounded-xl object-cover" />
                     <button
@@ -764,7 +765,7 @@ export const MessagesTab = memo(function MessagesTab({
 
             {videoPreview && !imagePreview && !isRecording && (
               <div className="flex-shrink-0 border-t border-border/20 bg-card/20" style={{ backdropFilter: "blur(8px)" }}>
-                <div className="flex items-center gap-3 px-4 py-2" style={{ maxWidth: 820, marginInline: "auto" }}>
+                <div className="flex items-center gap-3 px-4 py-2" style={{ maxWidth: "100%", marginInline: "auto" }}>
                   <div className="relative">
                     <video src={videoPreview} className="h-16 w-16 rounded-xl object-cover" />
                     <button
@@ -782,11 +783,11 @@ export const MessagesTab = memo(function MessagesTab({
             {/* ── Recording UI ── */}
             {isRecording && (
               <div className="flex-shrink-0 border-t border-red-500/25 bg-red-500/5" style={{ backdropFilter: "blur(10px)" }}>
-                <div
-                  ref={recordBarRef}
-                  className="flex items-center gap-3 px-4 py-3 select-none"
-                  style={{ maxWidth: 820, marginInline: "auto", touchAction: "none" }}
-                >
+                 <div
+                   ref={recordBarRef}
+                   className="flex items-center gap-3 px-4 py-3 select-none"
+                   style={{ maxWidth: "100%", marginInline: "auto", touchAction: "none" }}
+                 >
                   <button
                     onClick={cancelRecording}
                     className="w-10 h-10 rounded-full bg-card/40 border border-border/40 flex items-center justify-center flex-shrink-0 active:scale-90 transition-transform"
@@ -817,8 +818,8 @@ export const MessagesTab = memo(function MessagesTab({
 
             {/* ── Composer ── */}
             {!isRecording && (
-              <div className="flex-shrink-0 border-t border-border/20" style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01))", backdropFilter: "blur(16px) saturate(150%)", WebkitBackdropFilter: "blur(16px) saturate(150%)" }}>
-                <div className="px-3 py-3" style={{ maxWidth: 820, marginInline: "auto" }}>
+              <div className="flex-shrink-0 border-t border-border/20" style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01))", backdropFilter: "blur(16px) saturate(150%)", WebkitBackdropFilter: "blur(16px) saturate(150%)", paddingBottom: "calc(12px + env(safe-area-inset-bottom, 8px))" }}>
+                <div className="px-3 py-3" style={{ maxWidth: "100%", marginInline: "auto" }}>
                   <div className="flex items-end gap-2">
                     <button
                       onClick={() => setShowAttachmentSheet(true)}
