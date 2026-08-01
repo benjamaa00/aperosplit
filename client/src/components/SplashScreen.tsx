@@ -1,31 +1,23 @@
 import { useState, useEffect, memo, useRef } from "react";
 
-const SPLASH_DURATION = 5400;
-const FADE_START = 4.4;
-const FADE_END = 5.4;
+const SPLASH_DURATION = 4100;
+const FADE_START = 3.8;
+const FADE_END = 4.1;
 
 export const SplashScreen = memo(function SplashScreen({ onComplete }: { onComplete: () => void }) {
-  const [brandVisible, setBrandVisible] = useState(false);
-  const [brandFading, setBrandFading] = useState(false);
   const [exiting, setExiting] = useState(false);
   const onCompleteRef = useRef(onComplete);
   onCompleteRef.current = onComplete;
 
   useEffect(() => {
-    const t1 = setTimeout(() => setBrandVisible(true), 3200);
-    const t2 = setTimeout(() => setBrandFading(true), FADE_START * 1000);
     const t3 = setTimeout(() => setExiting(true), FADE_END * 1000);
     const t4 = setTimeout(() => onCompleteRef.current(), SPLASH_DURATION + 100);
-    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4); };
+    return () => { clearTimeout(t3); clearTimeout(t4); };
   }, []);
 
   return (
     <div className={`apple-splash ${exiting ? "apple-splash-fading" : ""}`} style={{ background: "#000000" }}>
       <SplashCanvas />
-      <div className={`apple-splash-brand ${brandVisible ? "visible" : ""} ${brandFading ? "fading" : ""}`}>
-        <div className="apple-splash-logo-text">AperoSplit</div>
-        <div className="apple-splash-tagline">Partagez, équilibrez</div>
-      </div>
     </div>
   );
 });
@@ -106,21 +98,52 @@ function SplashCanvas() {
 
       drawBg(gFade);
 
-      // ── Choreography ──
-      const OPEN_IN = 1.1;
-      let o1x = cx - LOGO_GAP, o1y = cy, o2x = cx + LOGO_GAP, o2y = cy;
+      // ── Choreography (4s timeline) ──
+      const PT1_START = 0.20;    // first point starts appearing
+      const PT1_IN = 0.40;       // first point fully in, starts pulsing
+      const PT2_START = 1.00;    // second point appears beside it
+      const PT2_IN = 1.20;       // second point fully in — separation begins
+      const SEP_END = 2.00;      // spheres at final position
+      const BREATH_START = 2.70; // very light breathing after the wave
+      const HOLD_START = 3.60;   // immobile, then fade to the app
+
+      let o1x = cx, o1y = cy, o2x = cx + R * 0.4, o2y = cy;
       let o1a = 0, o2a = 0, o1s = 0, o2s = 0;
       let sx = 1, sy = 1;
 
-      if (t < OPEN_IN) {
-        const p = easeOutCubic(clamp01(t / OPEN_IN));
-        const s = lerp(0.65, 1, p);
-        o1a = p; o1s = s; o2a = p; o2s = s;
-      } else if (t < FADE_START) {
-        const b = 1 + Math.sin((t - OPEN_IN) * 2.0) * 0.008;
-        o1a = 1; o1s = b; o2a = 1; o2s = b;
+      if (t < PT1_IN) {
+        const p = easeOutCubic(clamp01((t - PT1_START) / (PT1_IN - PT1_START)));
+        o1a = p;
+        o1s = lerp(0.22, 0.35, p);
+      } else if (t < PT2_START) {
+        const bp = t - PT1_IN;
+        o1a = 1;
+        o1s = 0.35 + Math.sin(bp * 2.0) * 0.02;
+      } else if (t < PT2_IN) {
+        const p = easeOutCubic(clamp01((t - PT2_START) / (PT2_IN - PT2_START)));
+        o1a = 1;
+        o1s = 0.35 + Math.sin((t - PT1_IN) * 2.0) * 0.02;
+        o2a = p;
+        o2s = lerp(0.22, 0.35, p);
+      } else if (t < SEP_END) {
+        const p = smoothstep(PT2_IN, SEP_END, t);
+        const grow = lerp(0.35, 1, p);
+        const stretch = 1 + (1 - p) * 0.28;
+        o1a = 1; o2a = 1;
+        o1s = grow; o2s = grow;
+        sx = stretch; sy = 1;
+        o1x = cx - LOGO_GAP * p;
+        o2x = (cx + R * 0.4) + (LOGO_GAP - R * 0.4) * p;
+      } else if (t < BREATH_START) {
+        o1a = 1; o2a = 1; o1s = 1; o2s = 1; sx = 1; sy = 1;
+        o1x = cx - LOGO_GAP; o2x = cx + LOGO_GAP;
+      } else if (t < HOLD_START) {
+        const b = 1 + Math.sin((t - BREATH_START) * 1.8) * 0.01;
+        o1a = 1; o2a = 1; o1s = b; o2s = b; sx = 1; sy = 1;
+        o1x = cx - LOGO_GAP; o2x = cx + LOGO_GAP;
       } else {
-        o1a = gFade; o2a = gFade;
+        o1a = gFade; o2a = gFade; o1s = 1; o2s = 1; sx = 1; sy = 1;
+        o1x = cx - LOGO_GAP; o2x = cx + LOGO_GAP;
       }
 
       // ══════════════════════════════════════════
@@ -209,12 +232,12 @@ function SplashCanvas() {
       };
 
       drawSphere(o1x, o1y, o1s, o1a, sx, sy, LEFT);
-      drawSphere(o2x, o2y, o2s, o2a, 1, 1, RIGHT);
+      drawSphere(o2x, o2y, o2s, o2a, sx, sy, RIGHT);
 
       // ══════════════════════════════════════════
-      //  INTERSECTION — translucent blend
+      //  INTERSECTION — translucent blend (only once spheres are near full size)
       // ══════════════════════════════════════════
-      if (o1a > 0.3 && o2a > 0.3) {
+      if (o1a > 0.3 && o2a > 0.3 && o1s > 0.7 && o2s > 0.7) {
         const halfDist = Math.abs(o2x - o1x) / 2;
         if (halfDist < R) {
           const overlapHalf = R - halfDist;
@@ -279,10 +302,10 @@ function SplashCanvas() {
       }
 
       // ══════════════════════════════════════════
-      //  DIVIDER — Razor-sharp thin white line
+      //  DIVIDER — Razor-sharp thin white line, appears at 2.00s at the intersection center
       // ══════════════════════════════════════════
-      if (t > 3.0 && t < FADE_START + 0.1) {
-        const lineIn = smoothstep(3.0, 3.5, t);
+      if (t > 2.00 && t < FADE_START + 0.1) {
+        const lineIn = smoothstep(2.00, 2.30, t);
         const lineOut = t > FADE_START ? smoothstep(FADE_END, FADE_START, t) : 1;
         const lineH = R * 2.6 * easeOutExpo(lineIn) * lineOut;
         const lineAlpha = lineIn * lineOut * gFade;
@@ -310,6 +333,43 @@ function SplashCanvas() {
         ctx.lineTo(cx, cy + lineH / 2);
         ctx.stroke();
 
+        ctx.restore();
+      }
+
+      // ── Horizontal light wave — soft pulse sweeping L→R through the logo ──
+      if (t > 2.40 && t < FADE_START + 0.1) {
+        const wp = smoothstep(2.40, 2.70, t);
+        const span = LOGO_GAP + R;
+        const wx = (cx - span) + wp * (2 * span);
+        const bw = R * 0.5;
+        const wa = Math.exp(-Math.pow((wp - 0.5) / 0.28, 2)) * 0.16 * gFade;
+
+        ctx.save();
+        ctx.globalCompositeOperation = "lighter";
+        const wg = ctx.createLinearGradient(wx - bw, 0, wx + bw, 0);
+        wg.addColorStop(0.0, "rgba(255,255,255,0)");
+        wg.addColorStop(0.5, `rgba(230,220,255,${wa.toFixed(3)})`);
+        wg.addColorStop(1.0, "rgba(255,255,255,0)");
+        ctx.fillStyle = wg;
+        ctx.beginPath();
+        ctx.ellipse(wx, cy, bw, R * 1.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      // ── Gentle glow that recedes after the wave ──
+      if (t > 2.70 && t < 3.40) {
+        const g = smoothstep(2.70, 3.40, t);
+        ctx.save();
+        ctx.globalCompositeOperation = "lighter";
+        ctx.globalAlpha = g * 0.06 * gFade;
+        const ag = ctx.createRadialGradient(cx, cy, 0, cx, cy, R * 1.6);
+        ag.addColorStop(0, "rgba(215,200,250,0.30)");
+        ag.addColorStop(1, "rgba(200,185,245,0)");
+        ctx.fillStyle = ag;
+        ctx.beginPath();
+        ctx.arc(cx, cy, R * 1.6, 0, Math.PI * 2);
+        ctx.fill();
         ctx.restore();
       }
 

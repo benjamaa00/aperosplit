@@ -601,32 +601,14 @@
     pointer-events: none;
   }
 
-  /* ═══ App entrance animation ═══ */
+  /* ═══ App entrance animation — discreet fade from the splash ═══ */
   .app-entrance {
-    position: relative;
-    animation: appEntranceIn calc(900ms * var(--animation-multiplier, 1)) cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    animation: appFadeIn calc(500ms * var(--animation-multiplier, 1)) cubic-bezier(0.4, 0, 0.2, 1) forwards;
   }
 
-  /* Soft bloom that clears as the app settles — premium handoff from the splash */
-  .app-entrance::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    z-index: 60;
-    pointer-events: none;
-    background: radial-gradient(120% 90% at 50% 30%, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.03) 45%, transparent 72%);
-    animation: appBloomOut calc(900ms * var(--animation-multiplier, 1)) cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  }
-
-  @keyframes appEntranceIn {
-    0%   { opacity: 0; transform: translateY(16px) scale(0.99); }
-    60%  { opacity: 1; transform: translateY(-2px) scale(1.002); }
-    100% { opacity: 1; transform: translateY(0) scale(1); }
-  }
-
-  @keyframes appBloomOut {
-    0%   { opacity: 1; transform: scale(0.96); }
-    100% { opacity: 0; transform: scale(1.03); }
+  @keyframes appFadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
   }
 
   /* ═══════════════════════════════════════════════════════════
@@ -1007,10 +989,6 @@
   .app-entrance {
     animation: none !important;
     opacity: 1 !important;
-  }
-  .app-entrance::after {
-    animation: none !important;
-    opacity: 0 !important;
   }
   .nav-pill { transition-duration: 0.01ms !important; }
   .nav-fab-glow { animation: none !important; }
