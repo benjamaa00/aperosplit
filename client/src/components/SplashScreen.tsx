@@ -60,12 +60,7 @@ function SplashCanvas() {
     function lerp(a: number, b: number, t: number) { return a + (b - a) * clamp01(t); }
     function easeOutCubic(t: number) { const c = 1 - t; return 1 - c * c * c; }
     function easeOutExpo(t: number) { return t >= 1 ? 1 : 1 - Math.pow(2, -10 * t); }
-    function easeInOutCubic(t: number) { return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; }
     function smoothstep(a: number, b: number, t: number) { const x = clamp01((t - a) / (b - a)); return x * x * (3 - 2 * x); }
-    function springClamp(t: number, damping: number, freq: number) {
-      if (t <= 0) return 0; if (t >= 1) return 1;
-      return 1 - Math.exp(-damping * t * 8) * Math.cos(freq * t * Math.PI * 2.5);
-    }
 
     const rgb = (c: number[]) => `${c[0]},${c[1]},${c[2]}`;
     const R = Math.min(W, H) * 0.13;
@@ -112,50 +107,20 @@ function SplashCanvas() {
       drawBg(gFade);
 
       // ── Choreography ──
-      let o1x = cx, o1y = cy, o2x = cx, o2y = cy;
+      const OPEN_IN = 1.1;
+      let o1x = cx - LOGO_GAP, o1y = cy, o2x = cx + LOGO_GAP, o2y = cy;
       let o1a = 0, o2a = 0, o1s = 0, o2s = 0;
       let sx = 1, sy = 1;
 
-      if (t < 0.70) {
-        const p = easeOutCubic(clamp01(t / 0.65));
-        o1a = p; o1s = p; o2a = 0; o2s = 0;
-      } else if (t < 1.20) {
-        const bp = (t - 0.70) / 0.50;
-        const breath = Math.sin(bp * Math.PI * 2.5) * 0.03;
-        o1a = 1; o1s = 1 + breath; o2a = 0; o2s = 0;
-      } else if (t < 1.65) {
-        const sp = easeInOutCubic(clamp01((t - 1.20) / 0.45));
-        o1a = 1; o1s = 1; o2a = 0; o2s = 0;
-        sx = 1 + sp * 0.4; sy = 1 - sp * 0.10;
-      } else if (t < 2.10) {
-        const mp = clamp01((t - 1.65) / 0.40);
-        const dist = easeOutCubic(mp) * R * 2.1;
-        o1a = 1; o1s = 1;
-        o2a = easeOutCubic(clamp01((t - 1.65) / 0.30));
-        o2s = o2a;
-        o1x = cx - dist; o2x = cx + dist;
-      } else if (t < 2.60) {
-        const dp = clamp01((t - 2.10) / 0.50);
-        const drift = lerp(R * 2.1, R * 2.2, easeOutCubic(dp));
-        o1a = 1; o2a = 1;
-        o1x = cx - drift; o2x = cx + drift;
-      } else if (t < 3.30) {
-        const rp = clamp01((t - 2.60) / 0.65);
-        const rEase = springClamp(rp, 0.6, 2);
-        const gap = lerp(R * 2.2, LOGO_GAP, rEase);
-        o1a = 1; o2a = 1;
-        o1x = cx - gap; o2x = cx + gap;
-      } else if (t < 3.80) {
-        const hold = t - 3.30;
-        const sp = 1 + Math.sin(hold * 2.2) * 0.01;
-        o1a = 1; o1s = sp; o2a = 1; o2s = sp;
-        o1x = cx - LOGO_GAP; o2x = cx + LOGO_GAP;
+      if (t < OPEN_IN) {
+        const p = easeOutCubic(clamp01(t / OPEN_IN));
+        const s = lerp(0.65, 1, p);
+        o1a = p; o1s = s; o2a = p; o2s = s;
       } else if (t < FADE_START) {
-        o1a = 1; o2a = 1;
-        o1x = cx - LOGO_GAP; o2x = cx + LOGO_GAP;
+        const b = 1 + Math.sin((t - OPEN_IN) * 2.0) * 0.008;
+        o1a = 1; o1s = b; o2a = 1; o2s = b;
       } else {
         o1a = gFade; o2a = gFade;
-        o1x = cx - LOGO_GAP; o2x = cx + LOGO_GAP;
       }
 
       // ══════════════════════════════════════════
@@ -311,24 +276,6 @@ function SplashCanvas() {
             ctx.restore();
           }
         }
-      }
-
-      // ── Split flash ──
-      if (t > 1.55 && t < 2.05) {
-        const ft = clamp01((t - 1.55) / 0.50);
-        const fa = ft < 0.1 ? ft / 0.1 : Math.pow(1 - (ft - 0.1) / 0.9, 3);
-        const intensity = 0.30 * fa * gFade;
-
-        ctx.save();
-        ctx.globalCompositeOperation = "lighter";
-        ctx.globalAlpha = intensity;
-        const fc = ctx.createRadialGradient(cx, cy, 0, cx, cy, R * 1.0);
-        fc.addColorStop(0, "rgba(190,170,245,0.35)");
-        fc.addColorStop(0.3, "rgba(160,140,225,0.15)");
-        fc.addColorStop(1, "rgba(130,110,205,0)");
-        ctx.fillStyle = fc;
-        ctx.beginPath(); ctx.arc(cx, cy, R * 1.0, 0, Math.PI * 2); ctx.fill();
-        ctx.restore();
       }
 
       // ══════════════════════════════════════════
