@@ -529,13 +529,7 @@ export const MessagesTab = memo(function MessagesTab({
 
   // ─── RENDER ───
   return (
-    <div
-      className="max-w-md mx-auto w-full flex relative overflow-hidden"
-      style={{
-        height: "calc(100dvh - 86px - env(safe-area-inset-bottom, 10px))",
-        paddingTop: "env(safe-area-inset-top, 0px)",
-      }}
-    >
+    <div className="max-w-md mx-auto w-full h-full flex relative overflow-hidden">
       {/* ── Lightbox ── */}
       {lightbox && (
         <div
