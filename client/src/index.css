@@ -1440,5 +1440,6 @@ button, a, [role="button"] {
 
 /* Prevent pull-to-refresh in the app */
 #root {
+  height: 100%;
   overscroll-behavior-y: contain;
 }

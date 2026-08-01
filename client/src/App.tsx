@@ -964,8 +964,8 @@ export default function App() {
  )}
 
  {/* Main app — renders behind everything, fades in with app-entrance */}
- {!showSplash && !showOnboarding && (
- <div className="app-entrance">
+  {!showSplash && !showOnboarding && (
+  <div className="app-entrance h-full">
  <ThemeProvider memberId={currentMemberId}>
  <ThemeToaster />
  {content}

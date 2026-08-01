@@ -237,15 +237,15 @@ const AppShell = memo(({ children, activeTab, onTabChange, onAddExpense, message
   return (
     <ErrorBoundary>
       <TooltipProvider>
-        <div className="relative min-h-[100dvh]" style={{ background: "var(--background, #08080D)" }}>
+        <div className="relative h-full" style={{ background: "var(--background, #08080D)" }}>
           {/* ── Scroll container ── */}
           <div
             ref={scrollRef}
-            className="h-[100dvh] overflow-y-auto overflow-x-hidden scrollbar-hidden"
+            className="h-full overflow-y-auto overflow-x-hidden scrollbar-hidden"
             style={{
               WebkitOverflowScrolling: "touch",
               overscrollBehaviorY: "contain",
-              paddingBottom: "calc(92px + env(safe-area-inset-bottom, 10px))",
+              paddingBottom: "calc(120px + env(safe-area-inset-bottom, 10px))",
             }}
           >
             {children}
