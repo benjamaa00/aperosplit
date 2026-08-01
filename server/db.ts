@@ -352,6 +352,7 @@ export function initializeDatabase(): Promise<void> {
             type VARCHAR(20) NOT NULL DEFAULT 'text',
             edited BOOLEAN NOT NULL DEFAULT FALSE,
             reactions JSONB DEFAULT '{}'::jsonb,
+            reply_to JSONB,
             created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
           );
           CREATE INDEX IF NOT EXISTS idx_conv_messages_conv ON conversation_messages(conversation_id, created_at ASC);
@@ -361,6 +362,11 @@ export function initializeDatabase(): Promise<void> {
       try {
         await dbPool.query(
           `ALTER TABLE conversation_messages ADD COLUMN IF NOT EXISTS reactions JSONB DEFAULT '{}'::jsonb`
+        );
+      } catch {}
+      try {
+        await dbPool.query(
+          `ALTER TABLE conversation_messages ADD COLUMN IF NOT EXISTS reply_to JSONB`
         );
       } catch {}
     } catch (error) {
@@ -1454,7 +1460,7 @@ export async function getAllGroupConversations(groupId: string, viewerMemberId: 
 export async function getConversationMessages(conversationId: string, limit = 100, before?: string) {
   const db = await ready();
   if (!db) return [];
-  let query = `SELECT id, conversation_id AS "conversationId", member_id AS "memberId", content, type, edited, reactions, created_at AS "createdAt"
+  let query = `SELECT id, conversation_id AS "conversationId", member_id AS "memberId", content, type, edited, reactions, reply_to AS "replyTo", created_at AS "createdAt"
     FROM conversation_messages WHERE conversation_id = $1`;
   const params: any[] = [conversationId];
   if (before) {
@@ -1466,19 +1472,26 @@ export async function getConversationMessages(conversationId: string, limit = 10
   return result.rows.reverse();
 }
 
-export async function sendConversationMessage(conversationId: string, memberId: string, content: string, type = "text") {
+export async function sendConversationMessage(
+  conversationId: string,
+  memberId: string,
+  content: string,
+  type = "text",
+  replyTo?: { id: string; memberId: string; name: string; content: string; type: string } | null
+) {
   const db = await ready();
   if (!db) return null;
   const id = `msg_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const replyToValue = replyTo ? JSON.stringify(replyTo) : null;
   await db.query(
-    `INSERT INTO conversation_messages (id, conversation_id, member_id, content, type) VALUES ($1, $2, $3, $4, $5)`,
-    [id, conversationId, memberId, content, type]
+    `INSERT INTO conversation_messages (id, conversation_id, member_id, content, type, reply_to) VALUES ($1, $2, $3, $4, $5, $6)`,
+    [id, conversationId, memberId, content, type, replyToValue]
   );
   await db.query(
     `UPDATE conversations SET last_message_at = NOW() WHERE id = $1`,
     [conversationId]
   );
-  return { id, conversationId, memberId, content, type, edited: false, reactions: {}, createdAt: new Date().toISOString() };
+  return { id, conversationId, memberId, content, type, edited: false, reactions: {}, replyTo: replyTo || null, createdAt: new Date().toISOString() };
 }
 
 export async function addConversationReaction(messageId: string, memberId: string, emoji: string) {

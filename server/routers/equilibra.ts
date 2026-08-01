@@ -924,9 +924,16 @@ export const equilibraRouter = router({
       memberId: z.string().min(1).max(128),
        content: z.string().trim().min(1).max(157286400),
       type: z.enum(["text", "image", "audio", "video"]).optional().default("text"),
+      replyTo: z.object({
+        id: z.string().min(1).max(128),
+        memberId: z.string().min(1).max(128),
+        name: z.string().max(80).default(""),
+        content: z.string().max(200).default(""),
+        type: z.enum(["text", "image", "audio", "video"]).default("text"),
+      }).optional().nullable(),
     }))
     .mutation(async ({ input }) => {
-      const message = await sendConversationMessage(input.conversationId, input.memberId, input.content, input.type);
+      const message = await sendConversationMessage(input.conversationId, input.memberId, input.content, input.type, input.replyTo);
       if (!message) return { success: false };
 
       try {

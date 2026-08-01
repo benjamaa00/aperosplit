@@ -102,6 +102,14 @@ export interface Conversation {
   otherMemberId?: string;
 }
 
+export interface MessageReply {
+  id: string;
+  memberId: string;
+  name: string;
+  content: string;
+  type: "text" | "image" | "audio" | "video";
+}
+
 export interface ConversationMessage {
   id: string;
   conversationId: string;
@@ -110,6 +118,7 @@ export interface ConversationMessage {
   type: string;
   edited: boolean;
   reactions?: Record<string, string[]>;
+  replyTo?: MessageReply | null;
   createdAt: string;
 }
 

@@ -1322,6 +1322,15 @@ html.dark .bottom-nav {
   }
 }
 
+/* Highlight a message bubble when jumping to it from a reply */
+.msg-highlight {
+  animation: msgFlash 1.6s ease;
+}
+@keyframes msgFlash {
+  0% { box-shadow: 0 0 0 3px rgba(126, 87, 255, 0.55); }
+  100% { box-shadow: 0 0 0 3px rgba(126, 87, 255, 0); }
+}
+
 /* ═══ Background ambient glow per tab ═══ */
 @keyframes ambientDrift {
   0%, 100% { transform: translate(0, 0) scale(1); }

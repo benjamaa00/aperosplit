@@ -3,12 +3,13 @@ import {
   ArrowLeft, Send, Users, X, MessageCircle,
   Mic, MicOff, Play, Pause, Paperclip, Trash2, X as XIcon,
   MoreHorizontal, ImageIcon, Camera, Video, Check, CheckCheck, Loader2,
+  Reply,
 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { AvatarImg } from "../components/AvatarImg";
 import { haptics } from "../utils/haptics";
-import type { Member, Conversation, ConversationMessage } from "../types";
+import type { Member, Conversation, ConversationMessage, MessageReply } from "../types";
 
 function compressImage(file: File, maxW = 1200, quality = 0.75): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -53,6 +54,15 @@ function formatLastMessagePreview(msg: ConversationMessage | undefined): string 
   return msg.content || "";
 }
 
+function replyContentLabel(type: string, content: string): string {
+  let label: string;
+  if (type === "image" || content?.startsWith("data:image")) label = "📷 Photo";
+  else if (type === "video" || content?.startsWith("data:video")) label = "🎬 Vidéo";
+  else if (type === "audio" || content?.startsWith("data:audio")) label = "🎤 Message vocal";
+  else label = content || "";
+  return label.length > 100 ? label.slice(0, 100) + "…" : label;
+}
+
 function formatMessageDate(dateStr: string): string {
   const d = new Date(dateStr);
   const now = new Date();
@@ -88,6 +98,8 @@ export const MessagesTab = memo(function MessagesTab({
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showList, setShowList] = useState(true);
   const [reactionPickerMsgId, setReactionPickerMsgId] = useState<string | null>(null);
+  const [replyToMsg, setReplyToMsg] = useState<ConversationMessage | null>(null);
+  const [actionSheetMsg, setActionSheetMsg] = useState<ConversationMessage | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -165,7 +177,12 @@ export const MessagesTab = memo(function MessagesTab({
     };
   }, []);
 
-  const doSend = useCallback(async (content: string, type: "text" | "image" | "audio" | "video" = "text") => {
+  const getMemberById = useCallback(
+    (id: string) => members.find((m) => m.id === id),
+    [members]
+  );
+
+  const doSend = useCallback(async (content: string, type: "text" | "image" | "audio" | "video" = "text", replyTo: MessageReply | null = null) => {
     if (!activeConversationId) return;
     haptics.light();
     try {
@@ -174,6 +191,7 @@ export const MessagesTab = memo(function MessagesTab({
         memberId: currentMemberId,
         content,
         type,
+        replyTo,
       });
       conversationsQuery.refetch();
       messagesQuery.refetch();
@@ -182,28 +200,61 @@ export const MessagesTab = memo(function MessagesTab({
     }
   }, [activeConversationId, currentMemberId, sendMessageMutation, conversationsQuery, messagesQuery]);
 
+  const makeReplySnapshot = useCallback((msg: ConversationMessage): MessageReply => ({
+    id: msg.id,
+    memberId: msg.memberId,
+    name: getMemberById(msg.memberId)?.name || "Membre",
+    content: replyContentLabel(msg.type, msg.content),
+    type: msg.type === "image" || msg.type === "video" || msg.type === "audio" ? msg.type : "text",
+  }), [getMemberById]);
+
+  const scrollToMessage = useCallback((id: string) => {
+    const el = chatContainerRef.current?.querySelector(`[data-msg-id="${id}"] .bubble-root`);
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    (el as HTMLElement).classList.add("msg-highlight");
+    setTimeout(() => (el as HTMLElement).classList.remove("msg-highlight"), 1600);
+  }, []);
+
+  const startReply = useCallback((msg: ConversationMessage) => {
+    setReplyToMsg(msg);
+    setActionSheetMsg(null);
+    setTimeout(() => { (inputRef.current as any)?.focus?.(); }, 80);
+    haptics.light();
+  }, []);
+
+  const handleSendAudio = useCallback((dataUrl: string) => {
+    const replyTo = replyToMsg ? makeReplySnapshot(replyToMsg) : null;
+    setReplyToMsg(null);
+    doSend(dataUrl, "audio", replyTo);
+  }, [replyToMsg, makeReplySnapshot, doSend]);
+
   const handleSendMessage = useCallback(async () => {
     if (videoProcessing) {
       toast.error("Veuillez attendre que la vidéo soit prête");
       return;
     }
+    const replyTo = replyToMsg ? makeReplySnapshot(replyToMsg) : null;
     if (imagePreview) {
       const img = imagePreview;
       setImagePreview(null);
-      await doSend(img, "image");
+      setReplyToMsg(null);
+      await doSend(img, "image", replyTo);
       return;
     }
     if (videoPreview) {
       const vid = videoPreview;
       setVideoPreview(null);
-      await doSend(vid, "video");
+      setReplyToMsg(null);
+      await doSend(vid, "video", replyTo);
       return;
     }
     if (!newMessage.trim()) return;
     const content = newMessage.trim();
     setNewMessage("");
-    await doSend(content, "text");
-  }, [newMessage, imagePreview, videoPreview, doSend]);
+    setReplyToMsg(null);
+    await doSend(content, "text", replyTo);
+  }, [newMessage, imagePreview, videoPreview, videoProcessing, replyToMsg, makeReplySnapshot, doSend]);
 
   const handlePaste = useCallback(async (e: React.ClipboardEvent) => {
     const items = e.clipboardData?.items;
@@ -328,7 +379,7 @@ export const MessagesTab = memo(function MessagesTab({
         const blob = new Blob(audioChunksRef.current, { type: blobType });
         if (blob.size < 1000) return;
         const reader = new FileReader();
-        reader.onload = () => doSend(reader.result as string, "audio");
+        reader.onload = () => handleSendAudio(reader.result as string);
         reader.readAsDataURL(blob);
       };
       mr.start();
@@ -343,7 +394,7 @@ export const MessagesTab = memo(function MessagesTab({
     } catch {
       toast.error("Accès au microphone refusé");
     }
-  }, [doSend]);
+  }, [handleSendAudio]);
 
   const stopRecording = useCallback(() => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
@@ -411,6 +462,8 @@ export const MessagesTab = memo(function MessagesTab({
       if (result?.conversationId) {
         setActiveConversationId(result.conversationId);
         setShowList(false);
+        setReplyToMsg(null);
+        setActionSheetMsg(null);
         await conversationsQuery.refetch();
       } else {
         toast.error("Impossible de créer la conversation");
@@ -426,6 +479,8 @@ export const MessagesTab = memo(function MessagesTab({
     if (groupConv) {
       setActiveConversationId(groupConv.id);
       setShowList(false);
+      setReplyToMsg(null);
+      setActionSheetMsg(null);
       return;
     }
     const result = await conversationsQuery.refetch();
@@ -433,6 +488,8 @@ export const MessagesTab = memo(function MessagesTab({
     if (gConv) {
       setActiveConversationId(gConv.id);
       setShowList(false);
+      setReplyToMsg(null);
+      setActionSheetMsg(null);
     } else {
       toast.error("Impossible d'ouvrir le chat du groupe");
     }
@@ -441,17 +498,14 @@ export const MessagesTab = memo(function MessagesTab({
   const handleBack = useCallback(() => {
     setActiveConversationId(null);
     setShowList(true);
+    setReplyToMsg(null);
+    setActionSheetMsg(null);
     haptics.light();
   }, []);
 
   const otherMembers = useMemo(
     () => members.filter((m) => m.id !== currentMemberId),
     [members, currentMemberId]
-  );
-
-  const getMemberById = useCallback(
-    (id: string) => members.find((m) => m.id === id),
-    [members]
   );
 
   const formatTime = useCallback((dateStr: string) => {
@@ -471,9 +525,9 @@ export const MessagesTab = memo(function MessagesTab({
     return `${m}:${sec.toString().padStart(2, "0")}`;
   }, []);
 
-  const handleMessagePointerDown = useCallback((msgId: string) => {
+  const handleMessagePointerDown = useCallback((msg: ConversationMessage) => {
     longPressTimerRef.current = setTimeout(() => {
-      setDeleteConfirmId(msgId);
+      setActionSheetMsg(msg);
       haptics.medium();
     }, 600);
   }, []);
@@ -571,6 +625,57 @@ export const MessagesTab = memo(function MessagesTab({
               >
                 Supprimer
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Message Action Sheet ── */}
+      {actionSheetMsg && (
+        <div className="fixed inset-0 z-[9999] bg-black/50 flex items-end justify-center" onClick={() => setActionSheetMsg(null)}>
+          <div
+            className="w-full max-w-md bg-card border-t border-border rounded-t-3xl px-5 pt-3 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+            style={{ paddingBottom: "calc(24px + env(safe-area-inset-bottom, 12px))" }}
+          >
+            <div className="w-10 h-1 rounded-full bg-muted/30 mx-auto mb-4" />
+            <div className="flex items-center gap-2 mb-3 px-1">
+              <div className="w-8 h-8 rounded-full overflow-hidden ring-1 ring-border/30 flex-shrink-0">
+                <AvatarImg avatar={getMemberById(actionSheetMsg.memberId)?.avatar || ""} size="text-sm" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[11px] font-semibold truncate">{getMemberById(actionSheetMsg.memberId)?.name || "Membre"}</p>
+                <p className="text-xs text-muted-foreground truncate">{replyContentLabel(actionSheetMsg.type, actionSheetMsg.content)}</p>
+              </div>
+            </div>
+            <div className="flex justify-between px-1 pb-3">
+              {["❤️","👍","😂","😮","😢","🔥"].map((e) => (
+                <button
+                  key={e}
+                  onClick={() => { handleAddReaction(actionSheetMsg.id, e); setActionSheetMsg(null); }}
+                  className="text-2xl active:scale-125 transition-transform"
+                >
+                  {e}
+                </button>
+              ))}
+            </div>
+            <div className="border-t border-border/30 pt-1">
+              <button
+                onClick={() => startReply(actionSheetMsg)}
+                className="w-full flex items-center gap-3 py-3 px-1 text-sm font-semibold active:bg-muted/20 rounded-xl"
+              >
+                <Reply size={16} className="text-primary flex-shrink-0" />
+                <span>Répondre</span>
+              </button>
+              {actionSheetMsg.memberId === currentMemberId && (
+                <button
+                  onClick={() => { setDeleteConfirmId(actionSheetMsg.id); setActionSheetMsg(null); }}
+                  className="w-full flex items-center gap-3 py-3 px-1 text-sm font-semibold text-destructive active:bg-muted/20 rounded-xl"
+                >
+                  <Trash2 size={16} className="flex-shrink-0" />
+                  <span>Supprimer</span>
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -776,15 +881,16 @@ export const MessagesTab = memo(function MessagesTab({
                           </div>
                         )}
                         <div
+                          data-msg-id={msg.id}
                           className={`flex ${isMe ? "justify-end" : "justify-start"} select-none group relative`}
-                          onPointerDown={() => isMe && handleMessagePointerDown(msg.id)}
+                          onPointerDown={() => handleMessagePointerDown(msg)}
                         onPointerUp={handleMessagePointerUp}
                         onPointerLeave={handleMessagePointerLeave}
                         onPointerCancel={handleMessagePointerUp}
                         onContextMenu={(e) => { if (isMe) { e.preventDefault(); setDeleteConfirmId(msg.id); } }}
                       >
                         <div
-                          className={`
+                          className={`bubble-root
                             ${isImage || isVideo ? "p-1 overflow-hidden" : "px-4 py-2.5"}
                             ${isMe
                               ? "bg-primary text-primary-foreground rounded-[22px] rounded-br-[6px]"
@@ -796,6 +902,25 @@ export const MessagesTab = memo(function MessagesTab({
                             ...(isImage || isVideo ? { maxWidth: "min(68%, 380px)" } : {}),
                           }}
                         >
+                          {msg.replyTo && (
+                            <button
+                              onPointerDown={(e) => e.stopPropagation()}
+                              onClick={(e) => { e.stopPropagation(); scrollToMessage(msg.replyTo!.id); }}
+                              className={`flex items-center gap-2 mb-1.5 rounded-xl px-2 py-1.5 text-left w-full active:opacity-70 transition-opacity ${
+                                isMe ? "bg-white/15" : "bg-muted/40"
+                              }`}
+                            >
+                              <span className="w-0.5 self-stretch rounded-full bg-primary/70 flex-shrink-0" />
+                              <span className="min-w-0 flex-1">
+                                <span className={`block text-[11px] font-semibold truncate ${isMe ? "text-white/90" : "text-primary"}`}>
+                                  {msg.replyTo.name}
+                                </span>
+                                <span className={`block text-[11px] truncate ${isMe ? "text-white/70" : "text-muted-foreground"}`}>
+                                  {replyContentLabel(msg.replyTo.type, msg.replyTo.content)}
+                                </span>
+                              </span>
+                            </button>
+                          )}
                           {!isMe && author && (
                             <div className={`flex items-center gap-2 mb-1.5 ${isImage || isVideo ? "px-2 pt-1" : "-ml-1"}`}>
                               <div className="w-5 h-5 rounded-full overflow-hidden ring-1 ring-border/30 flex-shrink-0">
@@ -861,8 +986,23 @@ export const MessagesTab = memo(function MessagesTab({
                           )}
                         </div>
 
+                        <button
+                          onPointerDown={(e) => e.stopPropagation()}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            startReply(msg);
+                          }}
+                          className={`react-affordance absolute top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-card/30 border border-border/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity active:scale-90 ${
+                            isMe ? "right-8" : "left-1"
+                          }`}
+                          aria-label="Répondre"
+                        >
+                          <Reply size={11} className="text-muted-foreground" />
+                        </button>
+
                         {isMe && (
                           <button
+                            onPointerDown={(e) => e.stopPropagation()}
                             onClick={(e) => {
                               e.stopPropagation();
                               setReactionPickerMsgId(reactionPickerMsgId === msg.id ? null : msg.id);
@@ -984,6 +1124,30 @@ export const MessagesTab = memo(function MessagesTab({
                     aria-label="Envoyer l'audio"
                   >
                     <Send size={15} />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* ── Reply Bar ── */}
+            {replyToMsg && !isRecording && (
+              <div className="flex-shrink-0 border-t border-border/20 bg-primary/5" style={{ backdropFilter: "blur(8px)" }}>
+                <div className="flex items-center gap-3 px-4 py-2">
+                  <Reply size={14} className="text-primary flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[11px] font-semibold text-primary truncate">
+                      Répondre à {getMemberById(replyToMsg.memberId)?.name || "Membre"}
+                    </p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {replyContentLabel(replyToMsg.type, replyToMsg.content)}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setReplyToMsg(null)}
+                    className="w-7 h-7 rounded-full bg-muted/30 flex items-center justify-center flex-shrink-0 active:scale-90 transition-transform"
+                    aria-label="Annuler la réponse"
+                  >
+                    <XIcon size={13} />
                   </button>
                 </div>
               </div>
