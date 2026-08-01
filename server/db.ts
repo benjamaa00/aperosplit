@@ -1499,24 +1499,24 @@ export async function addConversationReaction(messageId: string, memberId: strin
   if (!db) return null;
   const result = await db.query(
     `WITH current AS (
-       SELECT reactions FROM conversation_messages WHERE id = $1
+       SELECT reactions FROM conversation_messages WHERE id = $1::text
      ),
      updated AS (
        SELECT
          CASE
-           WHEN (current.reactions->$2)::jsonb IS NULL THEN
-             current.reactions || jsonb_build_object($2, jsonb_build_array($3))
-           WHEN (current.reactions->$2)::jsonb ? $3::text THEN
-             current.reactions || jsonb_build_object($2, (current.reactions->$2)::jsonb - $3::text)
+           WHEN (current.reactions->$2::text)::jsonb IS NULL THEN
+             current.reactions || jsonb_build_object($2::text, jsonb_build_array($3::text))
+           WHEN (current.reactions->$2::text)::jsonb ? $3::text THEN
+             current.reactions || jsonb_build_object($2::text, (current.reactions->$2::text)::jsonb - $3::text)
            ELSE
-             current.reactions || jsonb_build_object($2, (current.reactions->$2)::jsonb || $3::text)
+             current.reactions || jsonb_build_object($2::text, (current.reactions->$2::text)::jsonb || $3::text)
          END AS new_reactions
        FROM current
      )
      UPDATE conversation_messages
      SET reactions = updated.new_reactions
      FROM updated
-     WHERE conversation_messages.id = $1
+     WHERE conversation_messages.id = $1::text
      RETURNING reactions`,
     [messageId, emoji, memberId]
   );
