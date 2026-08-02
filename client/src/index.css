@@ -598,6 +598,20 @@
     inset: 0;
   }
 
+  /* Orbite : rotation autour du centre de la constellation (la sphère) */
+  .orb-orbit {
+    position: absolute;
+    inset: 0;
+    will-change: transform;
+  }
+
+  /* Porteur du satellite : décalé radialement, rentre/sort du centre */
+  .orb-holder {
+    position: absolute;
+    inset: 0;
+    will-change: transform;
+  }
+
   /* ── Liquid Glass orb ── */
   .orb-glass {
     position: absolute;
@@ -691,6 +705,31 @@
     width: 100%;
     height: 100%;
     animation: centerBreath 6.5s ease-in-out infinite;
+  }
+
+  .center-mark-wrap {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+  }
+
+  .center-name {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    margin: 0;
+    font-size: clamp(1.35rem, 1rem + 1.5vw, 1.9rem);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    background: linear-gradient(180deg, #ffffff 0%, #e9e2ff 55%, #cfc1ff 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+    pointer-events: none;
+    will-change: transform, opacity;
   }
 
   .center-mark {

@@ -1,11 +1,13 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { motion, MotionConfig } from "framer-motion";
 import { haptics } from "../utils/haptics";
-import { CATEGORY_ORBS, CENTER_IMAGE, CENTER_ORB, ORB_IMAGES } from "./introConfig";
+import { CATEGORY_ORBS, CENTER_IMAGE, CENTER_ORB, INTRO_PHASE_AT, ORB_IMAGES } from "./introConfig";
+import type { IntroPhase } from "./introConfig";
 import { CategoryOrb } from "./CategoryOrb";
 
 const EASE: [number, number, number, number] = [0.22, 1, 0.36, 1];
 const EXIT_MS = 550;
+const PHASE_ORDER: IntroPhase[] = ["orbit", "converge", "name", "emerge", "drift"];
 
 function CenterMark() {
   const [failed, setFailed] = useState(false);
@@ -44,6 +46,10 @@ export function IntroScreen({ onLogin }: IntroScreenProps) {
   const onLoginRef = useRef(onLogin);
   onLoginRef.current = onLogin;
 
+  const [phase, setPhase] = useState<IntroPhase>("idle");
+  const constellationRef = useRef<HTMLDivElement>(null);
+  const [rect, setRect] = useState<{ w: number; h: number } | null>(null);
+
   useEffect(() => {
     if (!exiting) return;
     const t = setTimeout(() => onLoginRef.current(), EXIT_MS);
@@ -57,6 +63,23 @@ export function IntroScreen({ onLogin }: IntroScreenProps) {
     });
   }, []);
 
+  useEffect(() => {
+    const timers = PHASE_ORDER.map((p) => setTimeout(() => setPhase(p), INTRO_PHASE_AT[p]));
+    return () => timers.forEach(clearTimeout);
+  }, []);
+
+  useLayoutEffect(() => {
+    const measure = () => {
+      const el = constellationRef.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      setRect({ w: r.width, h: r.height });
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, []);
+
   const handleClick = useCallback(() => {
     if (exitingRef.current) return;
     exitingRef.current = true;
@@ -64,11 +87,15 @@ export function IntroScreen({ onLogin }: IntroScreenProps) {
     setExiting(true);
   }, []);
 
+  const cx = CENTER_ORB.x / 100;
+  const cy = CENTER_ORB.y / 100;
+
   return (
     <MotionConfig reducedMotion="user">
       <div className={`intro-screen ${exiting ? "is-exiting" : ""}`}>
         <div className="intro-stage">
           <motion.div
+            ref={constellationRef}
             className="intro-constellation"
             initial={{ opacity: 0, scale: 0.98 }}
             animate={exiting ? { scale: 1.03, opacity: 0 } : { scale: 1, opacity: 1 }}
@@ -86,32 +113,57 @@ export function IntroScreen({ onLogin }: IntroScreenProps) {
               <motion.div
                 className="center-sphere"
                 initial={{ opacity: 0, scale: 0.65 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.25, duration: 0.5, ease: EASE }}
+                animate={
+                  phase === "name"
+                    ? { opacity: 1, scale: 1.05 }
+                    : { opacity: 1, scale: 1 }
+                }
+                transition={
+                  phase === "name"
+                    ? { duration: 0.8, repeat: Infinity, repeatType: "reverse", ease: "easeInOut" }
+                    : { delay: 0.25, duration: 0.5, ease: EASE }
+                }
               >
                 <div className="center-breath">
-                  <CenterMark />
+                  <motion.div
+                    className="center-mark-wrap"
+                    animate={phase === "name" ? { opacity: 0, scale: 0.7 } : { opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.4, ease: EASE }}
+                  >
+                    <CenterMark />
+                  </motion.div>
+                  <motion.div
+                    className="center-name"
+                    initial={false}
+                    animate={phase === "name" ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.85 }}
+                    transition={{ duration: 0.4, ease: EASE }}
+                  >
+                    AperoSplit
+                  </motion.div>
                 </div>
               </motion.div>
             </div>
 
-            {CATEGORY_ORBS.map((orb, i) => (
-              <CategoryOrb
-                key={orb.label}
-                images={ORB_IMAGES}
-                label={orb.label}
-                icon={orb.icon}
-                x={orb.x}
-                y={orb.y}
-                size={orb.size}
-                zIndex={orb.zIndex}
-                delay={0.55 + i * 0.09}
-                floatDuration={orb.floatDuration}
-                floatDelay={orb.floatDelay}
-                startIndex={orb.startIndex}
-                swapInterval={orb.swapInterval}
-              />
-            ))}
+            {rect &&
+              CATEGORY_ORBS.map((orb, i) => (
+                <CategoryOrb
+                  key={orb.label}
+                  images={ORB_IMAGES}
+                  label={orb.label}
+                  icon={orb.icon}
+                  size={orb.size}
+                  zIndex={orb.zIndex}
+                  delay={0.55 + i * 0.09}
+                  floatDuration={orb.floatDuration}
+                  floatDelay={orb.floatDelay}
+                  startIndex={orb.startIndex}
+                  swapInterval={orb.swapInterval}
+                  phase={phase}
+                  index={i}
+                  offsetX={(orb.x / 100 - cx) * rect.w}
+                  offsetY={(orb.y / 100 - cy) * rect.h}
+                />
+              ))}
           </motion.div>
 
           <motion.div
