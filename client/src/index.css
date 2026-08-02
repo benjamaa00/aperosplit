@@ -304,6 +304,143 @@
     z-index: 0;
   }
 
+  /* ── Premium auth screens ─────────────────────────────────── */
+  .auth-icon-tile {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 4.25rem;
+    height: 4.25rem;
+    border-radius: 1.4rem;
+    background: linear-gradient(
+      140deg,
+      oklch(1 0 0 / calc(var(--transparency, 0.7) * 55%)) 0%,
+      oklch(1 0 0 / calc(var(--transparency, 0.7) * 18%)) 100%
+    );
+    border: 1px solid oklch(1 0 0 / calc(10% + var(--transparency, 0.7) * 20%));
+    box-shadow: 0 10px 30px oklch(0 0 0 / calc(var(--shadow-intensity, 0.5) * 18%)),
+      inset 0 1px 0 oklch(1 0 0 / calc(var(--transparency, 0.7) * 55%));
+    backdrop-filter: blur(var(--card-blur, 32px)) saturate(180%);
+    -webkit-backdrop-filter: blur(var(--card-blur, 32px)) saturate(180%);
+  }
+
+  .dark .auth-icon-tile {
+    background: linear-gradient(
+      140deg,
+      oklch(0.2 0.012 270 / calc(var(--transparency, 0.7) * 90%)) 0%,
+      oklch(0.14 0.008 270 / calc(var(--transparency, 0.7) * 70%)) 100%
+    );
+    border: 1px solid oklch(1 0 0 / calc(5% + var(--transparency, 0.7) * 12%));
+    box-shadow: 0 12px 36px oklch(0 0 0 / calc(var(--shadow-intensity, 0.5) * 36%)),
+      inset 0 1px 0 oklch(1 0 0 / calc(var(--transparency, 0.7) * 14%));
+  }
+
+  .auth-icon-glow {
+    position: absolute;
+    inset: -1.25rem;
+    border-radius: 9999px;
+    background: color-mix(in oklab, var(--primary, oklch(0.623 0.214 259.815)) 30%, transparent);
+    filter: blur(26px);
+    opacity: 0.8;
+    pointer-events: none;
+  }
+
+  .auth-cta {
+    position: relative;
+    display: flex;
+    width: 100%;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 1.1rem;
+    padding: 0.95rem 1.25rem;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--primary-foreground, oklch(0.98 0 0));
+    background: linear-gradient(
+      180deg,
+      color-mix(in oklab, var(--primary, oklch(0.623 0.214 259.815)) 92%, white 8%) 0%,
+      var(--primary, oklch(0.623 0.214 259.815)) 100%
+    );
+    box-shadow: 0 12px 30px color-mix(in oklab, var(--primary, oklch(0.623 0.214 259.815)) 34%, transparent),
+      inset 0 1px 0 oklch(1 0 0 / calc(var(--transparency, 0.7) * 30%));
+    transition: transform 180ms cubic-bezier(0.34, 1.56, 0.64, 1),
+      box-shadow 220ms ease,
+      opacity 220ms ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .auth-cta:active:not(:disabled) {
+    transform: scale(0.97);
+  }
+
+  .auth-cta:disabled {
+    opacity: 0.45;
+    box-shadow: none;
+  }
+
+  .auth-field {
+    width: 100%;
+    border-radius: 1.1rem;
+    padding: 1rem 1.25rem;
+    text-align: center;
+    font-size: 1.125rem;
+    font-weight: 600;
+    letter-spacing: 0.35em;
+    color: var(--foreground);
+    background: oklch(1 0 0 / calc(var(--transparency, 0.7) * 55%));
+    border: 1px solid oklch(1 0 0 / calc(8% + var(--transparency, 0.7) * 16%));
+    backdrop-filter: blur(var(--card-blur, 32px)) saturate(180%);
+    -webkit-backdrop-filter: blur(var(--card-blur, 32px)) saturate(180%);
+    box-shadow: 0 4px 18px oklch(0 0 0 / calc(var(--shadow-intensity, 0.5) * 8%));
+    transition: border-color 220ms ease, box-shadow 220ms ease, background 220ms ease;
+  }
+
+  .dark .auth-field {
+    background: oklch(0.16 0.008 270 / calc(var(--transparency, 0.7) * 70%));
+    border: 1px solid oklch(1 0 0 / calc(4% + var(--transparency, 0.7) * 10%));
+  }
+
+  .auth-field::placeholder {
+    letter-spacing: 0.02em;
+    color: oklch(0.5 0 0 / 55%);
+  }
+
+  .dark .auth-field::placeholder {
+    color: oklch(0.75 0 0 / 45%);
+  }
+
+  .auth-field:focus {
+    outline: none;
+    border-color: color-mix(in oklab, var(--primary, oklch(0.623 0.214 259.815)) 55%, transparent);
+    box-shadow: 0 8px 26px color-mix(in oklab, var(--primary, oklch(0.623 0.214 259.815)) 18%, transparent),
+      inset 0 1px 0 oklch(1 0 0 / calc(var(--transparency, 0.7) * 35%));
+  }
+
+  .auth-avatar-ring {
+    position: absolute;
+    inset: -0.5rem;
+    border-radius: 9999px;
+    background: conic-gradient(
+      from 0deg,
+      transparent 0%,
+      color-mix(in oklab, var(--primary, oklch(0.623 0.214 259.815)) 50%, transparent) 25%,
+      transparent 55%
+    );
+    mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
+    -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
+    animation: auth-ring-spin calc(6s * var(--animation-multiplier, 1)) linear infinite;
+    opacity: 0.9;
+    pointer-events: none;
+  }
+
+  @keyframes auth-ring-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
   /* No press scale animation */
 
   /* iOS-style page transition */
