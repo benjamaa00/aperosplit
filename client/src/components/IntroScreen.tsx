@@ -1,49 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, MotionConfig } from "framer-motion";
-import { Car, Gamepad2, House, Plane, Receipt, ShoppingBag, Utensils } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
 import { haptics } from "../utils/haptics";
+import { CATEGORY_ORBS, CENTER_IMAGE, ORB_IMAGES } from "./introConfig";
 import { CategoryOrb } from "./CategoryOrb";
 
 const EASE: [number, number, number, number] = [0.22, 1, 0.36, 1];
 const EXIT_MS = 550;
-
-const CENTER_IMAGE = "/categories/aperosplit_icon.png";
-
-const ORB_IMAGES = [
-  CENTER_IMAGE,
-  "/categories/aperosplit_bell_final.png",
-  "/categories/aperosplit_calendar_final.png",
-  "/categories/aperosplit_card_final.png",
-  "/categories/aperosplit_cocktail_final.png",
-  "/categories/aperosplit_gift_final.png",
-  "/categories/aperosplit_group_final.png",
-  "/categories/aperosplit_piggy_bank_final.png",
-  "/categories/aperosplit_receipt_final.png",
-  "/categories/aperosplit_rocket_final.png",
-  "/categories/aperosplit_shopping_bag_final.png",
-];
-
-interface OrbConfig {
-  label: string;
-  icon: LucideIcon;
-  x: number;
-  y: number;
-  size: number;
-  speed: number;
-  startIndex: number;
-  swapInterval: number;
-}
-
-const CATEGORY_ORBS: OrbConfig[] = [
-  { label: "Transport", icon: Car, x: 12, y: -86, size: 48, speed: 0.06, startIndex: 0, swapInterval: 2600 },
-  { label: "Voyage", icon: Plane, x: 82, y: -52, size: 48, speed: 0.09, startIndex: 3, swapInterval: 2950 },
-  { label: "Shopping", icon: ShoppingBag, x: 98, y: 12, size: 48, speed: -0.05, startIndex: 6, swapInterval: 3300 },
-  { label: "Loisirs", icon: Gamepad2, x: 54, y: 70, size: 42, speed: 0.11, startIndex: 9, swapInterval: 3650 },
-  { label: "Logement", icon: House, x: -46, y: 73, size: 42, speed: -0.07, startIndex: 1, swapInterval: 4000 },
-  { label: "Nourriture", icon: Utensils, x: -93, y: 20, size: 36, speed: 0.08, startIndex: 4, swapInterval: 4350 },
-  { label: "Factures", icon: Receipt, x: -80, y: -52, size: 36, speed: -0.06, startIndex: 7, swapInterval: 4700 },
-];
 
 function CenterMark() {
   const [failed, setFailed] = useState(false);
@@ -108,6 +70,7 @@ export function IntroScreen({ onLogin }: IntroScreenProps) {
         <div className="intro-stage">
           <motion.div
             className="intro-constellation"
+            initial={{ opacity: 0, scale: 0.98 }}
             animate={exiting ? { scale: 1.03, opacity: 0 } : { scale: 1, opacity: 1 }}
             transition={{ duration: EXIT_MS / 1000, ease: "easeInOut" }}
           >
@@ -116,7 +79,7 @@ export function IntroScreen({ onLogin }: IntroScreenProps) {
                 className="center-sphere"
                 initial={{ opacity: 0, scale: 0.65 }}
                 animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.2, duration: 0.45, ease: EASE }}
+                transition={{ delay: 0.25, duration: 0.5, ease: EASE }}
               >
                 <div className="center-breath">
                   <CenterMark />
@@ -133,8 +96,9 @@ export function IntroScreen({ onLogin }: IntroScreenProps) {
                 x={orb.x}
                 y={orb.y}
                 size={orb.size}
-                delay={0.55 + i * 0.1}
-                speed={orb.speed}
+                delay={0.55 + i * 0.09}
+                floatDuration={orb.floatDuration}
+                floatDelay={orb.floatDelay}
                 startIndex={orb.startIndex}
                 swapInterval={orb.swapInterval}
               />
@@ -150,7 +114,7 @@ export function IntroScreen({ onLogin }: IntroScreenProps) {
               className="intro-title"
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.85, duration: 0.5, ease: EASE }}
+              transition={{ delay: 0.9, duration: 0.5, ease: EASE }}
             >
               AperoSplit
             </motion.h1>
