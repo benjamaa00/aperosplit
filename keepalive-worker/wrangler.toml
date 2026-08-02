@@ -1,0 +1,8 @@
+name = "aperosplit-keepalive"
+main = "src/index.js"
+compatibility_date = "2024-11-01"
+
+# Cron toutes les 2 minutes => 30 requetes / heure vers Render
+# (Cloudflare autorise un intervalle minimal de 1 minute, contrairement a GitHub qui plafonne a 5)
+[triggers]
+crons = ["*/2 * * * *"]
