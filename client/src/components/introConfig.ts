@@ -65,33 +65,35 @@ export const CATEGORY_ORBS: CategoryOrbConfig[] = [
 ];
 
 /**
- * Cycle cinématique de l'intro (se répète toutes les 8 s) :
+ * Cycle cinématique de l'intro (se répète toutes les ~8,8 s) :
  *  1. "orbit"   — les satellites tournent très lentement autour de la sphère
  *  2. "converge"— ils rentrent en douceur au centre de la sphère principale
  *  3. "name"    — la sphère disparaît complètement ; le titre « AperoSplit »
- *                monte depuis le bas et s'affiche en grand et coloré (2 s)
+ *                monte depuis le bas et s'affiche en grand et coloré (2,3 s)
  *  4. "return"  — le titre redescend, la sphère réapparaît en douceur et les
  *                satellites ressortent smooth ; le cycle recommence.
  */
 export type IntroPhase = "orbit" | "converge" | "name" | "return";
 
-export const INTRO_CYCLE_MS = 8000;
+export const INTRO_CYCLE_MS = 8800;
 
 /** moments des phases (ms) dans le cycle, à partir du début du cycle */
 export const INTRO_PHASE_AT = {
-  converge: 3500,
-  name: 4800,
-  return: 6800,
+  converge: 3600,
+  name: 5000,
+  return: 7300,
 } as const;
 
 export const INTRO_MOTION = {
   /** durée d'un tour complet de rotation lente (s) */
   spinDurationSec: 40,
-  convergeMs: 1300,
-  nameMs: 2000,
-  returnMs: 1200,
+  convergeMs: 1400,
+  nameMs: 2300,
+  returnMs: 1400,
   /** durée de la disparition de la sphère pendant le nom */
-  sphereFadeOutMs: 900,
+  sphereFadeOutMs: 1000,
+  /** durée de la montée du titre vers le centre (smooth glide) */
+  nameRiseMs: 800,
   /** échelle du titre affiché « en grandeur » */
   titleScale: 1.7,
 } as const;

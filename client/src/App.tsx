@@ -171,7 +171,7 @@ export default function App() {
   // Keep Render server awake by pinging API every 60 seconds
  useEffect(() => {
   if (isNetlify) return;
-  const ping = () => fetch("/api/trpc/equilibra.getGroupData?input=%7B%7D", { cache: "no-store" }).catch(() => {});
+  const ping = () => fetch("/health", { cache: "no-store" }).catch(() => {});
   ping();
   const interval = setInterval(ping, 60 * 1000);
   return () => clearInterval(interval);

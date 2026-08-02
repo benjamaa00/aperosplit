@@ -9,5 +9,5 @@ jobs:
   ping:
     runs-on: ubuntu-latest
     steps:
-      - name: Ping trpc endpoint (keep DB warm)
-        run: curl -sf -o /dev/null https://aperosplit.onrender.com/api/trpc/equilibra.getGroupData?input=%7B%7D || true
+      - name: Ping health endpoint (keep instance warm)
+        run: curl -sf -o /dev/null https://aperosplit.onrender.com/health

@@ -116,11 +116,29 @@ export function IntroScreen({ onLogin }: IntroScreenProps) {
       <div className={`intro-screen ${exiting ? "is-exiting" : ""}`}>
         <div className="intro-stage">
           <motion.div
+            className="intro-aura"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={
+              exiting
+                ? { opacity: 0, scale: 1.1 }
+                : phase === "name"
+                  ? { opacity: 0.95, scale: 1.05 }
+                  : { opacity: 0.5, scale: 1 }
+            }
+            transition={
+              exiting
+                ? { duration: EXIT_MS / 1000, ease: "easeInOut" }
+                : phase === "name"
+                  ? { duration: INTRO_MOTION.sphereFadeOutMs / 1000, ease: EASE }
+                  : { delay: 0.5, duration: 1.6, ease: "easeOut" }
+            }
+          />
+          <motion.div
             ref={constellationRef}
             className="intro-constellation"
-            initial={{ opacity: 0, scale: 0.98 }}
-            animate={exiting ? { scale: 1.03, opacity: 0 } : { scale: 1, opacity: 1 }}
-            transition={{ duration: EXIT_MS / 1000, ease: "easeInOut" }}
+            initial={{ opacity: 0, scale: 0.96 }}
+            animate={exiting ? { scale: 1.04, opacity: 0 } : { scale: 1, opacity: 1 }}
+            transition={exiting ? { duration: EXIT_MS / 1000, ease: "easeInOut" } : { duration: 0.9, ease: EASE }}
           >
             <div
               className="orb-anchor center-anchor"
@@ -187,10 +205,10 @@ export function IntroScreen({ onLogin }: IntroScreenProps) {
               }
               transition={
                 phase === "name"
-                  ? { duration: 0.5, ease: EASE }
+                  ? { duration: INTRO_MOTION.nameRiseMs / 1000, ease: EASE }
                   : phase === "return"
                     ? { duration: INTRO_MOTION.returnMs / 1000, ease: EASE }
-                    : { delay: 0.9, duration: 0.5, ease: EASE }
+                    : { delay: 0.9, duration: 0.6, ease: EASE }
               }
             >
               AperoSplit
@@ -202,6 +220,7 @@ export function IntroScreen({ onLogin }: IntroScreenProps) {
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 1.25, duration: 0.45, ease: EASE }}
+              whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.96 }}
               onClick={handleClick}
             >
