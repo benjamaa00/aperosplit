@@ -8,6 +8,7 @@ import {
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { AvatarImg } from "../components/AvatarImg";
+import { BottomSheet } from "../components/BottomSheet";
 import { haptics } from "../utils/haptics";
 import type { Member, Conversation, ConversationMessage, MessageReply } from "../types";
 
@@ -609,7 +610,7 @@ export const MessagesTab = memo(function MessagesTab({
       {/* ── Delete Confirm ── */}
       {deleteConfirmId && (
         <div className="fixed inset-0 z-[9999] bg-black/50 flex items-center justify-center p-4" onClick={() => setDeleteConfirmId(null)}>
-          <div className="bg-card border border-border rounded-3xl p-6 w-full max-w-xs shadow-2xl" onClick={e => e.stopPropagation()}>
+          <div className="glass-card-enhanced w-full max-w-xs rounded-3xl p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
             <h3 className="text-lg font-bold mb-2">Supprimer ce message ?</h3>
             <p className="text-sm text-muted-foreground mb-6">Cette action est irréversible.</p>
             <div className="flex gap-3">
@@ -632,53 +633,46 @@ export const MessagesTab = memo(function MessagesTab({
 
       {/* ── Message Action Sheet ── */}
       {actionSheetMsg && (
-        <div className="fixed inset-0 z-[9999] bg-black/50 flex items-end justify-center" onClick={() => setActionSheetMsg(null)}>
-          <div
-            className="w-full max-w-md bg-card border-t border-border rounded-t-3xl px-5 pt-3 shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-            style={{ paddingBottom: "calc(24px + env(safe-area-inset-bottom, 12px))" }}
-          >
-            <div className="w-10 h-1 rounded-full bg-muted/30 mx-auto mb-4" />
-            <div className="flex items-center gap-2 mb-3 px-1">
-              <div className="w-8 h-8 rounded-full overflow-hidden ring-1 ring-border/30 flex-shrink-0">
-                <AvatarImg avatar={getMemberById(actionSheetMsg.memberId)?.avatar || ""} size="text-sm" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-[11px] font-semibold truncate">{getMemberById(actionSheetMsg.memberId)?.name || "Membre"}</p>
-                <p className="text-xs text-muted-foreground truncate">{replyContentLabel(actionSheetMsg.type, actionSheetMsg.content)}</p>
-              </div>
+        <BottomSheet open onClose={() => setActionSheetMsg(null)}>
+          <div className="mb-3 flex items-center gap-2 px-1">
+            <div className="flex h-8 w-8 shrink-0 overflow-hidden rounded-full ring-1 ring-border/30">
+              <AvatarImg avatar={getMemberById(actionSheetMsg.memberId)?.avatar || ""} size="text-sm" />
             </div>
-            <div className="flex justify-between px-1 pb-3">
-              {["❤️","👍","😂","😮","😢","🔥"].map((e) => (
-                <button
-                  key={e}
-                  onClick={() => { handleAddReaction(actionSheetMsg.id, e); setActionSheetMsg(null); }}
-                  className="text-2xl active:scale-125 transition-transform"
-                >
-                  {e}
-                </button>
-              ))}
-            </div>
-            <div className="border-t border-border/30 pt-1">
-              <button
-                onClick={() => startReply(actionSheetMsg)}
-                className="w-full flex items-center gap-3 py-3 px-1 text-sm font-semibold active:bg-muted/20 rounded-xl"
-              >
-                <Reply size={16} className="text-primary flex-shrink-0" />
-                <span>Répondre</span>
-              </button>
-              {actionSheetMsg.memberId === currentMemberId && (
-                <button
-                  onClick={() => { setDeleteConfirmId(actionSheetMsg.id); setActionSheetMsg(null); }}
-                  className="w-full flex items-center gap-3 py-3 px-1 text-sm font-semibold text-destructive active:bg-muted/20 rounded-xl"
-                >
-                  <Trash2 size={16} className="flex-shrink-0" />
-                  <span>Supprimer</span>
-                </button>
-              )}
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[11px] font-semibold">{getMemberById(actionSheetMsg.memberId)?.name || "Membre"}</p>
+              <p className="truncate text-xs text-muted-foreground">{replyContentLabel(actionSheetMsg.type, actionSheetMsg.content)}</p>
             </div>
           </div>
-        </div>
+          <div className="flex justify-between px-1 pb-3">
+            {["❤️","👍","😂","😮","😢","🔥"].map((e) => (
+              <button
+                key={e}
+                onClick={() => { handleAddReaction(actionSheetMsg.id, e); setActionSheetMsg(null); }}
+                className="text-2xl active:scale-125 transition-transform"
+              >
+                {e}
+              </button>
+            ))}
+          </div>
+          <div className="border-t border-border/30 pt-1">
+            <button
+              onClick={() => startReply(actionSheetMsg)}
+              className="w-full flex items-center gap-3 py-3 px-1 text-sm font-semibold active:bg-muted/20 rounded-xl"
+            >
+              <Reply size={16} className="text-primary flex-shrink-0" />
+              <span>Répondre</span>
+            </button>
+            {actionSheetMsg.memberId === currentMemberId && (
+              <button
+                onClick={() => { setDeleteConfirmId(actionSheetMsg.id); setActionSheetMsg(null); }}
+                className="w-full flex items-center gap-3 py-3 px-1 text-sm font-semibold text-destructive active:bg-muted/20 rounded-xl"
+              >
+                <Trash2 size={16} className="flex-shrink-0" />
+                <span>Supprimer</span>
+              </button>
+            )}
+          </div>
+        </BottomSheet>
       )}
 
       {/* ── Conversation List Panel ── */}
@@ -1249,28 +1243,8 @@ export const MessagesTab = memo(function MessagesTab({
 
       {/* ── Emoji Picker ── */}
       {showEmojiPicker && (
-        <div
-          className="fixed inset-x-0 bottom-0 z-[1100] bg-card border-t border-border/50"
-          style={{
-            paddingBottom: "calc(12px + env(safe-area-inset-bottom, 8px))",
-            maxHeight: "40vh",
-            backdropFilter: "blur(20px) saturate(180%)",
-            WebkitBackdropFilter: "blur(20px) saturate(180%)",
-          }}
-        >
-          <div className="px-3 pt-2 pb-1 flex items-center justify-between">
-            <div className="w-10 h-1 rounded-full bg-muted/30 mx-auto mb-1" />
-            <div className="flex-1 flex justify-center">
-              <span className="text-xs text-muted-foreground">Emoji</span>
-            </div>
-            <button
-              onClick={() => setShowEmojiPicker(false)}
-              className="w-7 h-7 rounded-full bg-muted/30 flex items-center justify-center"
-            >
-              <XIcon size={12} />
-            </button>
-          </div>
-          <div className="grid grid-cols-6 gap-1 px-3 overflow-y-auto" style={{ maxHeight: "calc(40vh - 50px)" }}>
+        <BottomSheet open onClose={() => setShowEmojiPicker(false)} title="Emoji" maxHeight="40vh">
+          <div className="grid grid-cols-6 gap-1 px-1 overflow-y-auto" style={{ maxHeight: "calc(40vh - 50px)" }}>
             {["😀","😂","🥰","😍","🤔","😅","😎","🤗","😊","🙂","😘","👍","❤️","🔥","🎉","🤝","💯","🙏","👏","🎁","🍕","🍔","🍰","☕","🍷","🍺","📚","✈️","🚗","🏠","💰","⏰","✅","❌","⚠️","❓","❗","💡","⭐","🌟"].map((e) => (
               <button
                 key={e}
@@ -1293,64 +1267,51 @@ export const MessagesTab = memo(function MessagesTab({
               </button>
             ))}
           </div>
-        </div>
+        </BottomSheet>
       )}
 
       {/* ── Attachment Sheet ── */}
       {showAttachmentSheet && (
-        <div className="fixed inset-0 z-[1100] flex items-end sm:items-center justify-center" onClick={() => setShowAttachmentSheet(false)}>
-          <div className="absolute inset-0 bg-black/40" />
-          <div
-            className="relative w-full max-w-sm bg-card border border-border/50 rounded-t-3xl sm:rounded-3xl p-5 shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-            style={{ paddingBottom: "calc(20px + env(safe-area-inset-bottom, 10px))" }}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-base">Ajouter un média</h3>
-              <button onClick={() => setShowAttachmentSheet(false)} className="w-8 h-8 rounded-xl bg-muted/30 flex items-center justify-center">
-                <XIcon size={15} />
-              </button>
-            </div>
-            <div className="grid grid-cols-4 gap-4">
-              <button
-                onClick={() => { setShowAttachmentSheet(false); fileInputRef.current?.click(); }}
-                className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-card/50 border border-border/30 hover:bg-card/80 active:scale-95 transition-all"
-              >
-                <div className="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
-                  <ImageIcon size={22} className="text-blue-400" />
-                </div>
-                <span className="text-[11px] font-medium text-muted-foreground">Photo</span>
-              </button>
-              <button
-                onClick={() => { setShowAttachmentSheet(false); videoFileInputRef.current?.click(); }}
-                className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-card/50 border border-border/30 hover:bg-card/80 active:scale-95 transition-all"
-              >
-                <div className="w-12 h-12 rounded-2xl bg-purple-500/10 flex items-center justify-center border border-purple-500/20">
-                  <Video size={22} className="text-purple-400" />
-                </div>
-                <span className="text-[11px] font-medium text-muted-foreground">Vidéo</span>
-              </button>
-              <button
-                onClick={() => { setShowAttachmentSheet(false); fileInputRef.current?.click(); }}
-                className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-card/50 border border-border/30 hover:bg-card/80 active:scale-95 transition-all"
-              >
-                <div className="w-12 h-12 rounded-2xl bg-green-500/10 flex items-center justify-center border border-green-500/20">
-                  <Camera size={22} className="text-green-400" />
-                </div>
-                <span className="text-[11px] font-medium text-muted-foreground">Caméra</span>
-              </button>
-              <button
-                onClick={() => { setShowAttachmentSheet(false); fileInputRef.current?.click(); }}
-                className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-card/50 border border-border/30 hover:bg-card/80 active:scale-95 transition-all"
-              >
-                <div className="w-12 h-12 rounded-2xl bg-orange-500/10 flex items-center justify-center border border-orange-500/20">
-                  <Paperclip size={22} className="text-orange-400" />
-                </div>
-                <span className="text-[11px] font-medium text-muted-foreground">Fichier</span>
-              </button>
-            </div>
+        <BottomSheet open onClose={() => setShowAttachmentSheet(false)} title="Ajouter un média">
+          <div className="grid grid-cols-4 gap-4">
+            <button
+              onClick={() => { setShowAttachmentSheet(false); fileInputRef.current?.click(); }}
+              className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-card/50 border border-border/30 hover:bg-card/80 active:scale-95 transition-all"
+            >
+              <div className="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
+                <ImageIcon size={22} className="text-blue-400" />
+              </div>
+              <span className="text-[11px] font-medium text-muted-foreground">Photo</span>
+            </button>
+            <button
+              onClick={() => { setShowAttachmentSheet(false); videoFileInputRef.current?.click(); }}
+              className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-card/50 border border-border/30 hover:bg-card/80 active:scale-95 transition-all"
+            >
+              <div className="w-12 h-12 rounded-2xl bg-purple-500/10 flex items-center justify-center border border-purple-500/20">
+                <Video size={22} className="text-purple-400" />
+              </div>
+              <span className="text-[11px] font-medium text-muted-foreground">Vidéo</span>
+            </button>
+            <button
+              onClick={() => { setShowAttachmentSheet(false); fileInputRef.current?.click(); }}
+              className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-card/50 border border-border/30 hover:bg-card/80 active:scale-95 transition-all"
+            >
+              <div className="w-12 h-12 rounded-2xl bg-green-500/10 flex items-center justify-center border border-green-500/20">
+                <Camera size={22} className="text-green-400" />
+              </div>
+              <span className="text-[11px] font-medium text-muted-foreground">Caméra</span>
+            </button>
+            <button
+              onClick={() => { setShowAttachmentSheet(false); fileInputRef.current?.click(); }}
+              className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-card/50 border border-border/30 hover:bg-card/80 active:scale-95 transition-all"
+            >
+              <div className="w-12 h-12 rounded-2xl bg-orange-500/10 flex items-center justify-center border border-orange-500/20">
+                <Paperclip size={22} className="text-orange-400" />
+              </div>
+              <span className="text-[11px] font-medium text-muted-foreground">Fichier</span>
+            </button>
           </div>
-        </div>
+        </BottomSheet>
       )}
     </div>
   );
