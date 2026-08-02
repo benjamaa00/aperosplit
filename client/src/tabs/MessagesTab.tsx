@@ -1017,7 +1017,7 @@ export const MessagesTab = memo(function MessagesTab({
 
                       {reactionPickerMsgId === msg.id && (
                         <div
-                          className="fixed z-[100] flex gap-1 p-1.5 rounded-2xl bg-card border border-border shadow-xl"
+                          className="fixed z-[1100] flex gap-1 p-1.5 rounded-2xl bg-card border border-border shadow-xl"
                           style={{
                             top: "auto",
                             bottom: "120px",
@@ -1250,7 +1250,7 @@ export const MessagesTab = memo(function MessagesTab({
       {/* ── Emoji Picker ── */}
       {showEmojiPicker && (
         <div
-          className="fixed inset-x-0 bottom-0 z-30 bg-card border-t border-border/50"
+          className="fixed inset-x-0 bottom-0 z-[1100] bg-card border-t border-border/50"
           style={{
             paddingBottom: "calc(12px + env(safe-area-inset-bottom, 8px))",
             maxHeight: "40vh",
@@ -1298,7 +1298,7 @@ export const MessagesTab = memo(function MessagesTab({
 
       {/* ── Attachment Sheet ── */}
       {showAttachmentSheet && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" onClick={() => setShowAttachmentSheet(false)}>
+        <div className="fixed inset-0 z-[1100] flex items-end sm:items-center justify-center" onClick={() => setShowAttachmentSheet(false)}>
           <div className="absolute inset-0 bg-black/40" />
           <div
             className="relative w-full max-w-sm bg-card border border-border/50 rounded-t-3xl sm:rounded-3xl p-5 shadow-2xl"

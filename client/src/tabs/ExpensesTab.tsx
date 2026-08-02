@@ -542,14 +542,14 @@ export const ExpensesTab = memo(function ExpensesTab({
  {modal.type === "group" && (
  <div
  key="group-backdrop"
- className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm"
+ className="fixed inset-0 z-[1100] bg-black/40 backdrop-blur-sm"
  onClick={close}
  />
  )}
  {modal.type === "group" && (
  <div
  key="group-sheet"
- className="fixed inset-x-0 bottom-0 z-50 bg-card rounded-t-[1.5rem] p-5 pb-8 max-h-[80vh] flex flex-col"
+ className="fixed inset-x-0 bottom-0 z-[1100] bg-card rounded-t-[1.5rem] p-5 pb-8 max-h-[80vh] flex flex-col"
  onClick={(e) => e.stopPropagation()}
  >
  <div className="w-10 h-1 rounded-full bg-muted-foreground/30 mx-auto mb-4" />
@@ -644,14 +644,14 @@ export const ExpensesTab = memo(function ExpensesTab({
  {modal.type === "individual" && (
  <div
  key="indiv-backdrop"
- className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm"
+ className="fixed inset-0 z-[1100] bg-black/40 backdrop-blur-sm"
  onClick={close}
  />
  )}
  {modal.type === "individual" && (
  <div
  key="indiv-sheet"
- className="fixed inset-x-0 bottom-0 z-50 bg-card rounded-t-[1.5rem] p-5 pb-8 max-h-[70vh] flex flex-col"
+ className="fixed inset-x-0 bottom-0 z-[1100] bg-card rounded-t-[1.5rem] p-5 pb-8 max-h-[70vh] flex flex-col"
  onClick={(e) => e.stopPropagation()}
  >
  <div className="w-10 h-1 rounded-full bg-muted-foreground/30 mx-auto mb-4" />
@@ -749,14 +749,14 @@ export const ExpensesTab = memo(function ExpensesTab({
  {modal.type === "reimbursement" && (
  <div
  key="reimb-backdrop"
- className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm"
+ className="fixed inset-0 z-[1100] bg-black/40 backdrop-blur-sm"
  onClick={close}
  />
  )}
  {modal.type === "reimbursement" && (
  <div
  key="reimb-sheet"
- className="fixed inset-x-0 bottom-0 z-50 bg-card rounded-t-[1.5rem] p-5 pb-8"
+ className="fixed inset-x-0 bottom-0 z-[1100] bg-card rounded-t-[1.5rem] p-5 pb-8"
  onClick={(e) => e.stopPropagation()}
  >
  <div className="w-10 h-1 rounded-full bg-muted-foreground/30 mx-auto mb-4" />

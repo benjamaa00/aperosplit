@@ -28,7 +28,7 @@ export const SuccessAnimation = memo(function SuccessAnimation({
   return (
     <>
       {visible && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center pointer-events-none">
+        <div className="fixed inset-0 z-[1100] flex items-center justify-center pointer-events-none">
           <div
             className="rounded-full bg-primary flex items-center justify-center shadow-lg shadow-primary/30"
             style={{ width: size, height: size }}

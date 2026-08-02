@@ -122,7 +122,7 @@ export const GlobalSearchScreen = memo(function GlobalSearchScreen({
  <>
  {isOpen && (
  <div
- className="fixed inset-0 z-[200] bg-background/95 backdrop-blur-xl"
+ className="fixed inset-0 z-[1100] bg-background/95 backdrop-blur-xl"
  style={{ WebkitBackdropFilter: "blur(20px)" }}
  >
  <div className="flex flex-col h-full max-w-md mx-auto">

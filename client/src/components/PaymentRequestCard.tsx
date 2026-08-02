@@ -645,7 +645,7 @@ export const PaymentRequestCard = memo(function PaymentRequestCard({
  
  {showRefuseModal && (
  <div
- className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-6"
+ className="fixed inset-0 z-[1100] flex items-center justify-center bg-black/50 backdrop-blur-sm px-6"
  onClick={() => setShowRefuseModal(false)}
  >
  <div

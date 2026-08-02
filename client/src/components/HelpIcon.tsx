@@ -45,12 +45,12 @@ export function HelpIcon({ title, description, extra, variant = "info", size = 1
 
       {open && (
         <>
-          <div className="fixed inset-0 z-[90]" onClick={close} />
+          <div className="fixed inset-0 z-[1100]" onClick={close} />
           <div
             ref={popoverRef}
             role="dialog"
             aria-label={title}
-            className="fixed z-[91] w-[min(320px,calc(100vw-32px))] glass-card-enhanced rounded-2xl p-4 shadow-xl"
+            className="fixed z-[1101] w-[min(320px,calc(100vw-32px))] glass-card-enhanced rounded-2xl p-4 shadow-xl"
             style={getPopoverPosition(ref.current)}
           >
             <div className="flex items-start justify-between gap-2 mb-2">

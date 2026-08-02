@@ -1464,12 +1464,12 @@ html.dark .bottom-nav {
   }
   100% {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: none;
   }
 }
 
 .tab-content-animate {
-  animation: tabContentIn calc(350ms * var(--animation-multiplier, 1)) cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: tabContentIn calc(350ms * var(--animation-multiplier, 1)) cubic-bezier(0.16, 1, 0.3, 1) backwards;
 }
 
 /* Safe-area aware top padding (browser: small, PWA standalone: clears notch) */

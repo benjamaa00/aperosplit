@@ -118,7 +118,7 @@ export function GuidedTour({ tutorialId, steps, isOpen, onClose, isAdmin = false
   const bubblePos = getBubblePosition(targetRect, target?.placement);
 
   return (
-    <div className="fixed inset-0 z-[200]" role="dialog" aria-label="Tutoriel">
+    <div className="fixed inset-0 z-[1200]" role="dialog" aria-label="Tutoriel">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px]" onClick={handleClose} />
 
       {targetRect && (

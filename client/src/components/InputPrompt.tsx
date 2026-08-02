@@ -46,7 +46,7 @@ export function InputPrompt({
   <>
   {open && (
   <div
-  className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm px-6"
+  className="fixed inset-0 z-[1100] flex items-center justify-center bg-black/60 backdrop-blur-sm px-6"
   onClick={onClose}
   >
   <div
