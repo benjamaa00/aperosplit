@@ -517,88 +517,242 @@
   }
 
   /* ═══════════════════════════════════════════════════════════
-     APPLE-LEVEL SPLASH — Canvas-driven, pure black bg
+     APEROSPLIT INTRO — iCloud-style constellation, Liquid Glass
      ═══════════════════════════════════════════════════════════ */
-  .apple-splash {
+  :root {
+    --intro-bg: #0d0d12;
+    --orb-c1: #d5c6ff;
+    --orb-c2: #9a72ff;
+    --orb-c3: #7148f5;
+    --orb-c4: #5129c7;
+    --orb-glass-hi: rgba(255, 255, 255, 0.3);
+    --orb-glass-mid: rgba(165, 125, 255, 0.13);
+    --orb-glass-edge: rgba(80, 45, 180, 0.07);
+    --orb-glass-deep: rgba(30, 20, 70, 0.05);
+    --orb-shadow: rgba(82, 45, 190, 0.18);
+    --orb-rim: rgba(255, 255, 255, 0.13);
+  }
+
+  @media (color-gamut: p3) {
+    :root {
+      --orb-c1: color(display-p3 0.83 0.75 1);
+      --orb-c2: color(display-p3 0.6 0.43 1);
+      --orb-c3: color(display-p3 0.44 0.27 0.96);
+      --orb-c4: color(display-p3 0.33 0.15 0.79);
+      --orb-glass-mid: color(display-p3 0.6 0.43 1 / 0.13);
+      --orb-glass-edge: color(display-p3 0.3 0.16 0.7 / 0.07);
+      --orb-shadow: color(display-p3 0.32 0.18 0.75 / 0.18);
+    }
+  }
+
+  .intro-screen {
     position: fixed;
     inset: 0;
     z-index: 9999;
-    background: #000;
     display: flex;
     align-items: center;
     justify-content: center;
     overflow: hidden;
-    opacity: 1;
-    transition: opacity 500ms cubic-bezier(0.4, 0, 0.2, 1);
+    background: var(--intro-bg);
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    -webkit-tap-highlight-color: transparent;
   }
 
-  .apple-splash.apple-splash-fading {
-    opacity: 0;
+  .intro-screen.is-exiting {
     pointer-events: none;
   }
 
-  .apple-splash-canvas {
-    position: absolute;
-    inset: 0;
+  .intro-stage {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    max-width: 420px;
+    padding: 0 24px;
   }
 
-  .apple-splash-brand {
+  .intro-constellation {
+    position: relative;
+    width: 250px;
+    height: 250px;
+    flex-shrink: 0;
+    will-change: transform, opacity;
+  }
+
+  .orb-anchor {
     position: absolute;
-    bottom: 28%;
-    left: 0; right: 0;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+  }
+
+  .category-orb {
+    width: 100%;
+    height: 100%;
+    will-change: transform;
+  }
+
+  /* ── Liquid Glass orb ── */
+  .orb-glass {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background:
+      radial-gradient(
+        circle at 32% 22%,
+        var(--orb-glass-hi),
+        var(--orb-glass-mid) 40%,
+        var(--orb-glass-edge) 72%,
+        var(--orb-glass-deep)
+      );
+    backdrop-filter: blur(16px) saturate(155%);
+    -webkit-backdrop-filter: blur(16px) saturate(155%);
+    border: 1px solid var(--orb-rim);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.2),
+      0 8px 25px var(--orb-shadow);
+  }
+
+  .orb-glass::after {
+    content: "";
+    position: absolute;
+    left: 18%;
+    top: 10%;
+    width: 38%;
+    height: 26%;
+    border-radius: 50%;
+    background: radial-gradient(closest-side, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0));
+    pointer-events: none;
+  }
+
+  .orb-img {
+    width: 72%;
+    height: 72%;
+    object-fit: contain;
+    pointer-events: none;
+    filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.25));
+    -webkit-user-drag: none;
+  }
+
+  .orb-icon {
+    width: 46%;
+    height: 46%;
+    color: rgba(255, 255, 255, 0.94);
+    pointer-events: none;
+    filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.3));
+  }
+
+  /* ── Central sphere ── */
+  .center-anchor {
+    width: 80px;
+    height: 80px;
+  }
+
+  @media (min-width: 768px) {
+    .center-anchor {
+      width: 100px;
+      height: 100px;
+    }
+  }
+
+  .center-sphere {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background:
+      radial-gradient(circle at 34% 25%, var(--orb-c1), var(--orb-c2) 30%, var(--orb-c3) 64%, var(--orb-c4));
+    box-shadow:
+      inset 0 1px 1px rgba(255, 255, 255, 0.28),
+      inset 0 -10px 24px rgba(20, 5, 60, 0.35),
+      0 18px 40px rgba(81, 41, 199, 0.35),
+      0 4px 14px rgba(113, 72, 245, 0.4);
+    display: grid;
+    place-items: center;
+    will-change: transform;
+  }
+
+  .center-breath {
+    display: grid;
+    place-items: center;
+    width: 100%;
+    height: 100%;
+    animation: centerBreath 6.5s ease-in-out infinite;
+  }
+
+  .center-mark {
+    width: 56%;
+    height: 56%;
+    object-fit: contain;
+    filter: drop-shadow(0 1px 4px rgba(30, 5, 80, 0.45));
+    -webkit-user-drag: none;
+  }
+
+  @keyframes centerBreath {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.015); }
+  }
+
+  /* ── Copy: title, button, tagline ── */
+  .intro-copy {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     text-align: center;
-    opacity: 0;
-    transform: translateY(16px) scale(0.96);
-    transition: opacity 600ms cubic-bezier(0.16, 1, 0.3, 1), transform 600ms cubic-bezier(0.16, 1, 0.3, 1);
-    pointer-events: none;
-  }
-  .apple-splash-brand.visible {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-  .apple-splash-brand.fading {
-    opacity: 0;
-    transition-duration: 800ms;
-  }
-
-  .apple-splash-logo-text {
-    font-size: 2.4rem;
-    font-weight: 800;
-    letter-spacing: -0.04em;
-    background: linear-gradient(135deg, #D7CAFB 0%, #C0B0F0 25%, #8050F0 55%, #6030F0 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    filter: drop-shadow(0 0 24px rgba(96, 48, 240, 0.5));
-  }
-
-  .apple-splash-tagline {
     margin-top: 8px;
-    font-size: 0.75rem;
-    font-weight: 500;
-    color: rgba(255,255,255,0.45);
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
+    will-change: transform, opacity;
   }
 
-  /* ═══ Smooth cross-fade transition layers ═══ */
-  .transition-layer {
-    position: fixed;
-    inset: 0;
-    z-index: 9998;
-    opacity: 0;
-    transition: opacity 500ms cubic-bezier(0.4, 0, 0.2, 1);
-    pointer-events: none;
+  .intro-title {
+    margin: 0;
+    font-size: 1.75rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    background: linear-gradient(180deg, #ffffff 0%, #e9e2ff 55%, #cfc1ff 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
   }
 
-  .transition-layer-active {
-    opacity: 1;
-    pointer-events: auto;
+  @media (min-width: 768px) {
+    .intro-title {
+      font-size: 2rem;
+    }
   }
 
-  .transition-layer-exiting {
-    opacity: 0;
-    pointer-events: none;
+  .intro-button {
+    margin-top: 24px;
+    height: 46px;
+    padding: 0 34px;
+    border-radius: 999px;
+    border: none;
+    background: rgba(255, 255, 255, 0.96);
+    color: #15121d;
+    font-family: inherit;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    cursor: pointer;
+    box-shadow:
+      0 1px 2px rgba(0, 0, 0, 0.2),
+      0 10px 24px rgba(81, 41, 199, 0.28);
+    touch-action: manipulation;
+    user-select: none;
+  }
+
+  .intro-button:hover {
+    background: #ffffff;
+  }
+
+  .intro-tagline {
+    margin: 18px 0 0;
+    max-width: 280px;
+    font-size: 0.9375rem;
+    line-height: 1.5;
+    color: rgba(255, 255, 255, 0.6);
+    letter-spacing: 0.005em;
   }
 
   /* ═══ App entrance animation — discreet fade from the splash ═══ */
@@ -963,16 +1117,13 @@
   .skeleton::after {
     animation: none !important;
   }
-  .apple-splash,
-  .apple-splash * {
+  .intro-screen,
+  .intro-screen * {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
-  .apple-splash {
-    background: #050505 !important;
-  }
-  .apple-splash-brand {
-    transition: none !important;
+  .intro-screen {
+    background: #0d0d12 !important;
   }
   .onboarding-screen,
   .onboarding-screen * {
@@ -996,7 +1147,7 @@
 
 /* iOS safe area */
 @supports (padding-top: env(safe-area-inset-top)) {
-  .apple-splash,
+  .intro-screen,
   .onboarding-screen {
     padding-top: env(safe-area-inset-top);
     padding-bottom: env(safe-area-inset-bottom);

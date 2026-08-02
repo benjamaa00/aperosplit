@@ -37,7 +37,7 @@ import { ThemeToaster } from "./components/ThemeToaster";
 import { AddExpenseSheet } from "./components/AddExpenseSheet";
 import { RegisterScreen } from "./components/RegisterScreen";
 import { InviteScreen } from "./components/InviteScreen";
-import { SplashScreen } from "./components/SplashScreen";
+import { IntroScreen } from "./components/IntroScreen";
 import { TabContentSkeleton } from "./components/SkeletonLoaders";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 
@@ -92,8 +92,8 @@ export default function App() {
  const [inviteToken, setInviteToken] = useState<string | null>(null);
  const [notifications, setNotifications] = useState<Notification[]>([]);
  const [unreadCount, setUnreadCount] = useState(0);
- const [showSplash, setShowSplash] = useState(true);
- const [showOnboarding, setShowOnboarding] = useState(() => !hasCompletedOnboarding());
+  const [showIntro, setShowIntro] = useState(true);
+  const [showOnboarding, setShowOnboarding] = useState(() => !hasCompletedOnboarding());
  const [serverWaking, setServerWaking] = useState(false);
  const [serverWakeRetries, setServerWakeRetries] = useState(0);
  const [activeTutorial, setActiveTutorial] = useState<string | null>(null);
@@ -806,7 +806,13 @@ export default function App() {
  const goToEditProfile = useCallback(() => setScreen("editProfile"), []);
  const goToCategories = useCallback(() => setScreen("categoryManagement"), []);
 
- const handleLogout = useCallback(() => { setCurrentMemberId(""); setScreen("identity"); }, []);
+  const handleLogout = useCallback(() => { setCurrentMemberId(""); setScreen("identity"); }, []);
+
+  // Intro "Se connecter" — reuse the existing access flow, never auto-enter the app
+  const handleIntroLogin = useCallback(() => {
+    if (!accessCode && !inviteToken) setScreen("access");
+    setShowIntro(false);
+  }, [accessCode, inviteToken]);
 
  const handleNotificationSettingsSave = useCallback((s: { pushEnabled?: boolean; reminderFrequency?: string }) => {
  if (s.pushEnabled !== undefined) setPushNotifications(s.pushEnabled);
@@ -951,27 +957,23 @@ export default function App() {
 
  return (
  <>
- {/* Splash — stays mounted during its 500ms fade-out for overlap */}
- {showSplash && (
-   <SplashScreen onComplete={() => {
-     setShowSplash(false);
-   }} />
- )}
-
- {/* Onboarding — renders behind splash (both black bg), fades in via onboarding-entered class */}
- {showOnboarding && (
-   <OnboardingScreen onComplete={() => setShowOnboarding(false)} />
- )}
-
- {/* Main app — renders behind everything, fades in with app-entrance */}
-  {!showSplash && !showOnboarding && (
+  {/* Main app — always mounted behind the intro/onboarding so it can fade in simultaneously */}
   <div className="app-entrance h-full">
- <ThemeProvider memberId={currentMemberId}>
- <ThemeToaster />
- {content}
- </ThemeProvider>
- </div>
- )}
+  <ThemeProvider memberId={currentMemberId}>
+  <ThemeToaster />
+  {content}
+  </ThemeProvider>
+  </div>
+
+  {/* Onboarding — first-run walkthrough, above the app, below the intro */}
+  {showOnboarding && (
+    <OnboardingScreen onComplete={() => setShowOnboarding(false)} />
+  )}
+
+  {/* Intro — iCloud-style constellation; stays visible until the user taps Se connecter */}
+  {showIntro && (
+    <IntroScreen onLogin={handleIntroLogin} />
+  )}
  {activeTutorial && ALL_TUTORIALS[activeTutorial as keyof typeof ALL_TUTORIALS] && (
  <GuidedTour
  tutorialId={activeTutorial as any}
