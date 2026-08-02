@@ -1,25 +1,25 @@
 import { memo } from "react";
 
 export const BalanceCardSkeleton = memo(function BalanceCardSkeleton() {
- return (
- <div className="rounded-3xl h-48 w-full skeleton overflow-hidden">
- <div className="p-6 space-y-3">
- <div className="skeleton-text w-20 opacity-30" />
- <div className="skeleton-text-lg w-32 opacity-30" />
- <div className="skeleton-text w-40 opacity-30 mt-2" />
- <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-white/10">
- <div>
- <div className="skeleton-text w-24 opacity-30" />
- <div className="skeleton-text w-16 opacity-30 mt-1" />
- </div>
- <div>
- <div className="skeleton-text w-20 opacity-30" />
- <div className="skeleton-text w-16 opacity-30 mt-1" />
- </div>
- </div>
- </div>
- </div>
- );
+  return (
+  <div className="glass-card-enhanced rounded-[1.25rem] h-48 w-full skeleton overflow-hidden" style={{ padding: 0 }}>
+  <div className="p-6 space-y-3">
+  <div className="skeleton-text w-20 opacity-30" />
+  <div className="skeleton-text-lg w-32 opacity-30" />
+  <div className="skeleton-text w-40 opacity-30 mt-2" />
+  <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-border/50">
+  <div>
+  <div className="skeleton-text w-24 opacity-30" />
+  <div className="skeleton-text w-16 opacity-30 mt-1" />
+  </div>
+  <div>
+  <div className="skeleton-text w-20 opacity-30" />
+  <div className="skeleton-text w-16 opacity-30 mt-1" />
+  </div>
+  </div>
+  </div>
+  </div>
+  );
 });
 
 export const ExpenseCardSkeleton = memo(function ExpenseCardSkeleton() {

@@ -1,6 +1,7 @@
 import { memo, useState, useMemo } from "react";
 import { ChevronRight, ChevronDown, ArrowUpRight, X, Sparkles, Send, MessageSquare, Scale } from "lucide-react";
 import { EmptyState } from "../components/EmptyState";
+import { BottomSheet } from "../components/BottomSheet";
 import type { Member, Expense, PendingPayment } from "../types";
 import { formatCurrency } from "../utils/currency";
 import { calculateMemberBreakdown } from "../utils/debts";
@@ -16,64 +17,45 @@ interface RequestSheetProps {
 }
 
 function RequestSheet({ member, amount, currency, onClose, onConfirm }: RequestSheetProps) {
- const [note, setNote] = useState("");
+  const [note, setNote] = useState("");
 
- return (
- <div
-   className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[1100] flex items-end justify-center"
-   onClick={onClose}
- >
- <div
- className="w-full max-w-md bg-card rounded-t-[1.5rem] max-h-[80vh] overflow-y-auto [&::-webkit-scrollbar]:hidden"
- onClick={(e) => e.stopPropagation()}
- >
- <div className="w-10 h-1 rounded-full bg-muted-foreground/30 mx-auto mt-3" />
- <div className="p-6 space-y-5">
- <div className="flex items-center justify-between">
- <h3 className="text-lg font-bold tracking-tight">Demander un paiement</h3>
- <button
- onClick={onClose}
- className="w-8 h-8 flex items-center justify-center rounded-full bg-muted/50 text-muted-foreground hover:text-foreground transition-colors"
- >
- <X size={16} />
- </button>
- </div>
+  return (
+  <BottomSheet open onClose={onClose} title="Demander un paiement">
+  <div className="space-y-5">
+  <div className="flex items-center gap-4 rounded-2xl border border-border bg-card/40 p-4 backdrop-blur-sm">
+  <AvatarImg avatar={member.avatar} size="text-4xl" />
+  <div className="flex-1 min-w-0">
+  <p className="truncate text-sm font-semibold">{member.name}</p>
+  <p className="text-2xl font-bold tabular-nums text-primary">
+  {formatCurrency(amount, currency)}
+  </p>
+  </div>
+  </div>
 
- <div className="flex items-center gap-4 bg-muted/30 rounded-2xl p-4">
- <AvatarImg avatar={member.avatar} size="text-4xl" />
- <div className="flex-1 min-w-0">
- <p className="font-semibold text-sm truncate">{member.name}</p>
- <p className="text-2xl font-bold tabular-nums text-primary">
- {formatCurrency(amount, currency)}
- </p>
- </div>
- </div>
+  <div className="space-y-2">
+  <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+  <MessageSquare size={12} />
+  Note (optionnel)
+  </label>
+  <textarea
+  value={note}
+  onChange={(e) => setNote(e.target.value)}
+  placeholder="Ex: Remboursement pour le dîner..."
+  rows={3}
+  className="w-full resize-none rounded-xl border border-border bg-card/40 px-4 py-3 text-sm backdrop-blur-sm placeholder:text-muted-foreground/50 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all"
+  />
+  </div>
 
- <div className="space-y-2">
- <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
- <MessageSquare size={12} />
- Note (optionnel)
- </label>
- <textarea
- value={note}
- onChange={(e) => setNote(e.target.value)}
- placeholder="Ex: Remboursement pour le dîner..."
- rows={3}
- className="w-full bg-muted/30 border border-border rounded-xl px-4 py-3 text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all resize-none"
- />
- </div>
-
- <button
- onClick={() => onConfirm(note)}
- className="w-full bg-primary text-primary-foreground font-semibold py-3.5 rounded-2xl flex items-center justify-center gap-2 text-sm hover:bg-primary/90 transition-colors"
- >
- <Send size={15} />
- Envoyer la demande
- </button>
- </div>
- </div>
- </div>
- );
+  <button
+  onClick={() => onConfirm(note)}
+  className="auth-cta"
+  >
+  <Send size={15} />
+  Envoyer la demande
+  </button>
+  </div>
+  </BottomSheet>
+  );
 }
 
 export const BalancesTab = memo(function BalancesTab({

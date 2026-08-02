@@ -4,19 +4,19 @@ import {
  Trash2,
  Send,
  Users,
- UserCheck,
- Search,
- X,
- Receipt,
- Copy,
- MoreVertical,
- Pencil,
+  UserCheck,
+  Search,
+  Receipt,
+  Copy,
+  MoreVertical,
+  Pencil,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { Member, Expense, GroupCategory } from "../types";
 import { formatCurrency, formatDate } from "../utils/currency";
 import { AvatarImg } from "../components/AvatarImg";
 import { EmptyState } from "../components/EmptyState";
+import { BottomSheet } from "../components/BottomSheet";
 import { GlobalSearchScreen } from "../components/GlobalSearchScreen";
 
 type ModalState =
@@ -540,30 +540,8 @@ export const ExpensesTab = memo(function ExpensesTab({
 
  
  {modal.type === "group" && (
- <div
- key="group-backdrop"
- className="fixed inset-0 z-[1100] bg-black/40 backdrop-blur-sm"
- onClick={close}
- />
- )}
- {modal.type === "group" && (
- <div
- key="group-sheet"
- className="fixed inset-x-0 bottom-0 z-[1100] bg-card rounded-t-[1.5rem] p-5 pb-8 max-h-[80vh] flex flex-col"
- onClick={(e) => e.stopPropagation()}
- >
- <div className="w-10 h-1 rounded-full bg-muted-foreground/30 mx-auto mb-4" />
- <div className="flex items-center justify-between mb-4">
- <h2 className="text-lg font-bold">
- Demander à tous
- </h2>
- <button
- onClick={close}
- className="w-8 h-8 rounded-full bg-muted flex items-center justify-center"
- >
- <X size={16} />
- </button>
- </div>
+  <BottomSheet open onClose={close} title="Demander à tous" maxHeight="80vh">
+
 
  <div className="flex-1 overflow-y-auto space-y-1 mb-4">
  {modal.participants.map((pid) => {
@@ -626,46 +604,24 @@ export const ExpensesTab = memo(function ExpensesTab({
  />
  </div>
 
- <button
- onClick={handleGroupConfirm}
- disabled={modal.selectedIds.length === 0}
- className="w-full bg-primary text-primary-foreground py-3.5 rounded-2xl text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-40"
- >
- <Send size={16} />
- Envoyer la demande{" "}
- {modal.selectedIds.length > 0 &&
- `(${modal.selectedIds.length})`}
- </button>
- </div>
- )}
+  <button
+  onClick={handleGroupConfirm}
+  disabled={modal.selectedIds.length === 0}
+  className="w-full bg-primary text-primary-foreground py-3.5 rounded-2xl text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-40"
+  >
+  <Send size={16} />
+  Envoyer la demande{" "}
+  {modal.selectedIds.length > 0 &&
+  `(${modal.selectedIds.length})`}
+  </button>
+  </BottomSheet>
+  )}
  
 
  
  {modal.type === "individual" && (
- <div
- key="indiv-backdrop"
- className="fixed inset-0 z-[1100] bg-black/40 backdrop-blur-sm"
- onClick={close}
- />
- )}
- {modal.type === "individual" && (
- <div
- key="indiv-sheet"
- className="fixed inset-x-0 bottom-0 z-[1100] bg-card rounded-t-[1.5rem] p-5 pb-8 max-h-[70vh] flex flex-col"
- onClick={(e) => e.stopPropagation()}
- >
- <div className="w-10 h-1 rounded-full bg-muted-foreground/30 mx-auto mb-4" />
- <div className="flex items-center justify-between mb-4">
- <h2 className="text-lg font-bold">
- Choisir un membre
- </h2>
- <button
- onClick={close}
- className="w-8 h-8 rounded-full bg-muted flex items-center justify-center"
- >
- <X size={16} />
- </button>
- </div>
+  <BottomSheet open onClose={close} title="Choisir un membre" maxHeight="70vh">
+
 
  <div className="flex-1 overflow-y-auto space-y-1 mb-4">
  {modal.participants.map((pid) => {
@@ -733,44 +689,22 @@ export const ExpensesTab = memo(function ExpensesTab({
  />
  </div>
 
- <button
- onClick={handleIndividualConfirm}
- disabled={!modal.selectedId}
- className="w-full bg-primary text-primary-foreground py-3.5 rounded-2xl text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-40"
- >
- <Send size={16} />
- Envoyer la demande
- </button>
- </div>
- )}
+  <button
+  onClick={handleIndividualConfirm}
+  disabled={!modal.selectedId}
+  className="w-full bg-primary text-primary-foreground py-3.5 rounded-2xl text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-40"
+  >
+  <Send size={16} />
+  Envoyer la demande
+  </button>
+  </BottomSheet>
+  )}
  
 
  
  {modal.type === "reimbursement" && (
- <div
- key="reimb-backdrop"
- className="fixed inset-0 z-[1100] bg-black/40 backdrop-blur-sm"
- onClick={close}
- />
- )}
- {modal.type === "reimbursement" && (
- <div
- key="reimb-sheet"
- className="fixed inset-x-0 bottom-0 z-[1100] bg-card rounded-t-[1.5rem] p-5 pb-8"
- onClick={(e) => e.stopPropagation()}
- >
- <div className="w-10 h-1 rounded-full bg-muted-foreground/30 mx-auto mb-4" />
- <div className="flex items-center justify-between mb-4">
- <h2 className="text-lg font-bold">
- Demander remboursement
- </h2>
- <button
- onClick={close}
- className="w-8 h-8 rounded-full bg-muted flex items-center justify-center"
- >
- <X size={16} />
- </button>
- </div>
+  <BottomSheet open onClose={close} title="Demander remboursement">
+
 
  <div className="bg-background/50 rounded-xl p-4 flex items-center gap-3 mb-4">
  <div className="w-10 h-10 rounded-full overflow-hidden">
@@ -808,15 +742,15 @@ export const ExpensesTab = memo(function ExpensesTab({
  />
  </div>
 
- <button
- onClick={handleReimbursementConfirm}
- className="w-full bg-primary text-primary-foreground py-3.5 rounded-2xl text-sm font-semibold flex items-center justify-center gap-2"
- >
- <Send size={16} />
- Envoyer la demande
- </button>
- </div>
- )}
+  <button
+  onClick={handleReimbursementConfirm}
+  className="w-full bg-primary text-primary-foreground py-3.5 rounded-2xl text-sm font-semibold flex items-center justify-center gap-2"
+  >
+  <Send size={16} />
+  Envoyer la demande
+  </button>
+  </BottomSheet>
+  )}
  
  </>
  );

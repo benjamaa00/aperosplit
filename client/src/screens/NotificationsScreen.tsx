@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { ArrowLeft, Bell, Check, CheckCheck, X, Receipt, CreditCard, Users, MessageCircle, Clock, AlertTriangle, Trash2 } from "lucide-react";
 import { EmptyState } from "../components/EmptyState";
+import { BottomSheet } from "../components/BottomSheet";
 import type { Notification } from "../types";
 
 interface NotificationsScreenProps {
@@ -151,69 +152,65 @@ export function NotificationsScreen({ notifications, currentMemberId, onBack, on
 
       {/* Detail Modal */}
       {selectedNotif && (
-        <div className="fixed inset-0 z-[9999] flex items-end justify-center" onClick={() => setSelectedNotif(null)}>
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-          <div className="relative w-full max-w-md bg-card border border-border rounded-t-3xl p-6 pb-8 animate-slide-up"
-            onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-5">
-              <div className="flex items-center gap-3">
-                <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${getIconBg(selectedNotif.type)}`}>
-                  {getIcon(selectedNotif.type)}
-                </div>
-                <div>
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{getDetailLabel(selectedNotif.type)}</p>
-                  <p className="text-[10px] text-muted-foreground/50 mt-0.5">
-                    {new Date(selectedNotif.createdAt).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })}
-                  </p>
-                </div>
+        <BottomSheet open onClose={() => setSelectedNotif(null)} showClose={false}>
+          <div className="mb-5 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${getIconBg(selectedNotif.type)}`}>
+                {getIcon(selectedNotif.type)}
               </div>
-              <button onClick={() => setSelectedNotif(null)}
-                className="w-8 h-8 rounded-full bg-muted/30 flex items-center justify-center">
-                <X size={16} />
-              </button>
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{getDetailLabel(selectedNotif.type)}</p>
+                <p className="mt-0.5 text-[10px] text-muted-foreground/50">
+                  {new Date(selectedNotif.createdAt).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                </p>
+              </div>
             </div>
-
-            <h3 className="text-lg font-bold mb-2">{selectedNotif.title}</h3>
-            <p className="text-sm text-muted-foreground leading-relaxed">{selectedNotif.message}</p>
-
-            {selectedNotif.data && (
-              <div className="mt-4 p-3 rounded-xl bg-muted/20 border border-border">
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2 font-semibold">Détails</p>
-                <div className="space-y-1.5">
-                  {selectedNotif.data.amount && (
-                    <div className="flex justify-between text-xs">
-                      <span className="text-muted-foreground">Montant</span>
-                      <span className="font-semibold">{Number(selectedNotif.data.amount).toFixed(2)} MAD</span>
-                    </div>
-                  )}
-                  {selectedNotif.data.paymentId && (
-                    <div className="flex justify-between text-xs">
-                      <span className="text-muted-foreground">Paiement</span>
-                      <span className="font-mono text-[10px] text-muted-foreground">{selectedNotif.data.paymentId.slice(0, 16)}...</span>
-                    </div>
-                  )}
-                  {selectedNotif.data.payerId && (
-                    <div className="flex justify-between text-xs">
-                      <span className="text-muted-foreground">Payeur</span>
-                      <span className="font-mono text-[10px] text-muted-foreground">{selectedNotif.data.payerId.slice(0, 16)}...</span>
-                    </div>
-                  )}
-                  {selectedNotif.data.fromId && (
-                    <div className="flex justify-between text-xs">
-                      <span className="text-muted-foreground">De</span>
-                      <span className="font-mono text-[10px] text-muted-foreground">{selectedNotif.data.fromId.slice(0, 16)}...</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
             <button onClick={() => setSelectedNotif(null)}
-              className="w-full mt-5 py-3 rounded-2xl bg-primary text-primary-foreground font-semibold text-sm">
-              Fermer
+              className="flex h-8 w-8 items-center justify-center rounded-full bg-card/60 text-muted-foreground backdrop-blur-sm transition-colors hover:text-foreground">
+              <X size={16} />
             </button>
           </div>
-        </div>
+
+          <h3 className="mb-2 text-lg font-bold">{selectedNotif.title}</h3>
+          <p className="text-sm leading-relaxed text-muted-foreground">{selectedNotif.message}</p>
+
+          {selectedNotif.data && (
+            <div className="mt-4 rounded-xl border border-border bg-card/40 p-3 backdrop-blur-sm">
+              <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Détails</p>
+              <div className="space-y-1.5">
+                {selectedNotif.data.amount && (
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Montant</span>
+                    <span className="font-semibold">{Number(selectedNotif.data.amount).toFixed(2)} MAD</span>
+                  </div>
+                )}
+                {selectedNotif.data.paymentId && (
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Paiement</span>
+                    <span className="font-mono text-[10px] text-muted-foreground">{selectedNotif.data.paymentId.slice(0, 16)}...</span>
+                  </div>
+                )}
+                {selectedNotif.data.payerId && (
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Payeur</span>
+                    <span className="font-mono text-[10px] text-muted-foreground">{selectedNotif.data.payerId.slice(0, 16)}...</span>
+                  </div>
+                )}
+                {selectedNotif.data.fromId && (
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">De</span>
+                    <span className="font-mono text-[10px] text-muted-foreground">{selectedNotif.data.fromId.slice(0, 16)}...</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          <button onClick={() => setSelectedNotif(null)}
+            className="auth-cta mt-5">
+            Fermer
+          </button>
+        </BottomSheet>
       )}
     </div>
   );

@@ -146,14 +146,18 @@ export const StatsTab = memo(function StatsTab({ expenses, members, currentMembe
  </header>
 
  {/* Period Selector */}
- <div data-tutorial="stats-controls" className="flex gap-2 bg-card/30 border border-border rounded-2xl p-1">
- {([["week", "Semaine"], ["month", "Mois"], ["year", "Année"], ["all", "Tout"]] as [Period, string][]).map(([key, label]) => (
- <button key={key} onClick={() => setPeriod(key)}
- className={`flex-1 py-2.5 rounded-xl text-xs font-semibold transition-all ${period === key ? "bg-primary text-primary-foreground shadow-lg shadow-primary/30" : "text-muted-foreground hover:text-foreground"}`}>
- {label}
- </button>
- ))}
- </div>
+  <div data-tutorial="stats-controls" className="flex gap-1.5 rounded-2xl border border-border bg-card/40 p-1.5 shadow-[inset_0_1px_0_oklch(1_0_0/0.06)] backdrop-blur-xl">
+  {([["week", "Semaine"], ["month", "Mois"], ["year", "Année"], ["all", "Tout"]] as [Period, string][]).map(([key, label]) => (
+  <button key={key} onClick={() => setPeriod(key)}
+  className={`flex-1 rounded-xl py-2.5 text-xs font-semibold transition-all duration-200 ${
+  period === key
+  ? "bg-gradient-to-b from-primary to-primary/90 text-primary-foreground shadow-lg shadow-primary/30"
+  : "text-muted-foreground hover:text-foreground"
+  }`}>
+  {label}
+  </button>
+  ))}
+  </div>
 
  {/* Member Filter */}
  <div className="flex gap-2 items-center">

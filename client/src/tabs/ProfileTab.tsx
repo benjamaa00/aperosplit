@@ -639,11 +639,13 @@ export const ProfileTab = memo(function ProfileTab({
  
  
  
- onClick={() => { haptic("light"); onOpenNotifications(); }}
- className="p-4 rounded-2xl bg-card border border-border flex flex-col items-center gap-2 relative"
- >
- <Bell size={20} />
- <span className="text-xs font-medium">Notifications</span>
+  onClick={() => { haptic("light"); onOpenNotifications(); }}
+  className="glass-card-enhanced relative flex flex-col items-center gap-2 rounded-2xl p-4 transition-transform duration-200 active:scale-95"
+  >
+  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 text-primary shadow-lg shadow-primary/10">
+  <Bell size={19} />
+  </div>
+  <span className="text-xs font-medium">Notifications</span>
  {unreadCount && unreadCount > 0 ? (
  <span className="absolute top-2 right-2 w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
  {unreadCount}
@@ -654,39 +656,45 @@ export const ProfileTab = memo(function ProfileTab({
  {onOpenReports && (
  <button
  
- 
- 
- onClick={() => { haptic("light"); onOpenReports(); }}
- className="p-4 rounded-2xl bg-card border border-border flex flex-col items-center gap-2"
- >
- <BarChart3 size={20} />
- <span className="text-xs font-medium">Rapports</span>
- </button>
- )}
- {onOpenGroupSettings && currentMember.role === "admin" && (
- <button
- 
- 
- 
- onClick={() => { haptic("light"); onOpenGroupSettings(); }}
- className="p-4 rounded-2xl bg-card border border-border flex flex-col items-center gap-2"
- >
- <Users size={20} />
- <span className="text-xs font-medium">Groupe</span>
- </button>
- )}
- {onOpenMembers && currentMember.role === "admin" && (
- <button
- 
- 
- 
- onClick={() => { haptic("light"); onOpenMembers(); }}
- className="p-4 rounded-2xl bg-card border border-border flex flex-col items-center gap-2"
- >
- <Settings size={20} />
- <span className="text-xs font-medium">Membres</span>
- </button>
- )}
+  onClick={() => { haptic("light"); onOpenReports(); }}
+  className="glass-card-enhanced flex flex-col items-center gap-2 rounded-2xl p-4 transition-transform duration-200 active:scale-95"
+  >
+  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 text-primary shadow-lg shadow-primary/10">
+  <BarChart3 size={19} />
+  </div>
+  <span className="text-xs font-medium">Rapports</span>
+  </button>
+  )}
+  {onOpenGroupSettings && currentMember.role === "admin" && (
+  <button
+  
+  
+
+  
+  onClick={() => { haptic("light"); onOpenGroupSettings(); }}
+  className="glass-card-enhanced flex flex-col items-center gap-2 rounded-2xl p-4 transition-transform duration-200 active:scale-95"
+  >
+  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 text-primary shadow-lg shadow-primary/10">
+  <Users size={19} />
+  </div>
+  <span className="text-xs font-medium">Groupe</span>
+  </button>
+  )}
+  {onOpenMembers && currentMember.role === "admin" && (
+  <button
+  
+  
+
+  
+  onClick={() => { haptic("light"); onOpenMembers(); }}
+  className="glass-card-enhanced flex flex-col items-center gap-2 rounded-2xl p-4 transition-transform duration-200 active:scale-95"
+  >
+  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 text-primary shadow-lg shadow-primary/10">
+  <Settings size={19} />
+  </div>
+  <span className="text-xs font-medium">Membres</span>
+  </button>
+  )}
  </div>
 
  {/* Share Section - Admin Only */}
