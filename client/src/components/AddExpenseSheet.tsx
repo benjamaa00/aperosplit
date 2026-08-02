@@ -518,10 +518,10 @@ function AddExpenseSheet({
   className="fixed inset-0 z-[1100] bg-black/60 backdrop-blur-md"
  onClick={onClose}
  >
- <div
- onClick={(e) => e.stopPropagation()}
- className="absolute bottom-0 left-0 right-0 bg-background rounded-t-[2.5rem] max-h-[92vh] overflow-hidden flex flex-col"
- >
+  <div
+  onClick={(e) => e.stopPropagation()}
+  className="bottom-sheet absolute bottom-0 left-0 right-0 rounded-t-[2.5rem] max-h-[92vh] overflow-hidden flex flex-col"
+  >
  {/* Handle */}
  <div className="flex justify-center pt-3 pb-2 shrink-0">
  <div className="w-10 h-1.5 rounded-full bg-muted-foreground/20" />
