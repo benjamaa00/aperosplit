@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { motion, MotionConfig } from "framer-motion";
 import { haptics } from "../utils/haptics";
-import { CATEGORY_ORBS, CENTER_IMAGE, CENTER_ORB, INTRO_PHASE_AT, ORB_IMAGES } from "./introConfig";
+import { CATEGORY_ORBS, CENTER_IMAGE, CENTER_ORB, INTRO_CYCLE_MS, INTRO_MOTION, INTRO_PHASE_AT, ORB_IMAGES } from "./introConfig";
 import type { IntroPhase } from "./introConfig";
 import { CategoryOrb } from "./CategoryOrb";
 
 const EASE: [number, number, number, number] = [0.22, 1, 0.36, 1];
 const EXIT_MS = 550;
-const PHASE_ORDER: IntroPhase[] = ["orbit", "converge", "name", "emerge", "drift"];
+const PHASE_ORDER: Exclude<IntroPhase, "orbit">[] = ["converge", "name", "return"];
 
 function CenterMark() {
   const [failed, setFailed] = useState(false);
@@ -46,9 +46,11 @@ export function IntroScreen({ onLogin }: IntroScreenProps) {
   const onLoginRef = useRef(onLogin);
   onLoginRef.current = onLogin;
 
-  const [phase, setPhase] = useState<IntroPhase>("idle");
+  const [phase, setPhase] = useState<IntroPhase>("orbit");
   const constellationRef = useRef<HTMLDivElement>(null);
-  const [rect, setRect] = useState<{ w: number; h: number } | null>(null);
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  const [constellation, setConstellation] = useState<{ left: number; top: number; w: number; h: number } | null>(null);
+  const [rise, setRise] = useState<{ dx: number; dy: number } | null>(null);
 
   useEffect(() => {
     if (!exiting) return;
@@ -63,17 +65,35 @@ export function IntroScreen({ onLogin }: IntroScreenProps) {
     });
   }, []);
 
+  // cycle cinématique : se répète toutes les INTRO_CYCLE_MS
   useEffect(() => {
-    const timers = PHASE_ORDER.map((p) => setTimeout(() => setPhase(p), INTRO_PHASE_AT[p]));
+    let timers: ReturnType<typeof setTimeout>[] = [];
+    const loop = () => {
+      timers = PHASE_ORDER.map((p) => setTimeout(() => setPhase(p), INTRO_PHASE_AT[p]));
+      timers.push(
+        setTimeout(() => {
+          setPhase("orbit");
+          loop();
+        }, INTRO_CYCLE_MS),
+      );
+    };
+    loop();
     return () => timers.forEach(clearTimeout);
   }, []);
 
   useLayoutEffect(() => {
     const measure = () => {
       const el = constellationRef.current;
+      const t = titleRef.current;
       if (!el) return;
       const r = el.getBoundingClientRect();
-      setRect({ w: r.width, h: r.height });
+      setConstellation({ left: r.left, top: r.top, w: r.width, h: r.height });
+      if (t) {
+        const tr = t.getBoundingClientRect();
+        const ax = r.left + r.width * (CENTER_ORB.x / 100);
+        const ay = r.top + r.height * (CENTER_ORB.y / 100);
+        setRise({ dx: ax - (tr.left + tr.width / 2), dy: ay - (tr.top + tr.height / 2) });
+      }
     };
     measure();
     window.addEventListener("resize", measure);
@@ -89,6 +109,7 @@ export function IntroScreen({ onLogin }: IntroScreenProps) {
 
   const cx = CENTER_ORB.x / 100;
   const cy = CENTER_ORB.y / 100;
+  const isNaming = phase === "name" || phase === "return";
 
   return (
     <MotionConfig reducedMotion="user">
@@ -113,38 +134,22 @@ export function IntroScreen({ onLogin }: IntroScreenProps) {
               <motion.div
                 className="center-sphere"
                 initial={{ opacity: 0, scale: 0.65 }}
-                animate={
-                  phase === "name"
-                    ? { opacity: 1, scale: 1.05 }
-                    : { opacity: 1, scale: 1 }
-                }
+                animate={phase === "name" ? { opacity: 0, scale: 1.12 } : { opacity: 1, scale: 1 }}
                 transition={
                   phase === "name"
-                    ? { duration: 0.8, repeat: Infinity, repeatType: "reverse", ease: "easeInOut" }
-                    : { delay: 0.25, duration: 0.5, ease: EASE }
+                    ? { duration: INTRO_MOTION.sphereFadeOutMs / 1000, ease: EASE }
+                    : phase === "return"
+                      ? { duration: INTRO_MOTION.returnMs / 1000, ease: EASE }
+                      : { delay: 0.25, duration: 0.5, ease: EASE }
                 }
               >
                 <div className="center-breath">
-                  <motion.div
-                    className="center-mark-wrap"
-                    animate={phase === "name" ? { opacity: 0, scale: 0.7 } : { opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.4, ease: EASE }}
-                  >
-                    <CenterMark />
-                  </motion.div>
-                  <motion.div
-                    className="center-name"
-                    initial={false}
-                    animate={phase === "name" ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.85 }}
-                    transition={{ duration: 0.4, ease: EASE }}
-                  >
-                    AperoSplit
-                  </motion.div>
+                  <CenterMark />
                 </div>
               </motion.div>
             </div>
 
-            {rect &&
+            {constellation &&
               CATEGORY_ORBS.map((orb, i) => (
                 <CategoryOrb
                   key={orb.label}
@@ -160,8 +165,8 @@ export function IntroScreen({ onLogin }: IntroScreenProps) {
                   swapInterval={orb.swapInterval}
                   phase={phase}
                   index={i}
-                  offsetX={(orb.x / 100 - cx) * rect.w}
-                  offsetY={(orb.y / 100 - cy) * rect.h}
+                  offsetX={(orb.x / 100 - cx) * constellation.w}
+                  offsetY={(orb.y / 100 - cy) * constellation.h}
                 />
               ))}
           </motion.div>
@@ -172,10 +177,21 @@ export function IntroScreen({ onLogin }: IntroScreenProps) {
             transition={{ duration: EXIT_MS / 1000, ease: "easeInOut" }}
           >
             <motion.h1
-              className="intro-title"
+              ref={titleRef}
+              className={`intro-title${isNaming ? " is-naming" : ""}`}
               initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.9, duration: 0.5, ease: EASE }}
+              animate={
+                phase === "name" && rise
+                  ? { x: rise.dx, y: rise.dy, scale: INTRO_MOTION.titleScale, opacity: 1 }
+                  : { x: 0, y: 0, scale: 1, opacity: 1 }
+              }
+              transition={
+                phase === "name"
+                  ? { duration: 0.5, ease: EASE }
+                  : phase === "return"
+                    ? { duration: INTRO_MOTION.returnMs / 1000, ease: EASE }
+                    : { delay: 0.9, duration: 0.5, ease: EASE }
+              }
             >
               AperoSplit
             </motion.h1>

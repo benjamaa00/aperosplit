@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
 import type { CSSProperties } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import type { Transition } from "framer-motion";
 import type { LucideIcon } from "lucide-react";
-import { CENTER_ORB, INTRO_SEQUENCE } from "./introConfig";
+import { CENTER_ORB, INTRO_MOTION } from "./introConfig";
 import type { IntroPhase } from "./introConfig";
 
 const EASE: [number, number, number, number] = [0.22, 1, 0.36, 1];
@@ -22,7 +21,7 @@ export interface CategoryOrbProps {
   floatDelay?: number;
   startIndex?: number;
   swapInterval?: number;
-  /** phase courante de la séquence cinématique */
+  /** phase courante du cycle cinématique */
   phase: IntroPhase;
   /** index du satellite (pour le stagger à la sortie) */
   index: number;
@@ -68,19 +67,10 @@ export function CategoryOrb({
 
   const holderTransition =
     phase === "converge"
-      ? { duration: INTRO_SEQUENCE.convergeDurationMs / 1000, ease: EASE }
-      : phase === "emerge"
-        ? { duration: INTRO_SEQUENCE.emergeDurationMs / 1000, ease: EASE, delay: index * 0.06 }
+      ? { duration: INTRO_MOTION.convergeMs / 1000, ease: EASE }
+      : phase === "return"
+        ? { duration: INTRO_MOTION.returnMs / 1000, ease: EASE, delay: index * 0.06 }
         : { duration: 0.5, ease: EASE };
-
-  const rotate = phase === "orbit" ? 360 : phase === "drift" ? 720 : phase === "idle" ? 0 : 360;
-
-  const orbitTransition: Transition =
-    phase === "orbit"
-      ? { duration: INTRO_SEQUENCE.orbitDurationMs / 1000, ease: "linear" }
-      : phase === "drift"
-        ? { duration: INTRO_SEQUENCE.driftRotationMs / 1000, ease: "linear", repeat: Infinity }
-        : { duration: 0.3, ease: EASE };
 
   const style = {
     left: `${CENTER_ORB.x}%`,
@@ -98,11 +88,7 @@ export function CategoryOrb({
       aria-label={label}
       style={style}
     >
-      <motion.div
-        className="orb-orbit"
-        animate={{ rotate }}
-        transition={orbitTransition}
-      >
+      <div className="orb-orbit">
         <motion.div
           className="orb-holder"
           initial={rest}
@@ -138,7 +124,7 @@ export function CategoryOrb({
             </div>
           </motion.div>
         </motion.div>
-      </motion.div>
+      </div>
     </div>
   );
 }

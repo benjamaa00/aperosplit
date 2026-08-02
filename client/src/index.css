@@ -598,11 +598,17 @@
     inset: 0;
   }
 
-  /* Orbite : rotation autour du centre de la constellation (la sphère) */
+  /* Orbite : rotation très lente et continue autour de la sphère centrale */
   .orb-orbit {
     position: absolute;
     inset: 0;
+    animation: orbSpin 26s linear infinite;
     will-change: transform;
+  }
+
+  @keyframes orbSpin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
   }
 
   /* Porteur du satellite : décalé radialement, rentre/sort du centre */
@@ -707,31 +713,6 @@
     animation: centerBreath 6.5s ease-in-out infinite;
   }
 
-  .center-mark-wrap {
-    position: absolute;
-    inset: 0;
-    display: grid;
-    place-items: center;
-  }
-
-  .center-name {
-    position: absolute;
-    inset: 0;
-    display: grid;
-    place-items: center;
-    margin: 0;
-    font-size: clamp(1.35rem, 1rem + 1.5vw, 1.9rem);
-    font-weight: 800;
-    letter-spacing: -0.02em;
-    background: linear-gradient(180deg, #ffffff 0%, #e9e2ff 55%, #cfc1ff 100%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
-    color: transparent;
-    pointer-events: none;
-    will-change: transform, opacity;
-  }
-
   .center-mark {
     width: 56%;
     height: 56%;
@@ -771,6 +752,13 @@
     .intro-title {
       font-size: 2rem;
     }
+  }
+
+  /* Titre monté « en grandeur » : coloré une fois apparu */
+  .intro-title.is-naming {
+    background: linear-gradient(180deg, #ffffff 0%, #c4b5fd 35%, #a78bfa 65%, #7c3aed 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
   }
 
   .intro-button {

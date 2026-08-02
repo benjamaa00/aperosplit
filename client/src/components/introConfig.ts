@@ -65,29 +65,33 @@ export const CATEGORY_ORBS: CategoryOrbConfig[] = [
 ];
 
 /**
- * Séquence cinématique de l'intro :
- *  1. "orbit"    — les satellites tournent autour de la sphère centrale (2 s)
- *  2. "converge" — ils rentrent au centre de la sphère et s'y évanouissent
- *  3. "name"     — la sphère centrale affiche le nom « AperoSplit » (2 s)
- *  4. "emerge"   — les satellites ressortent du centre vers leurs positions
- *  5. "drift"    — ils continuent de tourner lentement autour de la sphère
+ * Cycle cinématique de l'intro (se répète toutes les 8 s) :
+ *  1. "orbit"   — les satellites tournent très lentement autour de la sphère
+ *  2. "converge"— ils rentrent en douceur au centre de la sphère principale
+ *  3. "name"    — la sphère disparaît complètement ; le titre « AperoSplit »
+ *                monte depuis le bas et s'affiche en grand et coloré (2 s)
+ *  4. "return"  — le titre redescend, la sphère réapparaît en douceur et les
+ *                satellites ressortent smooth ; le cycle recommence.
  */
-export type IntroPhase = "idle" | "orbit" | "converge" | "name" | "emerge" | "drift";
+export type IntroPhase = "orbit" | "converge" | "name" | "return";
 
-export const INTRO_SEQUENCE = {
-  orbitStartMs: 2600,
-  orbitDurationMs: 2000,
-  convergeDurationMs: 700,
-  nameDurationMs: 2000,
-  emergeDurationMs: 700,
-  driftRotationMs: 40000,
+export const INTRO_CYCLE_MS = 8000;
+
+/** moments des phases (ms) dans le cycle, à partir du début du cycle */
+export const INTRO_PHASE_AT = {
+  converge: 4000,
+  name: 4800,
+  return: 6800,
 } as const;
 
-export const INTRO_PHASE_AT: Record<IntroPhase, number> = {
-  idle: 0,
-  orbit: INTRO_SEQUENCE.orbitStartMs,
-  converge: INTRO_SEQUENCE.orbitStartMs + INTRO_SEQUENCE.orbitDurationMs,
-  name: INTRO_SEQUENCE.orbitStartMs + INTRO_SEQUENCE.orbitDurationMs + INTRO_SEQUENCE.convergeDurationMs,
-  emerge: INTRO_SEQUENCE.orbitStartMs + INTRO_SEQUENCE.orbitDurationMs + INTRO_SEQUENCE.convergeDurationMs + INTRO_SEQUENCE.nameDurationMs,
-  drift: INTRO_SEQUENCE.orbitStartMs + INTRO_SEQUENCE.orbitDurationMs + INTRO_SEQUENCE.convergeDurationMs + INTRO_SEQUENCE.nameDurationMs + INTRO_SEQUENCE.emergeDurationMs,
-};
+export const INTRO_MOTION = {
+  /** durée d'un tour complet de rotation lente (s) */
+  spinDurationSec: 26,
+  convergeMs: 800,
+  nameMs: 2000,
+  returnMs: 1200,
+  /** durée de la disparition de la sphère pendant le nom */
+  sphereFadeOutMs: 400,
+  /** échelle du titre affiché « en grandeur » */
+  titleScale: 1.7,
+} as const;
