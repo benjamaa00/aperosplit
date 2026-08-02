@@ -79,19 +79,19 @@ export const INTRO_CYCLE_MS = 8000;
 
 /** moments des phases (ms) dans le cycle, à partir du début du cycle */
 export const INTRO_PHASE_AT = {
-  converge: 4000,
+  converge: 3500,
   name: 4800,
   return: 6800,
 } as const;
 
 export const INTRO_MOTION = {
   /** durée d'un tour complet de rotation lente (s) */
-  spinDurationSec: 26,
-  convergeMs: 800,
+  spinDurationSec: 40,
+  convergeMs: 1300,
   nameMs: 2000,
   returnMs: 1200,
   /** durée de la disparition de la sphère pendant le nom */
-  sphereFadeOutMs: 400,
+  sphereFadeOutMs: 900,
   /** échelle du titre affiché « en grandeur » */
   titleScale: 1.7,
 } as const;

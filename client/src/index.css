@@ -602,13 +602,27 @@
   .orb-orbit {
     position: absolute;
     inset: 0;
-    animation: orbSpin 26s linear infinite;
+    animation: orbSpin var(--orb-spin-dur, 40s) linear infinite;
     will-change: transform;
   }
 
   @keyframes orbSpin {
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
+  }
+
+  /* L'emoji contre-tourne au même rythme : il reste droit et centré
+     pendant que sa sphère orbite autour de la sphère principale */
+  .orb-glyph {
+    position: absolute;
+    inset: 0;
+    animation: orbSpinReverse var(--orb-spin-dur, 40s) linear infinite;
+    will-change: transform;
+  }
+
+  @keyframes orbSpinReverse {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(-360deg); }
   }
 
   /* Porteur du satellite : décalé radialement, rentre/sort du centre */
