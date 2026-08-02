@@ -76,7 +76,7 @@ export function CategoryOrb({
       >
         <div className="orb-glass">
           {current ? (
-            <AnimatePresence initial={false}>
+            <AnimatePresence initial={false} mode="wait">
               <motion.img
                 key={current}
                 className="orb-img"
@@ -84,10 +84,10 @@ export function CategoryOrb({
                 alt={label}
                 loading="eager"
                 draggable={false}
-                initial={{ opacity: 0, scale: 0.9 }}
+                initial={{ opacity: 0, scale: 0.85 }}
                 animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 1.1 }}
-                transition={{ duration: 0.5, ease: EASE }}
+                exit={{ opacity: 0, scale: 0.85 }}
+                transition={{ duration: 0.35, ease: EASE }}
                 onError={() => setFailed((prev) => new Set(prev).add(current))}
               />
             </AnimatePresence>
