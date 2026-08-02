@@ -1,4 +1,4 @@
-import { memo, useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { memo, useState, useRef, useEffect, useCallback, useMemo, type PointerEvent as ReactPointerEvent } from "react";
 import {
   ArrowLeft, Send, Users, X, MessageCircle,
   Mic, MicOff, Play, Pause, Paperclip, Trash2, X as XIcon,
@@ -113,6 +113,10 @@ export const MessagesTab = memo(function MessagesTab({
   const swipeCancelRef = useRef(false);
   const recordBarRef = useRef<HTMLDivElement>(null);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const swipeStartXRef = useRef(0);
+  const swipeStartYRef = useRef(0);
+  const swipeActiveRef = useRef(false);
+  const swipeFiredRef = useRef(false);
 
   const regularConversationsQuery = trpc.equilibra.getConversations.useQuery(
     { memberId: currentMemberId },
@@ -526,14 +530,40 @@ export const MessagesTab = memo(function MessagesTab({
     return `${m}:${sec.toString().padStart(2, "0")}`;
   }, []);
 
-  const handleMessagePointerDown = useCallback((msg: ConversationMessage) => {
+  const handleMessagePointerDown = useCallback((msg: ConversationMessage, e: ReactPointerEvent) => {
+    swipeStartXRef.current = e.clientX;
+    swipeStartYRef.current = e.clientY;
+    swipeActiveRef.current = true;
+    swipeFiredRef.current = false;
     longPressTimerRef.current = setTimeout(() => {
       setActionSheetMsg(msg);
       haptics.medium();
     }, 600);
   }, []);
 
+  const handleMessagePointerMove = useCallback((msg: ConversationMessage, e: ReactPointerEvent) => {
+    if (!swipeActiveRef.current || swipeFiredRef.current) return;
+    const dx = e.clientX - swipeStartXRef.current;
+    const dy = e.clientY - swipeStartYRef.current;
+    if (Math.abs(dy) > 20 && Math.abs(dy) > Math.abs(dx)) {
+      swipeActiveRef.current = false;
+      return;
+    }
+    if (dx > 60 && dx > Math.abs(dy) * 1.5) {
+      swipeFiredRef.current = true;
+      swipeActiveRef.current = false;
+      if (longPressTimerRef.current) {
+        clearTimeout(longPressTimerRef.current);
+        longPressTimerRef.current = null;
+      }
+      startReply(msg);
+    } else if (dx < -30) {
+      swipeActiveRef.current = false;
+    }
+  }, [startReply]);
+
   const handleMessagePointerUp = useCallback(() => {
+    swipeActiveRef.current = false;
     if (longPressTimerRef.current) {
       clearTimeout(longPressTimerRef.current);
       longPressTimerRef.current = null;
@@ -541,6 +571,8 @@ export const MessagesTab = memo(function MessagesTab({
   }, []);
 
   const handleMessagePointerLeave = useCallback(() => {
+    if (swipeFiredRef.current) return;
+    swipeActiveRef.current = false;
     if (longPressTimerRef.current) {
       clearTimeout(longPressTimerRef.current);
       longPressTimerRef.current = null;
@@ -876,8 +908,9 @@ export const MessagesTab = memo(function MessagesTab({
                         )}
                         <div
                           data-msg-id={msg.id}
-                          className={`flex ${isMe ? "justify-end" : "justify-start"} select-none group relative`}
-                          onPointerDown={() => handleMessagePointerDown(msg)}
+                          className={`flex ${isMe ? "justify-end" : "justify-start"} select-none group relative touch-pan-y`}
+                          onPointerDown={(e) => handleMessagePointerDown(msg, e)}
+                        onPointerMove={(e) => handleMessagePointerMove(msg, e)}
                         onPointerUp={handleMessagePointerUp}
                         onPointerLeave={handleMessagePointerLeave}
                         onPointerCancel={handleMessagePointerUp}
