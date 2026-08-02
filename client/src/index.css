@@ -567,14 +567,14 @@
     flex-direction: column;
     align-items: center;
     width: 100%;
-    max-width: 420px;
+    max-width: 640px;
     padding: 0 10px;
   }
 
   .intro-constellation {
     position: relative;
-    width: 300px;
-    height: 224px;
+    width: min(100%, 610px, 74vh);
+    aspect-ratio: 610 / 513;
     flex-shrink: 0;
     will-change: transform, opacity;
   }
@@ -588,7 +588,14 @@
 
   .category-orb {
     position: absolute;
+    aspect-ratio: 1;
+    transform: translate(-50%, -50%);
     will-change: transform;
+  }
+
+  .category-orb-inner {
+    position: absolute;
+    inset: 0;
   }
 
   /* ── Liquid Glass orb ── */
@@ -596,8 +603,6 @@
     position: absolute;
     inset: 0;
     border-radius: 50%;
-    display: grid;
-    place-items: center;
     background:
       radial-gradient(
         circle at 32% 22%,
@@ -628,7 +633,12 @@
     pointer-events: none;
   }
 
+  /* Images empilées au centre : pendant le crossfade, l'ancienne et la
+     nouvelle occupent exactement la même position dans la sphère */
   .orb-img {
+    position: absolute;
+    inset: 0;
+    margin: auto;
     width: 72%;
     height: 72%;
     object-fit: contain;
@@ -638,6 +648,9 @@
   }
 
   .orb-icon {
+    position: absolute;
+    inset: 0;
+    margin: auto;
     width: 46%;
     height: 46%;
     color: rgba(255, 255, 255, 0.94);
@@ -653,15 +666,7 @@
 
   /* ── Central sphere ── */
   .center-anchor {
-    width: 88px;
-    height: 88px;
-  }
-
-  @media (min-width: 768px) {
-    .center-anchor {
-      width: 104px;
-      height: 104px;
-    }
+    aspect-ratio: 1;
   }
 
   .center-sphere {
@@ -707,7 +712,7 @@
     flex-direction: column;
     align-items: center;
     text-align: center;
-    margin-top: 8px;
+    margin-top: 16px;
     will-change: transform, opacity;
   }
 

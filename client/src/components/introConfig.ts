@@ -1,4 +1,4 @@
-import { Car, Gamepad2, House, Plane, Receipt, ShoppingBag, Utensils } from "lucide-react";
+import { Car, Gamepad2, Plane, Receipt, ShoppingBag, Utensils } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 export const CENTER_IMAGE = "/categories/aperosplit_icon.png";
@@ -17,12 +17,38 @@ export const ORB_IMAGES = [
   "/categories/aperosplit_shopping_bag_final.png",
 ];
 
+/**
+ * Composition iCloud-classique, non alignée :
+ * une grande sphère/avatar centrale dominante, entourée de satellites
+ * orbitaux de tailles différentes. Les positions et tailles sont des
+ * pourcentages relatifs au conteneur (intro-constellation, 610×513) :
+ * left/top en %, transform: translate(-50%, -50%).
+ */
+
+export interface CenterOrbConfig {
+  /** centre X en % de la largeur du conteneur */
+  x: number;
+  /** centre Y en % de la hauteur du conteneur */
+  y: number;
+  /** diamètre en % de la largeur du conteneur */
+  size: number;
+  zIndex: number;
+}
+
+export const CENTER_ORB: CenterOrbConfig = {
+  x: 50,
+  y: 53,
+  size: 44,
+  zIndex: 5,
+};
+
 export interface CategoryOrbConfig {
   label: string;
   icon: LucideIcon;
   x: number;
   y: number;
   size: number;
+  zIndex: number;
   floatDuration: number;
   floatDelay: number;
   startIndex: number;
@@ -30,11 +56,10 @@ export interface CategoryOrbConfig {
 }
 
 export const CATEGORY_ORBS: CategoryOrbConfig[] = [
-  { label: "Transport", icon: Car, x: 0, y: -86, size: 48, floatDuration: 7.2, floatDelay: -2.0, startIndex: 0, swapInterval: 4200 },
-  { label: "Voyage", icon: Plane, x: 100, y: -56, size: 48, floatDuration: 6.4, floatDelay: -3.5, startIndex: 3, swapInterval: 4700 },
-  { label: "Shopping", icon: ShoppingBag, x: 126, y: 6, size: 48, floatDuration: 8.1, floatDelay: -1.0, startIndex: 6, swapInterval: 5200 },
-  { label: "Loisirs", icon: Gamepad2, x: 98, y: 60, size: 42, floatDuration: 6.9, floatDelay: -4.2, startIndex: 9, swapInterval: 5600 },
-  { label: "Logement", icon: House, x: 0, y: 88, size: 42, floatDuration: 7.8, floatDelay: -5.0, startIndex: 1, swapInterval: 6100 },
-  { label: "Nourriture", icon: Utensils, x: -100, y: 60, size: 42, floatDuration: 6.1, floatDelay: -0.7, startIndex: 4, swapInterval: 6500 },
-  { label: "Factures", icon: Receipt, x: -126, y: 6, size: 36, floatDuration: 7.5, floatDelay: -2.8, startIndex: 7, swapInterval: 6900 },
+  { label: "Voyage", icon: Plane, x: 52, y: 15.5, size: 18, zIndex: 1, floatDuration: 7.2, floatDelay: -2.0, startIndex: 3, swapInterval: 4700 },
+  { label: "Transport", icon: Car, x: 22, y: 39, size: 25, zIndex: 1, floatDuration: 6.4, floatDelay: -3.5, startIndex: 0, swapInterval: 4200 },
+  { label: "Shopping", icon: ShoppingBag, x: 84, y: 55, size: 26, zIndex: 1, floatDuration: 8.1, floatDelay: -1.0, startIndex: 6, swapInterval: 5200 },
+  { label: "Loisirs", icon: Gamepad2, x: 18, y: 58, size: 8.5, zIndex: 1, floatDuration: 6.9, floatDelay: -4.2, startIndex: 9, swapInterval: 5600 },
+  { label: "Nourriture", icon: Utensils, x: 21.5, y: 67.5, size: 12, zIndex: 1, floatDuration: 6.1, floatDelay: -0.7, startIndex: 4, swapInterval: 6500 },
+  { label: "Factures", icon: Receipt, x: 56, y: 89, size: 21, zIndex: 2, floatDuration: 7.5, floatDelay: -2.8, startIndex: 7, swapInterval: 6900 },
 ];

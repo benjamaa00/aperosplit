@@ -11,9 +11,13 @@ export interface CategoryOrbProps {
   images?: string[];
   label: string;
   icon: LucideIcon;
+  /** diamètre en % de la largeur du conteneur */
   size?: number;
+  /** centre X en % du conteneur */
   x?: number;
+  /** centre Y en % du conteneur */
   y?: number;
+  zIndex?: number;
   delay?: number;
   floatDuration?: number;
   floatDelay?: number;
@@ -26,9 +30,10 @@ export function CategoryOrb({
   images,
   label,
   icon: Icon,
-  size = 48,
+  size = 16,
   x = 0,
   y = 0,
+  zIndex = 1,
   delay = 0.55,
   floatDuration = 7,
   floatDelay = 0,
@@ -47,47 +52,50 @@ export function CategoryOrb({
   }, [available.length, swapInterval]);
 
   const current = available.length ? available[idx % available.length] : null;
-  const half = size / 2;
   const style = {
-    width: size,
-    height: size,
-    left: `calc(50% - ${half}px + ${x}px)`,
-    top: `calc(50% - ${half}px + ${y}px)`,
+    left: `${x}%`,
+    top: `${y}%`,
+    width: `${size}%`,
+    zIndex,
     "--float-dur": `${floatDuration}s`,
     "--float-delay": `${floatDelay}s`,
   } as CSSProperties;
 
   return (
-    <motion.div
+    <div
       className="category-orb"
       role="img"
       aria-label={label}
       style={style}
-      initial={{ opacity: 0, scale: 0.85 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ delay, duration: ENTER_DURATION, ease: EASE }}
     >
-      <div className="orb-glass">
-        {current ? (
-          <AnimatePresence initial={false}>
-            <motion.img
-              key={current}
-              className="orb-img"
-              src={current}
-              alt={label}
-              loading="eager"
-              draggable={false}
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.6, ease: EASE }}
-              onError={() => setFailed((prev) => new Set(prev).add(current))}
-            />
-          </AnimatePresence>
-        ) : (
-          <Icon className="orb-icon" strokeWidth={1.8} />
-        )}
-      </div>
-    </motion.div>
+      <motion.div
+        className="category-orb-inner"
+        initial={{ opacity: 0, scale: 0.85 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ delay, duration: ENTER_DURATION, ease: EASE }}
+      >
+        <div className="orb-glass">
+          {current ? (
+            <AnimatePresence initial={false}>
+              <motion.img
+                key={current}
+                className="orb-img"
+                src={current}
+                alt={label}
+                loading="eager"
+                draggable={false}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 1.1 }}
+                transition={{ duration: 0.5, ease: EASE }}
+                onError={() => setFailed((prev) => new Set(prev).add(current))}
+              />
+            </AnimatePresence>
+          ) : (
+            <Icon className="orb-icon" strokeWidth={1.8} />
+          )}
+        </div>
+      </motion.div>
+    </div>
   );
 }

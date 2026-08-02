@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, MotionConfig } from "framer-motion";
 import { haptics } from "../utils/haptics";
-import { CATEGORY_ORBS, CENTER_IMAGE, ORB_IMAGES } from "./introConfig";
+import { CATEGORY_ORBS, CENTER_IMAGE, CENTER_ORB, ORB_IMAGES } from "./introConfig";
 import { CategoryOrb } from "./CategoryOrb";
 
 const EASE: [number, number, number, number] = [0.22, 1, 0.36, 1];
@@ -74,7 +74,15 @@ export function IntroScreen({ onLogin }: IntroScreenProps) {
             animate={exiting ? { scale: 1.03, opacity: 0 } : { scale: 1, opacity: 1 }}
             transition={{ duration: EXIT_MS / 1000, ease: "easeInOut" }}
           >
-            <div className="orb-anchor center-anchor">
+            <div
+              className="orb-anchor center-anchor"
+              style={{
+                left: `${CENTER_ORB.x}%`,
+                top: `${CENTER_ORB.y}%`,
+                width: `${CENTER_ORB.size}%`,
+                zIndex: CENTER_ORB.zIndex,
+              }}
+            >
               <motion.div
                 className="center-sphere"
                 initial={{ opacity: 0, scale: 0.65 }}
@@ -96,6 +104,7 @@ export function IntroScreen({ onLogin }: IntroScreenProps) {
                 x={orb.x}
                 y={orb.y}
                 size={orb.size}
+                zIndex={orb.zIndex}
                 delay={0.55 + i * 0.09}
                 floatDuration={orb.floatDuration}
                 floatDelay={orb.floatDelay}
